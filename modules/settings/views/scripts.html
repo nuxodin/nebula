@@ -1,0 +1,64 @@
+<script>
+  // Einstellungen laden
+  async function loadSettings() {
+    try {
+      const response = await fetch('/api/settings');
+      const settings = await response.json();
+      
+      document.getElementById('siteName').value = settings.siteName;
+      document.getElementById('theme').value = settings.theme;
+      document.getElementById('language').value = settings.language;
+      document.getElementById('notifications').checked = settings.notifications;
+
+      // Theme anwenden wenn geladen
+      applyTheme(settings.theme);
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    }
+  }
+
+  // Theme anwenden
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+  }
+
+  // Einstellungen speichern
+  document.getElementById('settingsForm').onsubmit = async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const settings = {
+      siteName: formData.get('siteName'),
+      theme: formData.get('theme'),
+      language: formData.get('language'),
+      notifications: formData.get('notifications') === 'on'
+    };
+
+    try {
+      const response = await fetch('/api/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(settings)
+      });
+
+      if (response.ok) {
+        const successMessage = document.getElementById('successMessage');
+        successMessage.style.display = 'block';
+        setTimeout(() => {
+          successMessage.style.display = 'none';
+        }, 3000);
+
+        // Theme sofort anwenden
+        applyTheme(settings.theme);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Ein Fehler ist aufgetreten');
+    }
+  };
+
+  // Initial load
+  loadSettings();
+</script>

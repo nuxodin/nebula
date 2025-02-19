@@ -1,0 +1,27 @@
+<script>
+// Check for password change success message
+if (window.location.search.includes('passwordChanged=true')) {
+  const message = document.getElementById('passwordChangedMessage');
+  message.style.display = 'block';
+  setTimeout(() => {
+    message.style.display = 'none';
+  }, 5000);
+}
+
+// Profildaten laden
+async function loadProfileData() {
+  try {
+    const response = await fetch('/api/clients/me');
+    const user = await response.json();
+    
+    // Benutzerdaten anzeigen
+    document.getElementById('userLogin').textContent = user.login;
+    document.getElementById('userEmail').textContent = user.email || '-';
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+
+// Initial load
+loadProfileData();
+</script>

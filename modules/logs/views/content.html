@@ -1,0 +1,25 @@
+<div class="header">
+  <h1>System Logs</h1>
+  <div class="log-actions">
+    <input type="text" class="search" placeholder="Logs durchsuchen..." id="logSearch">
+    <select id="logLevel" class="search">
+      <option value="all">Alle Level</option>
+      <option value="info">Info</option>
+      <option value="error">Error</option>
+    </select>
+  </div>
+</div>
+
+<u2-table sortable>
+  <table>
+    <thead>
+      <tr>
+        <th>Zeitpunkt
+        <th>Level
+        <th>Nachricht
+        <th>Quelle
+        <th>Benutzer
+      </tr>
+    <tbody id="logGrid">
+  </table>
+</u2-table>

@@ -1,0 +1,77 @@
+<script>
+// Domain-Details laden
+async function loadDomainDetails() {
+  const id = window.location.pathname.split('/')[2]; // Get domain ID from URL
+
+  // Set file manager link
+  document.getElementById('fileManagerLink').href = `./${id}/files`;
+
+  try {
+    // Domain Hauptdaten laden
+    const response = await fetch(`/api/domains/${id}`, {
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error('Domain nicht gefunden');
+    }
+    
+    const domain = await response.json();
+    
+    // Seitentitel und Überschrift aktualisieren
+    document.getElementById('pageTitle').textContent = `Domain ${domain.name}`;
+    
+    // Basis Informationen setzen
+    document.getElementById('domainName').textContent = domain.name;
+    document.getElementById('domainStatus').innerHTML = `
+      <span class="status-badge ${domain.status.toLowerCase() === 'aktiv' ? 'status-active' : 'status-inactive'}">
+        ${domain.status}
+      </span>`;
+    document.getElementById('domainOwner').textContent = domain.owner_name;
+    document.getElementById('domainCreated').textContent = new Date(domain.created_at).toLocaleString();
+    
+    // Hosting Informationen
+    document.getElementById('hostingType').textContent = domain.htype || 'Nicht konfiguriert';
+    document.getElementById('ipAddress').textContent = domain.ip_address || 'Nicht zugewiesen';
+    document.getElementById('phpVersion').textContent = domain.php_version || 'Standard';
+    document.getElementById('ftpUsername').textContent = domain.ftp_username || 'Nicht konfiguriert';
+
+    // Datenbanken anzeigen
+    const databasesList = document.getElementById('databasesList');
+    if (Array.isArray(domain.databases) && domain.databases.length > 0) {
+      databasesList.innerHTML = domain.databases.map(db => `
+        <tr>
+          <td>${db.name}</td>
+          <td>${db.type}</td>
+        </tr>
+      `).join('');
+    } else {
+      databasesList.innerHTML = '<p>Keine Datenbanken konfiguriert</p>';
+    }
+
+    // E-Mail Konten anzeigen
+    document.getElementById('mailsList').innerHTML = Array.isArray(domain.mail_accounts) && domain.mail_accounts.length ?
+      domain.mail_accounts.map(mail => `
+        <tr>
+          <td>${mail.mail_name}</td>
+        </tr>
+      `).join('') :
+      '<p>Keine E-Mail Konten konfiguriert</p>';
+
+  } catch (error) {
+    console.error('Error:', error);
+    alert('Fehler beim Laden der Domain-Details');
+  }
+}
+
+// Initial load
+loadDomainDetails();
+
+document.addEventListener('DOMContentLoaded', async () => {
+    // Setze die Domain-ID in den Files-Link
+    const domainId = window.location.pathname.split('/')[2];
+    document.getElementById('domainId').textContent = domainId;
+});
+</script>

@@ -1,0 +1,141 @@
+<script>
+  let domains = [];
+  let currentDomainToDelete = null;
+  
+  // Domains laden
+  async function loadDomains() {
+    try {
+      const response = await fetch('/api/domains');
+      domains = await response.json();
+      renderDomains(domains);
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Fehler beim Laden der Domains');
+    }
+  }
+
+  // Benutzer für Select laden
+  async function loadUsers() {
+    try {
+      const response = await fetch('/api/clients');
+      const users = await response.json();
+      const select = document.getElementById('ownerSelect');
+      select.innerHTML = '<option value="">Bitte wählen...</option>' +
+        users.map(user => `
+          <option value="${user.id}">${user.login} (${user.email})</option>
+        `).join('');
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Fehler beim Laden der Benutzer');
+    }
+  }
+
+  // Domains filtern und anzeigen
+  function renderDomains(domainsToRender) {
+    const tbody = document.getElementById('domainGrid');
+    tbody.innerHTML = domainsToRender.map(domain => `
+      <tr u2-href="/domains/${domain.id}">
+        <td>
+          <a href="/domains/${domain.id}">${domain.name}</a>
+        <td>
+          <span class="status-badge ${domain.status.toLowerCase() === 'aktiv' ? 'status-active' : 'status-inactive'}">
+            ${domain.status}
+          </span>
+        <td>${domain.owner_name || domain.owner_id}
+        <td>
+          <u2-time type=relative datetime="${domain.created_at}" minute>
+            ${new Date(domain.created_at).toLocaleString()}
+          </u2-time>
+          
+        <td>
+          <button class="u2-unstyle" onclick="showDeleteDomainModal(${domain.id}, '${domain.name}')">
+            <i class="mdi mdi-delete"></i>
+          </button>
+    `).join('');
+  }
+
+  // Modal Funktionen
+  function showAddDomainModal() {
+    loadUsers();
+  }
+
+  function hideAddDomainModal() {
+    document.getElementById('addDomainModal').classList.remove('active');
+  }
+
+  function showDeleteDomainModal(id, name) {
+    currentDomainToDelete = id;
+    document.getElementById('deleteDomainName').textContent = name;
+    document.getElementById('deleteDomainModal').classList.add('active');
+  }
+
+  function hideDeleteDomainModal() {
+    currentDomainToDelete = null;
+    document.getElementById('deleteDomainModal').classList.remove('active');
+  }
+
+  async function confirmDeleteDomain() {
+    if (!currentDomainToDelete) return;
+
+    try {
+      const response = await fetch(`/api/domains/${currentDomainToDelete}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        loadDomains();
+        hideDeleteDomainModal();
+      } else {
+        const error = await response.json();
+        alert(error.message || 'Fehler beim Löschen der Domain');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Fehler beim Löschen der Domain');
+    }
+  }
+
+  // Domain-Suche
+  document.getElementById('domainSearch').addEventListener('input', (e) => {
+    const searchTerm = e.target.value.toLowerCase();
+    const filteredDomains = domains.filter(domain => 
+      domain.name.toLowerCase().includes(searchTerm)
+    );
+    renderDomains(filteredDomains);
+  });
+
+  // Form Handler
+  document.getElementById('addDomainForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = {
+      name: formData.get('name'),
+      owner_id: Number(formData.get('owner_id'))
+    };
+    
+    try {
+      const response = await fetch('/api/domains', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+      
+      if (response.ok) {
+        hideAddDomainModal();
+        loadDomains();
+        e.target.reset();
+      } else {
+        const error = await response.json();
+        alert(error.message || 'Fehler beim Erstellen der Domain');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Fehler beim Erstellen der Domain');
+    }
+  };
+
+  // Initial load
+  loadDomains();
+</script>

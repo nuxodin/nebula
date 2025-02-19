@@ -1,0 +1,120 @@
+<script>
+  let users = [];
+  let currentUserToDelete = null;
+  
+  // Benutzer laden
+  async function loadUsers() {
+    try {
+      const response = await fetch('/api/clients');
+      users = await response.json();
+      renderUsers(users);
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Fehler beim Laden der Benutzer');
+    }
+  }
+
+  // Benutzer filtern und anzeigen
+  function renderUsers(usersToRender) {
+    const tbody = document.getElementById('userGrid');
+    tbody.innerHTML = usersToRender.map(user => `
+      <tr>
+        <td>${user.login}
+        <td>${user.email || '-'}
+        <td>
+          <span class="status-badge status-active">Aktiv</span>
+        <td>${user.domain_count || 0}
+        <td>
+          <button class="u2-unstyle" onclick="showDeleteUserModal(${user.id}, '${user.login}')">
+            <i class="mdi mdi-delete"></i>
+          </button>
+    `).join('');
+  }
+
+  // Modal Funktionen
+  function showAddUserModal() {
+    document.getElementById('addUserModal').showModal();
+  }
+
+  function hideAddUserModal() {
+    document.getElementById('addUserModal').close();
+  }
+
+  function showDeleteUserModal(id, login) {
+    currentUserToDelete = id;
+    document.getElementById('deleteUserName').textContent = login;
+    document.getElementById('deleteUserModal').showModal();
+  }
+
+  function hideDeleteUserModal() {
+    currentUserToDelete = null;
+    document.getElementById('deleteUserModal').close();
+  }
+
+  async function confirmDeleteUser() {
+    if (!currentUserToDelete) return;
+
+    try {
+      const response = await fetch(`/api/clients/${currentUserToDelete}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        loadUsers();
+        hideDeleteUserModal();
+      } else {
+        const error = await response.json();
+        alert(error.message || 'Fehler beim Löschen des Benutzers');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Fehler beim Löschen des Benutzers');
+    }
+  }
+
+  // Benutzer-Suche
+  document.getElementById('userSearch').addEventListener('input', (e) => {
+    const searchTerm = e.target.value.toLowerCase();
+    const filteredUsers = users.filter(user => 
+      user.login.toLowerCase().includes(searchTerm) ||
+      (user.email && user.email.toLowerCase().includes(searchTerm))
+    );
+    renderUsers(filteredUsers);
+  });
+
+  // Form Handler
+  document.getElementById('addUserForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = {
+      login: formData.get('login'),
+      email: formData.get('email'),
+      password: formData.get('password')
+    };
+    
+    try {
+      const response = await fetch('/api/clients', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+      
+      if (response.ok) {
+        hideAddUserModal();
+        loadUsers();
+        e.target.reset();
+      } else {
+        const error = await response.json();
+        alert(error.message || 'Fehler beim Erstellen des Benutzers');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Fehler beim Erstellen des Benutzers');
+    }
+  };
+
+  // Initial load
+  loadUsers();
+</script>

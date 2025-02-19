@@ -1,0 +1,146 @@
+<div class="header">
+  <h1 id="pageTitle">File Explorer</h1>
+  <div>
+    <button class="btn" data-action="upload">
+      <i class="mdi mdi-upload"></i> Upload File
+    </button>
+    <button class="btn" data-action="newFile">
+      <i class="mdi mdi-file-plus"></i> New File
+    </button>
+    <button class="btn" data-action="newFolder">
+      <i class="mdi mdi-folder-plus"></i> New Folder
+    </button>
+  </div>
+</div>
+
+<div class="file-explorer">
+  <div class="file-tree">
+    <div class="breadcrumb" id="pathBreadcrumb">
+      <!-- Will be filled dynamically -->
+    </div>
+    
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 32px"></th>
+          <th>Name</th>
+          <th>Size</th>
+          <th>Modified</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="fileList">
+        <!-- Will be filled dynamically -->
+      </tbody>
+    </table>
+  </div>
+  
+  <div class="file-preview" id="filePreview">
+    <div class="preview-header">
+      <h3 id="previewTitle">Select a file to preview</h3>
+    </div>
+    <div class="preview-content">
+      <textarea id="fileContent" spellcheck="false"></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- Upload Dialog -->
+<dialog id="uploadDialog">
+  <h2>Upload File</h2>
+  <form id="uploadForm" method="POST" enctype="multipart/form-data">
+    <div class="form-group">
+      <label for="fileUpload">Select Files</label>
+      <input type="file" id="fileUpload" name="file" multiple>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn">Upload</button>
+      <button type="button" onclick="closeDialog('uploadDialog')" class="btn">Cancel</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Rename Dialog -->
+<dialog id="renameDialog">
+  <h2>Rename</h2>
+  <form id="renameForm">
+    <div class="form-group">
+      <label for="newName">New Name</label>
+      <input type="text" id="newName" name="newName" required>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn">Rename</button>
+      <button type="button" onclick="closeDialog('renameDialog')" class="btn">Cancel</button>
+    </div>
+  </form>
+</dialog>
+
+<style>
+.file-explorer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  height: calc(100vh - 200px);
+}
+
+.file-tree {
+  background: white;
+  border-radius: 8px;
+  padding: 1rem;
+  overflow: auto;
+}
+
+.file-preview {
+  background: white;
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-header {
+  margin-bottom: 1rem;
+}
+
+.preview-content {
+  flex: 1;
+  overflow: auto;
+}
+
+#fileContent {
+  width: 100%;
+  height: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  padding: 1rem;
+  font-family: monospace;
+  resize: none;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background: #f8fafc;
+  border-radius: 4px;
+}
+
+.breadcrumb a {
+  color: #1e293b;
+  text-decoration: none;
+}
+
+.breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.file-icon {
+  font-size: 1.2rem;
+}
+
+.file-row:hover {
+  background: #f8fafc;
+}
+</style>

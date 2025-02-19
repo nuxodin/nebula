@@ -1,0 +1,81 @@
+<header class="header">
+  <h1>Dashboard</h1>
+</header>
+<div id="passwordChangedMessage" class="success-message" style="display: none; background: #ecfdf5; color: #059669; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+  Ihr Passwort wurde erfolgreich geändert.
+</div>
+<div class="grid">
+  <div class="card">
+    <div class="stat">
+      <div class="stat-info">
+        <h3 id="">
+          <i class="mdi mdi-domain" style="font-size: 2rem;"></i>
+          <span id="domainCount">...</span>
+          Domains
+        </h3>
+      </div>
+    </div>
+    <table style="margin-bottom: 1rem;">
+      <thead>
+        <tr>
+          <th>Domain</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="domainList">
+        <tr><td colspan="2">Lädt...</td></tr>
+      </tbody>
+    </table>
+    <a href="/domains#addDomainModal" class="btn">
+      <i class="mdi mdi-plus"></i>
+      Domain hinzufügen
+    </a>
+  </div>
+  <div class="card">
+    <div class="stat">
+      <div class="stat-info">
+        <h3>
+          <i class="mdi mdi-account-group" style="font-size: 2rem;"></i>
+          <span id="userCount">...</span>
+          Benutzer
+        </h3>
+      </div>
+    </div>
+    <table style="margin-bottom: 1rem;">
+      <thead>
+        <tr>
+          <th>Benutzer</th>
+          <th>Rolle</th>
+        </tr>
+      </thead>
+      <tbody id="userList">
+        <tr><td colspan="2">Lädt...</td></tr>
+      </tbody>
+    </table>
+    <a href="/users#addUserModal" class="btn">
+      <i class="mdi mdi-plus"></i>
+      Benutzer hinzufügen
+    </a>
+  </div>
+  <div class="card">
+    <div class="stat">
+      <div class="stat-info">
+        <h3>
+          <i class="mdi mdi-text-box-search" style="font-size: 2rem;"></i>
+          Letzte Aktivitäten
+        </h3>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Zeit</th>
+          <th>Ereignis</th>
+        </tr>
+      </thead>
+      <tbody id="activityList">
+        <tr><td colspan="2">Lädt...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>

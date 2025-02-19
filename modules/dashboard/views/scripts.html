@@ -1,0 +1,55 @@
+<script>
+  // Check for password change success message
+  if (window.location.search.includes('passwordChanged=true')) {
+    const message = document.getElementById('passwordChangedMessage');
+    message.style.display = 'block';
+    setTimeout(() => {
+      message.style.display = 'none';
+    }, 5000);
+  }
+
+  // Dashboard-Daten laden
+  async function loadDashboardData() {
+    try {
+      // todo: get data from specifi api
+      const response = await fetch('/api/dashboard/stats');
+      const data = await response.json();
+      
+      // Update domain section
+      document.getElementById('domainCount').textContent = data.domains.active;
+      document.getElementById('domainList').innerHTML = data.domains.list
+        .map(domain => `
+          <tr>
+            <td><a href="/domains/${domain.id}">${domain.name}</a>
+            <td>${domain.status}</td>
+          </tr>
+        `).join('');
+
+      // Update user section
+      document.getElementById('userCount').textContent = data.users.active;
+      document.getElementById('userList').innerHTML = data.users.list
+        .map(user => `
+          <tr>
+            <td>${user.name}</td>
+            <td>${user.role}</td>
+          </tr>
+        `).join('');
+
+      // Update activity section
+      document.getElementById('activityList').innerHTML = data.activities
+        .map(activity => `
+          <tr>
+            <td>${activity.time}</td>
+            <td>${activity.event}</td>
+          </tr>
+        `).join('');
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    }
+  }
+
+  // Initial load
+  loadDashboardData();
+  // Aktualisiere alle 30 Sekunden
+  setInterval(loadDashboardData, 30000);
+</script>

@@ -1,0 +1,65 @@
+<div class="user-actions">
+  <input type="text" class="search" placeholder="Benutzer durchsuchen..." id="userSearch">
+  <a href="#addUserModal">
+    <button onclick="showAddUserModal()">
+      <i class="mdi mdi-plus"></i> Benutzer hinzufügen
+    </button>
+  </a>
+</div>
+
+<u2-table sortable>
+  <table>
+    <thead>
+      <tr>
+        <th>Benutzername
+        <th>E-Mail
+        <th>Status
+        <th>Domains
+        <th>Aktionen
+      </tr>
+    <tbody id="userGrid">
+  </table>
+</u2-table>
+
+<!-- Modal für neuen Benutzer -->
+<dialog id="addUserModal" u2-navigable>
+  <h2>Neuen Benutzer hinzufügen</h2>
+  <form id="addUserForm">
+    <div class="u2-table">
+      <div>
+        <label>
+          <div>Benutzername</div>
+          <div>
+            <input name="login" required placeholder="z.B. maxmustermann">
+          </div>
+        </label>
+        <label>
+          <div>E-Mail</div>
+          <div>
+            <input type="email" name="email" required placeholder="z.B. max@mustermann.de">
+          </div>
+        </label>
+        <label>
+          <div>Passwort</div>
+          <div>
+            <input type="password" name="password" required>
+          </div>
+        </label>
+      </div>
+    </div>
+    <div class="u2-flex" style="justify-content: space-between; margin-top:1em">
+      <button type="submit" class="btn">Benutzer hinzufügen</button>
+      <button type="button" onclick="history.back()">Abbrechen</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="deleteUserModal">
+  <h2>Benutzer löschen</h2>
+  <p>Möchten Sie den Benutzer <strong id="deleteUserName"></strong> wirklich löschen?</p>
+  <p class="warning">Achtung: Dies wird auch alle zugehörigen Domains und deren Einstellungen löschen!</p>
+  <div class="form-actions">
+    <button class="btn btn-danger" onclick="confirmDeleteUser()">Löschen</button>
+    <button class="btn btn-secondary" onclick="hideDeleteUserModal()">Abbrechen</button>
+  </div>
+</dialog>
