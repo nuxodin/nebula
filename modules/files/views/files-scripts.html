@@ -1,12 +1,18 @@
-<script>
+<script type="module">
+import { apiFetch } from '/public/js/utils.js';
+
 let currentPath = '/';
 let selectedItemForRename = null;
 let config = window.fileExplorerConfig || { rootPath: "/", title: "File Explorer" };
 
 // Initialize
 async function init() {
-  // Immer mit dem konfigurierten Root-Pfad starten
-  currentPath = config.rootPath;
+  // URL-Parameter überprüfen
+  const urlParams = new URLSearchParams(window.location.search);
+  const filePath = urlParams.get('file');
+  
+  // Wenn ein Pfad in der URL ist, diesen verwenden, sonst den konfigurierten Root-Pfad
+  currentPath = filePath ? decodeUrlPath(filePath) : config.rootPath;
   
   // Titel setzen
   document.getElementById('pageTitle').textContent = config.title;
@@ -17,18 +23,31 @@ async function init() {
 
 // Setup event listeners using event delegation
 function setupEventListeners() {
-  // Globaler Click-Handler für alle Aktionen
-  document.addEventListener('click', handleGlobalClick);
+  // Click-Handler nur noch für Aktionen und Datei-Vorschau
+  document.addEventListener('click', (e) => {
+    const target = e.target;
+    const actionElement = target.closest('[data-action]');
+    const fileElement = target.closest('[data-type="file"]');
+    
+    if (actionElement) {
+      e.preventDefault();
+      handleAction(actionElement);
+    } else if (fileElement) {
+      e.preventDefault();
+      console.log(fileElement.href)
+      previewFile(fileElement.href.split('file=')[1]);
+    }
+  });
 
+  // Form-Handler
+  setupFormHandlers();
+  
   // Browser-Navigation (Vor/Zurück)
   window.addEventListener('popstate', async () => {
     const urlParams = new URLSearchParams(window.location.search);
     currentPath = urlParams.get('file') || '/';
     await loadFiles();
   });
-
-  // Form-Handler
-  setupFormHandlers();
 }
 
 // Zentraler Click-Handler
@@ -70,6 +89,7 @@ function handleAction(element) {
 // Handler für Navigation
 function handleNavigation(element) {
   const path = element.dataset.path;
+  console.log(element.dataset)
   if (element.dataset.type === 'file') {
     previewFile(path);
   } else {
@@ -99,21 +119,15 @@ async function handleUpload(e) {
   formData.append('path', currentPath);
 
   try {
-    const response = await fetch('/api/files/upload', {
-      method: 'POST',
-      body: formData
+    const response = await apiFetch('/api/files/upload', {
+      data: Object.fromEntries(formData)
     });
 
-    if (response.ok) {
-      closeDialog('uploadDialog');
-      loadFiles();
-      e.target.reset();
-    } else {
-      throw new Error('Upload failed');
-    }
+    closeDialog('uploadDialog');
+    loadFiles();
+    e.target.reset();
   } catch (error) {
-    console.error('Error:', error);
-    alert('Error uploading files');
+    alert('Fehler beim Hochladen der Dateien: ' + error.message);
   }
 }
 
@@ -125,38 +139,29 @@ async function handleRename(e) {
   const newPath = dir + '\\' + newName;
 
   try {
-    const response = await fetch('/api/files/rename', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ oldPath: selectedItemForRename, newPath })
+    await apiFetch('/api/files/rename', {
+      data: { oldPath: selectedItemForRename, newPath }
     });
 
-    if (response.ok) {
-      closeDialog('renameDialog');
-      loadFiles();
-    } else {
-      throw new Error('Rename failed');
-    }
+    closeDialog('renameDialog');
+    loadFiles();
   } catch (error) {
-    console.error('Error:', error);
-    alert('Error renaming item');
+    alert('Fehler beim Umbenennen: ' + error.message);
   }
 }
 
 // Load files and directories
 async function loadFiles() {
   try {
-    const response = await fetch('/api/files/list?path=' + encodeURIComponent(currentPath));
-    if (!response.ok) throw new Error('Failed to load directory');
-    const data = await response.json();
+    const listPath = encodeURIComponent(currentPath === '/' ? config.rootPath : currentPath);
+    const data = await apiFetch('/api/files/list?path=' + listPath);
+    
     if (data.error) {
-      alert('Error: ' + data.error);
-      // Wenn ein Fehler auftritt, gehe zum übergeordneten Verzeichnis zurück
+      alert('Fehler: ' + data.error);
       if (currentPath !== '/' && !currentPath.endsWith(':\\')) {
         const parentPath = currentPath.split('\\').slice(0, -1).join('\\');
         if (parentPath !== currentPath) {
-          currentPath = parentPath || '/';
-          await loadFiles();
+          navigateTo(parentPath || '/');
         }
       }
       return;
@@ -164,8 +169,7 @@ async function loadFiles() {
     renderPath();
     renderFiles(data);
   } catch (error) {
-    console.error('Error:', error);
-    alert('Error loading files');
+    alert('Fehler beim Laden der Dateien: ' + error.message);
   }
 }
 
@@ -181,22 +185,28 @@ function renderPath() {
     } else if (currentPath.startsWith(config.rootPath)) {
       pathToProcess = currentPath.slice(config.rootPath.length);
     }
-    // Domain-Name als erste Ebene
     parts.push(config.title.replace('Files - ', '')); 
   }
   
   // Restliche Pfadteile hinzufügen
   if (pathToProcess) {
-    parts.push(...pathToProcess.split(/[\/\\]/).filter(p => p));
+    // Windows-Pfade korrekt behandeln
+    const cleanPath = pathToProcess.replace(/^[\/\\]+/, '');
+    parts.push(...cleanPath.split(/[\/\\]/).filter(p => p));
   }
   
-  let html = '<a href="#" data-path="' + config.rootPath + '">' + (parts[0] || 'Root') + '</a>';
-  let currentPathBuild = config.rootPath;
+  let currentPathBuild = parts[0]?.includes(':') ? parts[0] + '\\' : config.rootPath;
+  const rootUrl = new URL(window.location.href);
+  rootUrl.searchParams.set('file', encodePathForUrl(currentPathBuild));
+  
+  let html = '<a href="' + rootUrl.toString() + '">' + (parts[0] || 'Root') + '</a>';
   
   // Ab dem zweiten Element den Pfad aufbauen
   for (let i = 1; i < parts.length; i++) {
     currentPathBuild = join(currentPathBuild, parts[i]);
-    html += ` / <a href="#" data-path="${currentPathBuild}">${parts[i]}</a>`;
+    const pathUrl = new URL(window.location.href);
+    pathUrl.searchParams.set('file', encodePathForUrl(currentPathBuild));
+    html += ` / <a href="${pathUrl.toString()}">${parts[i]}</a>`;
   }
   
   document.getElementById('pathBreadcrumb').innerHTML = html;
@@ -211,8 +221,11 @@ function renderFiles(items) {
   // Parent directory link (..)
   if (currentPath !== '/' && !currentPath.endsWith(':\\')) {
     const parentPath = currentPath.split('\\').slice(0, -1).join('\\') || '/';
+    const parentUrl = new URL(window.location.href);
+    parentUrl.searchParams.set('file', encodePathForUrl(parentPath));
+    
     tbody.innerHTML += '<tr class="file-row"><td><i class="mdi mdi-folder file-icon"></i></td>' +
-      '<td><a href="#" data-path="' + parentPath + '">..</a></td>' +
+      '<td><a href="' + parentUrl.toString() + '">..</a></td>' +
       '<td>-</td><td>-</td><td>-</td></tr>';
   }
 
@@ -220,19 +233,14 @@ function renderFiles(items) {
     const isDirectory = item.name.endsWith('/');
     const name = isDirectory ? item.name.slice(0, -1) : item.name;
     const icon = isDirectory ? 'mdi-folder' : 'mdi-file-document';
+    const itemUrl = new URL(window.location.href);
+    itemUrl.searchParams.set('file', encodePathForUrl(item.path));
     
-    tbody.innerHTML += '<tr class="file-row"><td><i class="mdi ' + icon + ' file-icon"></i></td><td>' + 
-      (isDirectory 
-        ? '<a href="#" data-path="' + item.path + '">' + name + '</a>'
-        : '<a href="#" data-path="' + item.path + '" data-type="file">' + name + '</a>'
-      ) + '</td><td>' + (item.size ? formatFileSize(item.size) : '-') + '</td><td>' + 
-      (item.modified ? new Date(item.modified).toLocaleString(undefined, {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-      }) : '-') + '</td><td>' +
+    tbody.innerHTML += '<tr class="file-row" data-path="' + item.path + '"><td><i class="mdi ' + icon + ' file-icon"></i></td><td>' + 
+      '<a href="' + itemUrl.toString() + '">' + name + '</a>' +
+      '</td><td>' +
+      (item.size ? '<u2-bytes>' + (item.size || 0) + '</u2-bytes> ' : '-') + '</td><td>' + 
+      (item.modified ? '<u2-time datetime="' + item.modified + '" type="relative" minute mode=short>' + item.modified + '</u2-time>' : '-') + '</td><td>' +
       '<button class="btn u2-unstyle" data-action="rename" data-path="' + item.path + '" data-name="' + name + '" title="Rename">' +
         '<i class="mdi mdi-rename"></i></button>' + 
       '<button class="btn u2-unstyle" data-action="delete" data-path="' + item.path + '" title="Delete">' +
@@ -240,34 +248,12 @@ function renderFiles(items) {
   });
 }
 
-// File size formatter
-function formatFileSize(bytes) {
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let size = bytes;
-  let unitIndex = 0;
-  
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex++;
-  }
-  
-  return size.toFixed(1) + ' ' + units[unitIndex];
-}
-
-// Navigation
+// Navigation (wird jetzt hauptsächlich durch normale Links gesteuert)
 function navigateTo(path) {
-  // Wenn ein Root-Pfad konfiguriert ist, diesen nicht überschreiten
-  if (config.rootPath !== "/" && !path.startsWith(config.rootPath)) {
-    currentPath = config.rootPath;
-  } else {
-    currentPath = path;
-  }
-  
-  // URL aktualisieren ohne Seitenneuladen
+  currentPath = path;
   const url = new URL(window.location.href);
-  url.searchParams.set('file', currentPath);
+  url.searchParams.set('file', encodePathForUrl(path));
   window.history.pushState({}, '', url.toString());
-  
   loadFiles();
   document.getElementById('previewTitle').textContent = 'Select a file to preview';
   document.getElementById('fileContent').value = '';
@@ -275,15 +261,14 @@ function navigateTo(path) {
 
 // File preview
 async function previewFile(path) {
+  console.log('Preview file:', path);
   try {
-    const response = await fetch('/api/files/content?path=' + encodeURIComponent(path));
-    const content = await response.text();
+    const content = await apiFetch('/api/files/content?path=' + encodeURIComponent(path));
     document.getElementById('fileContent').value = content;
     document.getElementById('previewTitle').textContent = path.split(/[\/\\]/).pop();
     setupEditor(path);
   } catch (error) {
-    console.error('Error:', error);
-    alert('Error loading file content');
+    alert('Fehler beim Laden der Datei: ' + error.message);
   }
 }
 
@@ -302,20 +287,13 @@ function setupEditor(path) {
 async function saveFile(path) {
   try {
     const content = document.getElementById('fileContent').value;
-    const response = await fetch('/api/files/content', {
+    await apiFetch('/api/files/content', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path, content })
+      data: { path, content }
     });
-
-    if (response.ok) {
-      alert('File saved successfully');
-    } else {
-      throw new Error('Failed to save file');
-    }
+    alert('Datei erfolgreich gespeichert');
   } catch (error) {
-    console.error('Error:', error);
-    alert('Error saving file');
+    alert('Fehler beim Speichern der Datei: ' + error.message);
   }
 }
 
@@ -347,22 +325,15 @@ async function createNewFile() {
     // Verwende join für korrekte Pfadkonstruktion
     const path = join(currentPath, name);
     if (!path.startsWith(config.rootPath)) {
-      throw new Error('Invalid path');
+      throw new Error('Ungültiger Pfad');
     }
 
-    const response = await fetch('/api/files', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path, type: 'file' })
+    await apiFetch('/api/files', {
+      data: { path, type: 'file' }
     });
-
-    if (!response.ok) {
-      throw new Error('Failed to create file');
-    }
     await loadFiles();
   } catch (error) {
-    console.error('Error:', error);
-    alert('Error creating file');
+    alert('Fehler beim Erstellen der Datei: ' + error.message);
   }
 }
 
@@ -374,50 +345,58 @@ async function createNewFolder() {
     // Verwende join für korrekte Pfadkonstruktion
     const path = join(currentPath, name);
     if (!path.startsWith(config.rootPath)) {
-      throw new Error('Invalid path');
+      throw new Error('Ungültiger Pfad');
     }
 
-    const response = await fetch('/api/files', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path, type: 'directory' })
+    await apiFetch('/api/files', {
+      data: { path, type: 'directory' }
     });
-
-    if (!response.ok) {
-      throw new Error('Failed to create folder');
-    }
     await loadFiles();
   } catch (error) {
-    console.error('Error:', error);
-    alert('Error creating folder');
+    alert('Fehler beim Erstellen des Ordners: ' + error.message);
   }
 }
 
 async function deleteItem(path) {
-  if (!confirm('Are you sure you want to delete this item?')) return;
+  if (!confirm('Sind Sie sicher, dass Sie dieses Element löschen möchten?')) return;
 
   try {
-    const response = await fetch('/api/files', {
+    await apiFetch('/api/files', {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path })
+      data: { path }
     });
-
-    if (response.ok) {
-      loadFiles();
-    } else {
-      alert('Error deleting item');
-    }
+    loadFiles();
   } catch (error) {
-    console.error('Error:', error);
-    alert('Error deleting item');
+    alert('Fehler beim Löschen: ' + error.message);
   }
 }
 
 // Hilfsfunktion zum Verbinden von Pfaden
 function join(...parts) {
-  // Filtere leere Teile heraus und verbinde mit \
-  return parts.filter(part => part).join('\\').replace(/\\+/g, '\\');
+  if (!parts.length) return '';
+  // Konvertiere alle Teile zu Backslashes
+  parts = parts.map(p => p.replace(/\//g, '\\'));
+  let result = parts[0].replace(/[\\/]+$/g, '');
+  // Sicherstellen, dass Laufwerksbuchstaben korrekt formatiert sind
+  if (/^[A-Za-z]:$/.test(result)) {
+    result += '\\';
+  } else if (/^[A-Za-z]:[^\\]/.test(result)) {
+    result = result.replace(/^([A-Za-z]:)(.*)$/, (_, drive, rest) => drive + '\\' + rest);
+  }
+  for (let i = 1; i < parts.length; i++) {
+    let part = parts[i].replace(/^[\\/]+/g, '').replace(/[\\/]+$/g, '');
+    result += '\\' + part;
+  }
+  return result;
+}
+
+// URL-Helper Funktionen
+function encodePathForUrl(path) {
+  return encodeURIComponent(path.replace(/\\/g, '/'));
+}
+
+function decodeUrlPath(encodedPath) {
+  return decodeURIComponent(encodedPath).replace(/\//g, '\\');
 }
 
 // Initial load

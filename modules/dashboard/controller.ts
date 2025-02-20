@@ -1,8 +1,9 @@
 import { logError } from "../../utils/logger.ts";
 import db from "../../utils/database.ts";
 import { Context } from "hono";
+import { osInfo } from "../../utils/os.ts";
 
-export const getDashboardStats = (c: Context) => {
+export const getDashboardStats = async (c: Context) => {
   try {
     // Aktive Domains zählen und letzte Domains abrufen
     const domains = db.queryEntries(`
@@ -49,6 +50,8 @@ export const getDashboardStats = (c: Context) => {
       LIMIT 3
     `);
 
+    const systemStats = await osInfo();
+
     const stats = {
       domains: {
         total: domainStats.total,
@@ -60,7 +63,8 @@ export const getDashboardStats = (c: Context) => {
         active: userStats.active,
         list: users
       },
-      activities: activities
+      activities: activities,
+      system: systemStats  // Changed: Directly use systemStats object without nesting
     };
 
     return c.json(stats);

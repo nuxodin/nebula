@@ -14,6 +14,8 @@ import { getLogin, postLogin, getLogout, getProfile, postPasswordChange } from "
 import { logError } from "./utils/logger.ts";
 import db from "./utils/database.ts";
 
+//import "./install.ts";
+
 // Initialisierung der Datenbank und Beispieldaten
 async function initializeDatabase() {
   try {
@@ -84,3 +86,4 @@ app.onError((err, c) => {
 // Server starten
 Deno.serve({ port }, app.fetch);
 console.log(`Nebula läuft auf http://localhost:${port}`);
+

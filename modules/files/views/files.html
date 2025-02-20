@@ -1,13 +1,15 @@
 <div class="header">
   <h1 id="pageTitle">File Explorer</h1>
   <div>
-    <button class="btn" data-action="upload">
-      <i class="mdi mdi-upload"></i> Upload File
-    </button>
-    <button class="btn" data-action="newFile">
+    <a href="#uploadDialog">
+      <button>
+        <i class="mdi mdi-upload"></i> Upload File
+      </button>
+    </a>
+    <button data-action="newFile">
       <i class="mdi mdi-file-plus"></i> New File
     </button>
-    <button class="btn" data-action="newFolder">
+    <button data-action="newFolder">
       <i class="mdi mdi-folder-plus"></i> New Folder
     </button>
   </div>
@@ -40,13 +42,13 @@
       <h3 id="previewTitle">Select a file to preview</h3>
     </div>
     <div class="preview-content">
-      <textarea id="fileContent" spellcheck="false"></textarea>
+        <textarea id="fileContent" spellcheck="false"></textarea>
     </div>
   </div>
 </div>
 
 <!-- Upload Dialog -->
-<dialog id="uploadDialog">
+<dialog id="uploadDialog" u2-navigable>
   <h2>Upload File</h2>
   <form id="uploadForm" method="POST" enctype="multipart/form-data">
     <div class="form-group">

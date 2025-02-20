@@ -8,9 +8,6 @@ export const authMiddleware = async (c: Context, next: Next) => {
     const isLoggedIn = await session.get('isLoggedIn');
     const currentPath = new URL(c.req.url).pathname;
 
-    // Debug-Logging für Session-Status
-    console.log('Auth check for path:', currentPath, 'Session:', isLoggedIn);
-
     // Login-Seite ist immer zugänglich
     if (currentPath === '/login') {
       return next();

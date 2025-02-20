@@ -1,31 +1,32 @@
-<script>
+<script type="module">
+
+
+  import { apiFetch } from '/public/js/utils.js';
+
+
   let domains = [];
   let currentDomainToDelete = null;
   
   // Domains laden
   async function loadDomains() {
     try {
-      const response = await fetch('/api/domains');
-      domains = await response.json();
+      const domains = await apiFetch('/api/domains');
       renderDomains(domains);
     } catch (error) {
-      console.error('Error:', error);
-      alert('Fehler beim Laden der Domains');
+      alert('Fehler beim Laden der Domains: ' + error.message);
     }
   }
 
   // Benutzer für Select laden
   async function loadUsers() {
     try {
-      const response = await fetch('/api/clients');
-      const users = await response.json();
+      const users = await apiFetch('/api/clients');
       const select = document.getElementById('ownerSelect');
       select.innerHTML = '<option value="">Bitte wählen...</option>' +
         users.map(user => `
           <option value="${user.id}">${user.login} (${user.email})</option>
         `).join('');
     } catch (error) {
-      console.error('Error:', error);
       alert('Fehler beim Laden der Benutzer');
     }
   }
@@ -54,11 +55,6 @@
     `).join('');
   }
 
-  // Modal Funktionen
-  function showAddDomainModal() {
-    loadUsers();
-  }
-
   function hideAddDomainModal() {
     document.getElementById('addDomainModal').classList.remove('active');
   }
@@ -78,31 +74,14 @@
     if (!currentDomainToDelete) return;
 
     try {
-      const response = await fetch(`/api/domains/${currentDomainToDelete}`, {
-        method: 'DELETE'
-      });
-
-      if (response.ok) {
-        loadDomains();
-        hideDeleteDomainModal();
-      } else {
-        const error = await response.json();
-        alert(error.message || 'Fehler beim Löschen der Domain');
-      }
+      const response = await apiFetch(`/api/domains/${currentDomainToDelete}`, {method: 'DELETE'});
+      loadDomains();
+      hideDeleteDomainModal();
     } catch (error) {
-      console.error('Error:', error);
-      alert('Fehler beim Löschen der Domain');
+      alert(error.message || 'Fehler beim Löschen der Domain');
     }
-  }
 
-  // Domain-Suche
-  document.getElementById('domainSearch').addEventListener('input', (e) => {
-    const searchTerm = e.target.value.toLowerCase();
-    const filteredDomains = domains.filter(domain => 
-      domain.name.toLowerCase().includes(searchTerm)
-    );
-    renderDomains(filteredDomains);
-  });
+  }
 
   // Form Handler
   document.getElementById('addDomainForm').onsubmit = async (e) => {
@@ -113,29 +92,20 @@
       owner_id: Number(formData.get('owner_id'))
     };
     
-    try {
-      const response = await fetch('/api/domains', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-      });
-      
-      if (response.ok) {
-        hideAddDomainModal();
-        loadDomains();
-        e.target.reset();
-      } else {
-        const error = await response.json();
-        alert(error.message || 'Fehler beim Erstellen der Domain');
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Fehler beim Erstellen der Domain');
-    }
-  };
 
-  // Initial load
-  loadDomains();
+    try {
+      const response = await apiFetch('/api/domains', {data});
+      hideAddDomainModal();
+      loadDomains();
+      e.target.reset();
+    } catch (error) {
+      alert(error.message);
+    }
+
+};
+
+// Initial load
+loadDomains();
+loadUsers();
+
 </script>

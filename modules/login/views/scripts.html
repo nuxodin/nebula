@@ -1,4 +1,6 @@
-<script>
+<script type="module">
+import { apiFetch } from '/public/js/utils.js';
+
 // Check for password change success message
 if (window.location.search.includes('passwordChanged=true')) {
   const message = document.getElementById('passwordChangedMessage');
@@ -11,14 +13,13 @@ if (window.location.search.includes('passwordChanged=true')) {
 // Profildaten laden
 async function loadProfileData() {
   try {
-    const response = await fetch('/api/clients/me');
-    const user = await response.json();
+    const user = await apiFetch('/api/clients/me');
     
     // Benutzerdaten anzeigen
     document.getElementById('userLogin').textContent = user.login;
     document.getElementById('userEmail').textContent = user.email || '-';
   } catch (error) {
-    console.error('Error:', error);
+    alert('Fehler beim Laden der Profildaten: ' + error.message);
   }
 }
 

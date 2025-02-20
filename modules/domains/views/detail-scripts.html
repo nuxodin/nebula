@@ -1,4 +1,6 @@
-<script>
+<script type="module">
+import { apiFetch } from '/public/js/utils.js';
+
 // Domain-Details laden
 async function loadDomainDetails() {
   const id = window.location.pathname.split('/')[2]; // Get domain ID from URL
@@ -8,17 +10,7 @@ async function loadDomainDetails() {
 
   try {
     // Domain Hauptdaten laden
-    const response = await fetch(`/api/domains/${id}`, {
-      headers: {
-        'Accept': 'application/json'
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error('Domain nicht gefunden');
-    }
-    
-    const domain = await response.json();
+    const domain = await apiFetch(`/api/domains/${id}`);
     
     // Seitentitel und Überschrift aktualisieren
     document.getElementById('pageTitle').textContent = `Domain ${domain.name}`;
@@ -61,8 +53,7 @@ async function loadDomainDetails() {
       '<p>Keine E-Mail Konten konfiguriert</p>';
 
   } catch (error) {
-    console.error('Error:', error);
-    alert('Fehler beim Laden der Domain-Details');
+    alert('Fehler beim Laden der Domain-Details: ' + error.message);
   }
 }
 

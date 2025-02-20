@@ -1,4 +1,6 @@
-<script>
+<script type="module">
+  import { apiFetch } from '/public/js/utils.js';
+
   // Check for password change success message
   if (window.location.search.includes('passwordChanged=true')) {
     const message = document.getElementById('passwordChangedMessage');
@@ -11,9 +13,7 @@
   // Dashboard-Daten laden
   async function loadDashboardData() {
     try {
-      // todo: get data from specifi api
-      const response = await fetch('/api/dashboard/stats');
-      const data = await response.json();
+      const data = await apiFetch('/api/dashboard/stats');
       
       // Update domain section
       document.getElementById('domainCount').textContent = data.domains.active;
@@ -43,8 +43,23 @@
             <td>${activity.event}</td>
           </tr>
         `).join('');
+
+      // Update system information - adjusted to match new data structure
+      document.getElementById('systemInfo').textContent = data.system.system;
+      document.getElementById('ipAddress').textContent = data.system.ipAddress;
+      document.getElementById('uptime').textContent = data.system.uptime;
+      
+      document.getElementById('cpuUsage').value = data.system.cpuUsage;
+      document.getElementById('cpuPercentage').textContent = data.system.cpuUsage + '%';
+      
+      document.getElementById('ramUsage').value = data.system.memoryUsage;
+      document.getElementById('ramPercentage').textContent = data.system.memoryUsage + '%';
+      
+      document.getElementById('diskUsage').value = data.system.diskUsage;
+      document.getElementById('diskPercentage').textContent = data.system.diskUsage + '%';
+      
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      alert('Fehler beim Laden der Dashboard-Daten: ' + error.message);
     }
   }
 

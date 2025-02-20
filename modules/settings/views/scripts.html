@@ -1,9 +1,10 @@
-<script>
+<script type="module">
+  import { apiFetch } from '/public/js/utils.js';
+
   // Einstellungen laden
   async function loadSettings() {
     try {
-      const response = await fetch('/api/settings');
-      const settings = await response.json();
+      const settings = await apiFetch('/api/settings');
       
       document.getElementById('siteName').value = settings.siteName;
       document.getElementById('theme').value = settings.theme;
@@ -13,7 +14,7 @@
       // Theme anwenden wenn geladen
       applyTheme(settings.theme);
     } catch (error) {
-      console.error('Error loading settings:', error);
+      alert('Fehler beim Laden der Einstellungen: ' + error.message);
     }
   }
 
@@ -35,27 +36,21 @@
     };
 
     try {
-      const response = await fetch('/api/settings', {
+      const response = await apiFetch('/api/settings', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(settings)
+        data: settings
       });
 
-      if (response.ok) {
-        const successMessage = document.getElementById('successMessage');
-        successMessage.style.display = 'block';
-        setTimeout(() => {
-          successMessage.style.display = 'none';
-        }, 3000);
+      const successMessage = document.getElementById('successMessage');
+      successMessage.style.display = 'block';
+      setTimeout(() => {
+        successMessage.style.display = 'none';
+      }, 3000);
 
-        // Theme sofort anwenden
-        applyTheme(settings.theme);
-      }
+      // Theme sofort anwenden
+      applyTheme(settings.theme);
     } catch (error) {
-      console.error('Error:', error);
-      alert('Ein Fehler ist aufgetreten');
+      alert('Fehler beim Speichern der Einstellungen: ' + error.message);
     }
   };
 

@@ -8,10 +8,24 @@ interface FileOptions {
   title?: string;
 }
 
-// Hilfsfunktion für Pfadvalidierung
+// Hilfsfunktion für Pfadvalidierung und -normalisierung
+function normalizeAndValidatePath(path: string, rootPath: string): string {
+  // Entferne führende Slashes und normalisiere Backslashes
+  const normalizedPath = path.replace(/^[\/\\]+/, '').replace(/\//g, '\\');
+  
+  // Wenn es ein Windows-Laufwerkspfad ist, diesen direkt verwenden
+  if (/^[A-Za-z]:\\/.test(normalizedPath)) {
+    return normalizedPath;
+  }
+  
+  // Ansonsten den rootPath als Basis verwenden
+  return rootPath === "/" ? normalizedPath : join(rootPath, normalizedPath);
+}
+
 function validatePath(path: string, rootPath: string): boolean {
   if (rootPath === "/") return true;
-  return path.startsWith(rootPath);
+  const normalizedPath = normalizeAndValidatePath(path, rootPath);
+  return normalizedPath.startsWith(rootPath);
 }
 
 // View Controller
@@ -39,6 +53,7 @@ export const getFilesView = async (c, options: FileOptions) => {
 export const getFiles = async (c, options: FileOptions) => {
   try {
     const { path = "/" } = c.req.query();
+    const normalizedPath = normalizeAndValidatePath(path, options.rootPath);
     
     // Wenn ein Root-Pfad konfiguriert ist und wir im Root sind
     if ((path === "/" || path === options.rootPath) && options.rootPath !== "/") {
@@ -104,18 +119,17 @@ export const getFiles = async (c, options: FileOptions) => {
     }
 
     // Prüfe ob der Pfad innerhalb des erlaubten Bereichs liegt
-    const requestedPath = path === "/" ? options.rootPath : path;
-    if (!validatePath(requestedPath, options.rootPath)) {
+    if (!validatePath(normalizedPath, options.rootPath)) {
       return c.json({ error: "Access denied" }, 403);
     }
 
     // Liste Dateien und Ordner
     const files = [];
     try {
-      const dirEntries = Deno.readDirSync(requestedPath);
+      const dirEntries = Deno.readDirSync(normalizedPath);
       for (const entry of dirEntries) {
         try {
-          const entryPath = join(requestedPath, entry.name);
+          const entryPath = join(normalizedPath, entry.name);
           // Sicherheitscheck für den Pfad
           if (!validatePath(entryPath, options.rootPath)) {
             continue;
@@ -141,7 +155,7 @@ export const getFiles = async (c, options: FileOptions) => {
 
       return c.json(files);
     } catch (err) {
-      logError(`Error accessing directory: ${requestedPath}`, "Files", c, err);
+      logError(`Error accessing directory: ${normalizedPath}`, "Files", c, err);
       return c.json({ error: "Directory not accessible" }, 403);
     }
   } catch (err) {
@@ -224,11 +238,20 @@ export const renameFile = async (c, options: FileOptions) => {
 export const getFileContent = async (c, options: FileOptions) => {
   try {
     const { path } = c.req.query();
-    
     if (!validatePath(path, options.rootPath)) {
       return c.json({ error: "Access denied" }, 403);
     }
 
+    const stat = await Deno.stat(path);
+    
+    // Wenn es ein Download ist (Accept-Header prüfen)
+    if (c.req.header("Accept")?.includes("text/html")) {
+      const filename = path.split(/[\/\\]/).pop();
+      c.header("Content-Disposition", `attachment; filename="${filename}"`);
+      return c.body(await Deno.readFile(path));
+    }
+
+    // Für Text-Vorschau
     const content = await Deno.readTextFile(path);
     return c.text(content);
   } catch (err) {

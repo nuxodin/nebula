@@ -1,56 +1,56 @@
-<script>
-  let logs = [];
+<script type="module">
+import { apiFetch } from '/public/js/utils.js';
 
-  // Logs laden
-  async function loadLogs() {
-    try {
-      const response = await fetch('/api/logs');
-      logs = await response.json();
-      renderLogs(logs);
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Fehler beim Laden der Logs');
-    }
+let logs = [];
+
+// Logs laden
+async function loadLogs() {
+  try {
+    const logs = await apiFetch('/api/logs');
+    renderLogs(logs);
+  } catch (error) {
+    alert('Fehler beim Laden der Logs: ' + error.message);
   }
+}
 
-  // Logs filtern und anzeigen
-  function renderLogs(logsToRender) {
-    const tbody = document.getElementById('logGrid');
-    tbody.innerHTML = logsToRender.map(log => `
-      <tr>
-        <td>${new Date(log.timestamp).toLocaleString()}
-        <td>
-          <span class="status-badge ${log.level === 'error' ? 'status-inactive' : 'status-active'}">
-            ${log.level.toUpperCase()}
-          </span>
-        <td>${log.message}
-        <td>${log.source || '-'}
-        <td>${log.user_login || '-'}
-    `).join('');
-  }
+// Logs filtern und anzeigen
+function renderLogs(logsToRender) {
+  const tbody = document.getElementById('logGrid');
+  tbody.innerHTML = logsToRender.map(log => `
+    <tr>
+      <td>${new Date(log.timestamp).toLocaleString()}
+      <td>
+        <span class="status-badge ${log.level === 'error' ? 'status-inactive' : 'status-active'}">
+          ${log.level.toUpperCase()}
+        </span>
+      <td>${log.message}
+      <td>${log.source || '-'}
+      <td>${log.user_login || '-'}
+  `).join('');
+}
 
-  // Log-Suche
-  document.getElementById('logSearch').addEventListener('input', (e) => {
-    const searchTerm = e.target.value.toLowerCase();
-    const filteredLogs = logs.filter(log => 
-      log.message.toLowerCase().includes(searchTerm) ||
-      (log.source && log.source.toLowerCase().includes(searchTerm)) ||
-      (log.user_login && log.user_login.toLowerCase().includes(searchTerm))
-    );
-    renderLogs(filteredLogs);
-  });
+// Log-Suche
+document.getElementById('logSearch').addEventListener('input', (e) => {
+  const searchTerm = e.target.value.toLowerCase();
+  const filteredLogs = logs.filter(log => 
+    log.message.toLowerCase().includes(searchTerm) ||
+    (log.source && log.source.toLowerCase().includes(searchTerm)) ||
+    (log.user_login && log.user_login.toLowerCase().includes(searchTerm))
+  );
+  renderLogs(filteredLogs);
+});
 
-  // Log Level Filter
-  document.getElementById('logLevel').addEventListener('change', (e) => {
-    const level = e.target.value;
-    const filteredLogs = level === 'all' 
-      ? logs 
-      : logs.filter(log => log.level === level);
-    renderLogs(filteredLogs);
-  });
+// Log Level Filter
+document.getElementById('logLevel').addEventListener('change', (e) => {
+  const level = e.target.value;
+  const filteredLogs = level === 'all' 
+    ? logs 
+    : logs.filter(log => log.level === level);
+  renderLogs(filteredLogs);
+});
 
-  // Initial load und Auto-Refresh
-  loadLogs();
-  // Aktualisiere alle 10 Sekunden
-  setInterval(loadLogs, 10000);
+// Initial load und Auto-Refresh
+loadLogs();
+// Aktualisiere alle 10 Sekunden
+setInterval(loadLogs, 10000);
 </script>

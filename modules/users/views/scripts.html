@@ -1,16 +1,16 @@
-<script>
+<script type="module">
+  import { apiFetch } from '/public/js/utils.js';
+  
   let users = [];
   let currentUserToDelete = null;
   
   // Benutzer laden
   async function loadUsers() {
     try {
-      const response = await fetch('/api/clients');
-      users = await response.json();
+      const users = await apiFetch('/api/clients');
       renderUsers(users);
     } catch (error) {
-      console.error('Error:', error);
-      alert('Fehler beim Laden der Benutzer');
+      alert('Fehler beim Laden der Benutzer: ' + error.message);
     }
   }
 
@@ -55,20 +55,13 @@
     if (!currentUserToDelete) return;
 
     try {
-      const response = await fetch(`/api/clients/${currentUserToDelete}`, {
+      await apiFetch(`/api/clients/${currentUserToDelete}`, {
         method: 'DELETE'
       });
-
-      if (response.ok) {
-        loadUsers();
-        hideDeleteUserModal();
-      } else {
-        const error = await response.json();
-        alert(error.message || 'Fehler beim Löschen des Benutzers');
-      }
+      loadUsers();
+      hideDeleteUserModal();
     } catch (error) {
-      console.error('Error:', error);
-      alert('Fehler beim Löschen des Benutzers');
+      alert('Fehler beim Löschen des Benutzers: ' + error.message);
     }
   }
 
@@ -93,25 +86,14 @@
     };
     
     try {
-      const response = await fetch('/api/clients', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
+      await apiFetch('/api/clients', {
+        data
       });
-      
-      if (response.ok) {
-        hideAddUserModal();
-        loadUsers();
-        e.target.reset();
-      } else {
-        const error = await response.json();
-        alert(error.message || 'Fehler beim Erstellen des Benutzers');
-      }
+      hideAddUserModal();
+      loadUsers();
+      e.target.reset();
     } catch (error) {
-      console.error('Error:', error);
-      alert('Fehler beim Erstellen des Benutzers');
+      alert('Fehler beim Erstellen des Benutzers: ' + error.message);
     }
   };
 
