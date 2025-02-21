@@ -1,9 +1,10 @@
 import { Hono } from "hono";
-import { getAllDomains, createDomain, deleteDomain, getDomainById, getDomainDetailView } from "./controller.ts";
-import { createFileRoutes } from "../files/routes.ts";
 import { config } from "../../utils/config.ts";
 import { renderTemplate } from "../../utils/template.ts";
+import { objToRoutes } from "../../utils/routes.ts";
 import db from "../../utils/database.ts";
+import { api, getDomainDetailView } from "./controller.ts";
+import { createFileRoutes } from "../files/routes.ts";
 
 // Domain Files Handler erstellen
 function createDomainFilesHandler(domain: { name: string }) {
@@ -17,11 +18,7 @@ function createDomainFilesHandler(domain: { name: string }) {
 // API Routes  
 const apiRoutes = new Hono();
 
-// Standard Domain-API-Routen
-apiRoutes.get("/", getAllDomains);
-apiRoutes.post("/", createDomain);
-apiRoutes.delete("/:id", deleteDomain);
-apiRoutes.get("/:id", getDomainById);
+objToRoutes(apiRoutes, api);
 
 // Domain-Files API-Route
 apiRoutes.all("/:id/files/*", async (c) => {

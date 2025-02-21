@@ -90,13 +90,28 @@ async function initializeDatabase() {
         dom_id INTEGER,
         mail_name TEXT,
         password TEXT,
+        status TEXT DEFAULT 'aktiv',
+        quota INTEGER,
+        autoresponder_enabled INTEGER DEFAULT 0,
+        autoresponder_config TEXT,
+        forwarders TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (dom_id) REFERENCES domains(id)
       );
     `);
 
-    db.query(`DROP TABLE IF EXISTS logs`);
     db.query(`
-      CREATE TABLE logs (
+      CREATE TABLE IF NOT EXISTS mail_aliases (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        mail_id INTEGER,
+        alias TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (mail_id) REFERENCES mail(id) ON DELETE CASCADE
+      );
+    `);
+
+    db.query(`
+      CREATE TABLE IF NOT EXISTS logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
         level TEXT NOT NULL,
@@ -194,6 +209,7 @@ export async function install() {
   !existsSync(dataPath) && ensureDirSync(dataPath);
   !existsSync(configPath) && ensureDirSync(configPath);
   !existsSync(dataFolder) && ensureDirSync(dataFolder);
+
 
   if (!existsSync(configFile)) {
     await Deno.writeTextFile(configFile, JSON.stringify(defaultConfig, null, 2));

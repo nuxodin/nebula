@@ -5,7 +5,6 @@ import { createDomain } from "./createDomain.ts";
 import { config } from "../../utils/config.ts";
 import { runCommand } from "../../utils/command.ts";
 import { renderTemplate } from "../../utils/template.ts";
-import { ensureDir } from "https://deno.land/std@0.208.0/fs/ensure_dir.ts";
 
 // View Controllers
 export const getDomainView = async (c) => {
@@ -20,6 +19,7 @@ export const getDomainView = async (c) => {
 };
 
 export const getDomainFilesView = async (c) => {
+  console.error("is this used?");
   try {
     const { id } = c.req.param();
     const domain = db.queryEntries("SELECT name FROM domains WHERE id = ?", [id])[0];
@@ -35,10 +35,11 @@ export const getDomainFilesView = async (c) => {
   }
 };
 
-// Nur noch wichtige Ereignisse loggen
-export const getAllDomains = (c) => {
-  try {
-    const domains = db.queryEntries(`
+
+
+export const api = {
+  get:function() {
+    return db.queryEntries(`
       SELECT d.*, 
              c.login as owner_name,
              h.ip_address,
@@ -48,105 +49,97 @@ export const getAllDomains = (c) => {
       LEFT JOIN clients c ON d.owner_id = c.id
       LEFT JOIN hosting h ON d.id = h.dom_id
     `);
-    return c.json(domains);
-  } catch (err) {
-    logError("Fehler beim Abrufen der Domains", "Domains", c, err);
-    return c.text("Internal Server Error", 500);
+  },
+  post: async function(c) {
+    const data = await c.req.json();
+    // const session = c.get('session');
+    // const userId = await session.get('userId');
+    const userId = await c.get('session').get('userId');
+    return await createDomain({
+      name: data.name,
+      owner_id: userId,
+      php_version: String(data.php_version || config.default_php_version),
+      document_root: String(data.document_root || config.default_document_root),
+      webspace_limit: Number(data.webspace_limit || config.default_webspace_limit),
+      traffic_limit: Number(data.traffic_limit || config.default_traffic_limit)
+    });
+  },
+  ':id': {
+    get: async function(c) {
+      const { id } = c.req.param();
+    
+      const domain = db.queryEntries(`
+        SELECT d.*, 
+               c.login as owner_name,
+               h.ip_address,
+               h.htype,
+               h.ftp_username,
+               h.php_memory_limit
+        FROM domains d
+        LEFT JOIN clients c ON d.owner_id = c.id
+        LEFT JOIN hosting h ON d.id = h.dom_id
+        WHERE d.id = ?
+      `, [id])[0];
+  
+      if (!domain) {
+        return c.json({ error: "Domain not found" }, 404);
+      }
+  
+      // Datenbanken separat abrufen
+      domain.databases = db.queryEntries(`
+        SELECT name, type
+        FROM databases
+        WHERE dom_id = ?
+      `, [id]);
+  
+      // E-Mail-Konten separat abrufen
+      domain.mail_accounts = db.queryEntries(`
+        SELECT id, mail_name
+        FROM mail
+        WHERE dom_id = ?
+      `, [id]);
+  
+      return domain;
+    },
+    delete: async function(c) {
+      const { id } = c.req.param();
+      const domain = db.queryEntries("SELECT name FROM domains WHERE id = ?", [id])[0];
+      
+      if (!domain) {
+        return c.text("Domain nicht gefunden", 404);
+      }
+  
+      // Lösche Domain-Verzeichnis
+      const domainPath = `${config.vhosts_root}/${domain.name}`;
+      try {
+        await Deno.remove(domainPath, { recursive: true });
+      } catch (err) {
+        logError(`Fehler beim Löschen des Domain-Verzeichnisses ${domainPath}`, "Domains", c, err);
+        // Wir setzen fort, auch wenn das Verzeichnis nicht gelöscht werden konnte
+      }
+      
+      // Lösche alle abhängigen Datensätze
+      db.query("DELETE FROM dns_records WHERE domain_id = ?", [id]);
+      db.query("DELETE FROM hosting WHERE dom_id = ?", [id]);
+      db.query("DELETE FROM databases WHERE dom_id = ?", [id]);
+      db.query("DELETE FROM mail WHERE dom_id = ?", [id]);
+      db.query("DELETE FROM domains WHERE id = ?", [id]);
+      
+      logInfo(`Domain ${domain?.name} wurde gelöscht`, "Domains", c);
+      return c.json({ message: "Domain deleted" });
+    }      
   }
+
+
 };
 
-// todo: da stimmt was nicht, createDomain wurde ja importiert, welche ist die richtige?
-export const createDomain = async (c) => {
-  try {
-    const { name, owner_id } = await c.req.json();
-    logInfo(`Domain ${name} wurde erstellt`, "Domains", c);
-    const newDomain = db.queryEntries("SELECT * FROM domains WHERE id = ?", [domainId])[0];
-    return c.json(newDomain);
-  } catch (err) {
-    logError("Fehler beim Erstellen der Domain", "Domains", c, err);
-    return c.text("Internal Server Error", 500);
-  }
-};
 
-export const deleteDomain = async (c) => {
-  try {
-    const { id } = c.req.param();
-    const domain = db.queryEntries("SELECT name FROM domains WHERE id = ?", [id])[0];
-    
-    if (!domain) {
-      return c.text("Domain nicht gefunden", 404);
-    }
-
-    // Lösche Domain-Verzeichnis
-    const domainPath = `${config.vhosts_root}/${domain.name}`;
-    try {
-      await Deno.remove(domainPath, { recursive: true });
-    } catch (err) {
-      logError(`Fehler beim Löschen des Domain-Verzeichnisses ${domainPath}`, "Domains", c, err);
-      // Wir setzen fort, auch wenn das Verzeichnis nicht gelöscht werden konnte
-    }
-    
-    // Lösche alle abhängigen Datensätze
-    db.query("DELETE FROM dns_records WHERE domain_id = ?", [id]);
-    db.query("DELETE FROM hosting WHERE dom_id = ?", [id]);
-    db.query("DELETE FROM databases WHERE dom_id = ?", [id]);
-    db.query("DELETE FROM mail WHERE dom_id = ?", [id]);
-    db.query("DELETE FROM domains WHERE id = ?", [id]);
-    
-    logInfo(`Domain ${domain?.name} wurde gelöscht`, "Domains", c);
-    return c.json({ message: "Domain deleted" });
-  } catch (err) {
-    logError("Fehler beim Löschen der Domain", "Domains", c, err);
-    return c.text("Internal Server Error", 500);
-  }
-};
-
-export const getDomainById = async (c) => {
-  try {
-    const { id } = c.req.param();
-    
-    const domain = db.queryEntries(`
-      SELECT d.*, 
-             c.login as owner_name,
-             h.ip_address,
-             h.htype,
-             h.ftp_username,
-             h.php_memory_limit
-      FROM domains d
-      LEFT JOIN clients c ON d.owner_id = c.id
-      LEFT JOIN hosting h ON d.id = h.dom_id
-      WHERE d.id = ?
-    `, [id])[0];
-
-    if (!domain) {
-      return c.json({ error: "Domain not found" }, 404);
-    }
-
-    // Datenbanken separat abrufen
-    domain.databases = db.queryEntries(`
-      SELECT name, type
-      FROM databases
-      WHERE dom_id = ?
-    `, [id]);
-
-    // E-Mail-Konten separat abrufen
-    domain.mail_accounts = db.queryEntries(`
-      SELECT mail_name
-      FROM mail
-      WHERE dom_id = ?
-    `, [id]);
-
-    return c.json(domain);
-  } catch (err) {
-    logError("Fehler beim Abrufen der Domain-Details", "Domains", c, err);
-    return c.json({ error: "Internal Server Error" }, 500);
-  }
-};
 
 export const getDomainDetailView = async (c) => {
   try {
     const { id } = c.req.param();
     
+    // todo: brauchen wir das alles?
     const domain = db.queryEntries(`
       SELECT d.*, 
              c.login as owner_name,
@@ -164,8 +157,8 @@ export const getDomainDetailView = async (c) => {
       return c.text("Domain not found", 404);
     }
 
-    const content = await Deno.readTextFile("./modules/domains/views/detail.html");
-    const scripts = await Deno.readTextFile("./modules/domains/views/detail-scripts.html");
+    const content = await Deno.readTextFile("./modules/domains/views/detail/content.html");
+    const scripts = await Deno.readTextFile("./modules/domains/views/detail/scripts.html");
     return c.html(await renderTemplate(`Domain ${domain.name}`, content, "", scripts));
   } catch (err) {
     logError("Fehler beim Abrufen der Domain-Details", "Domains", c, err);
@@ -174,6 +167,7 @@ export const getDomainDetailView = async (c) => {
 };
 
 // Get domain list with statistics
+/* todo: add things to api?
 export async function getDomains(c: Context) {
   try {
     const domains = db.queryEntries(`
@@ -203,35 +197,14 @@ export async function getDomains(c: Context) {
     return c.json({ error: "Internal server error" }, 500);
   }
 }
+*/
 
-// Create new domain
-export async function postDomain(c: Context) {
-  try {
-    const data = await c.req.parseBody();
-    const session = c.get('session');
-    const userId = await session.get('userId');
-
-    const result = await createDomain({
-      name: String(data.name),
-      owner_id: userId,
-      php_version: String(data.php_version || config.default_php_version),
-      document_root: String(data.document_root || config.default_document_root),
-      webspace_limit: Number(data.webspace_limit || config.default_webspace_limit),
-      traffic_limit: Number(data.traffic_limit || config.default_traffic_limit)
-    });
-
-    return c.json(result);
-  } catch (err) {
-    logError("Error creating domain", "Domains", c, err);
-    return c.json({ error: err.message }, 500);
-  }
-}
 
 // Update domain settings
 export async function updateDomain(c: Context) {
   try {
     const domainId = c.req.param('id');
-    const data = await c.req.parseBody();
+    const data = await c.req.json();
     
     // Update domain settings
     db.query(`

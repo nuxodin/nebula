@@ -12,43 +12,23 @@
         <th>Status
         <th>Besitzer
         <th>Erstellt am
-        <th>Aktionen
+        <th width="33">Aktionen
       </tr>
     <tbody id="domainGrid">
   </table>
 </u2-table>
 
 <!-- Modal für neue Domain -->
-<dialog id="addDomainModal" u2-navigable>
+<dialog id="addDomainModal" u2-navigable class="u2x-modal">
   <h2>Neue Domain hinzufügen</h2>
   <form id="addDomainForm">
-    <div class="form-group">
-      <label>
-        Domain Name
-        <input name="name" required placeholder="z.B. example.com">
-      </label>
-    </div>
-    <div class="form-group">
-      <label>
-        Besitzer
-        <select name="owner_id" required id="ownerSelect">
-          <option value="">Bitte wählen...</option>
-        </select>
-      </label>
-    </div>
-    <div class="form-actions">
+    <label>
+      Domain Name
+      <input name="name" required placeholder="z.B. example.com" style="width: 100%">
+    </label>
+    <div class="-buttons">
       <button type="submit" class="btn">Domain hinzufügen</button>
       <button type="button" onclick="history.back()">Abbrechen</button>
     </div>
   </form>
-</dialog>
-
-<dialog id="deleteDomainModal">
-  <h2>Domain löschen</h2>
-  <p>Möchten Sie die Domain <strong id="deleteDomainName"></strong> wirklich löschen?</p>
-  <p class="warning">Achtung: Dies wird auch alle zugehörigen Hosting-Einstellungen, Datenbanken und E-Mail-Konten löschen!</p>
-  <div class="form-actions">
-    <button class="btn btn-danger" onclick="confirmDeleteDomain()">Löschen</button>
-    <button class="btn btn-secondary" onclick="hideDeleteDomainModal()">Abbrechen</button>
-  </div>
 </dialog>

@@ -1,4 +1,4 @@
-import { writeFile, runCommand } from "../../utils/command.ts";
+import { runCommand } from "../../utils/command.ts";
 
 export async function createBindZone(domainName: string, dnsRecords: any[], defaultIp: string) {
     const bindZoneFile = `/etc/bind/zones/db.${domainName}`;
@@ -33,7 +33,8 @@ ns1     IN      A       ${defaultIp}
 
 ${records}
     `;
-    await writeFile(bindZoneFile, bindZone);
+    // Speichere Bind-Zone-Datei
+    await Deno.writeTextFile(bindZoneFile, bindZone);
 
     const namedConfLocal = `/etc/bind/named.conf.local`;
     const zoneEntry = `

@@ -16,11 +16,12 @@ async function loadDomainDetails() {
     document.getElementById('pageTitle').textContent = `Domain ${domain.name}`;
     
     // Basis Informationen setzen
-    document.getElementById('domainName').textContent = domain.name;
+    document.getElementById('domainName').innerHTML = `
+      <a href="https://${domain.name}" target="_blank">${domain.name}</a>`;
     document.getElementById('domainStatus').innerHTML = `
-      <span class="status-badge ${domain.status.toLowerCase() === 'aktiv' ? 'status-active' : 'status-inactive'}">
+      <small class="u2-badge ${domain.status.toLowerCase() === 'aktiv' ? 'status-active' : 'status-inactive'}">
         ${domain.status}
-      </span>`;
+      </small>`;
     document.getElementById('domainOwner').textContent = domain.owner_name;
     document.getElementById('domainCreated').textContent = new Date(domain.created_at).toLocaleString();
     
@@ -47,7 +48,7 @@ async function loadDomainDetails() {
     document.getElementById('mailsList').innerHTML = Array.isArray(domain.mail_accounts) && domain.mail_accounts.length ?
       domain.mail_accounts.map(mail => `
         <tr>
-          <td>${mail.mail_name}</td>
+          <td><a href="/mail/${mail.id}">${mail.mail_name}</a></td>
         </tr>
       `).join('') :
       '<p>Keine E-Mail Konten konfiguriert</p>';

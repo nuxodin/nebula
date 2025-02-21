@@ -8,9 +8,10 @@
       /* Base Styles */
       html {
         --sidebar-width: 14rem;
-        --hsl-h: 251;
+        --hsl-h: 200;
         --hsl-s: 50%;
         --hsl-l: 50%;
+        font-size: calc(12px + .2vw);
       }
       body { 
         background: #e0e7f5;
@@ -93,16 +94,19 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+        > h1 {
+          margin:0;
+        }
       }
       .card {
         background: white;
-        border-radius: 8px;
+        border-radius: .3rem;
         padding: 1.5rem;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         margin-bottom: 1rem;
       }
       .u2-grid {
-        --u2-Items-width: 18rem;
+        --u2-Items-width: 25em;
       }
 
       .btn-icon {
@@ -115,13 +119,6 @@
       }
       .btn-danger:hover {
         background: #b91c1c;
-      }
-      .status-badge {
-        display: inline-block;
-        padding: 0.25rem 0.75rem;
-        border-radius: 9999px;
-        font-size: 0.75rem;
-        font-weight: 500;
       }
       .status-active {
         background: #ecfdf5;
@@ -170,6 +167,9 @@
           </a>
           <a href="/files" class="nav-item">
             <i class="mdi mdi-file"></i> Dateien
+          </a>
+          <a href="/mail" class="nav-item">
+            <i class="mdi mdi-email"></i> E-Mail
           </a>
           <a href="/logs" class="nav-item">
             <i class="mdi mdi-text-box-search"></i> Logs

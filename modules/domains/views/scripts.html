@@ -17,70 +17,45 @@
     }
   }
 
-  // Benutzer für Select laden
-  async function loadUsers() {
-    try {
-      const users = await apiFetch('/api/clients');
-      const select = document.getElementById('ownerSelect');
-      select.innerHTML = '<option value="">Bitte wählen...</option>' +
-        users.map(user => `
-          <option value="${user.id}">${user.login} (${user.email})</option>
-        `).join('');
-    } catch (error) {
-      alert('Fehler beim Laden der Benutzer');
-    }
-  }
+  const tbody = document.getElementById('domainGrid');
 
   // Domains filtern und anzeigen
   function renderDomains(domainsToRender) {
-    const tbody = document.getElementById('domainGrid');
     tbody.innerHTML = domainsToRender.map(domain => `
-      <tr u2-href="/domains/${domain.id}">
+      <tr u2-href="/domains/${domain.id}" item-id="${domain.id}">
         <td>
           <a href="/domains/${domain.id}">${domain.name}</a>
         <td>
-          <span class="status-badge ${domain.status.toLowerCase() === 'aktiv' ? 'status-active' : 'status-inactive'}">
+          <small class="u2-badge ${domain.status.toLowerCase() === 'aktiv' ? 'status-active' : 'status-inactive'}">
             ${domain.status}
-          </span>
+          </small>
         <td>${domain.owner_name || domain.owner_id}
         <td>
           <u2-time type=relative datetime="${domain.created_at}" minute>
             ${new Date(domain.created_at).toLocaleString()}
           </u2-time>
-          
         <td>
-          <button class="u2-unstyle" onclick="showDeleteDomainModal(${domain.id}, '${domain.name}')">
+          <button class="u2-unstyle -delete" u2-confirm="Domain löschen? Inklusive zugehörige Datenbanken und E-Mail-Konten" xonclick="showDeleteDomainModal(${domain.id}, '${domain.name}')">
             <i class="mdi mdi-delete"></i>
           </button>
     `).join('');
   }
 
-  function hideAddDomainModal() {
-    document.getElementById('addDomainModal').classList.remove('active');
-  }
+  tbody.addEventListener('click', async (e) => {
+    if (e.target.classList.contains('-delete')) {
+      const id = e.target.closest('tr').getAttribute('item-id');
+      e.preventDefault();
+      confirmDeleteDomain(id);
+    }
+  });
 
-  function showDeleteDomainModal(id, name) {
-    currentDomainToDelete = id;
-    document.getElementById('deleteDomainName').textContent = name;
-    document.getElementById('deleteDomainModal').classList.add('active');
-  }
-
-  function hideDeleteDomainModal() {
-    currentDomainToDelete = null;
-    document.getElementById('deleteDomainModal').classList.remove('active');
-  }
-
-  async function confirmDeleteDomain() {
-    if (!currentDomainToDelete) return;
-
+  async function confirmDeleteDomain(id) {
     try {
-      const response = await apiFetch(`/api/domains/${currentDomainToDelete}`, {method: 'DELETE'});
+      const response = await apiFetch(`/api/domains/${id}`, {method: 'DELETE'});
       loadDomains();
-      hideDeleteDomainModal();
     } catch (error) {
       alert(error.message || 'Fehler beim Löschen der Domain');
     }
-
   }
 
   // Form Handler
@@ -88,11 +63,8 @@
     e.preventDefault();
     const formData = new FormData(e.target);
     const data = {
-      name: formData.get('name'),
-      owner_id: Number(formData.get('owner_id'))
+      name: formData.get('name')
     };
-    
-
     try {
       const response = await apiFetch('/api/domains', {data});
       hideAddDomainModal();
@@ -101,11 +73,8 @@
     } catch (error) {
       alert(error.message);
     }
-
 };
 
-// Initial load
 loadDomains();
-loadUsers();
 
 </script>

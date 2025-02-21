@@ -1,4 +1,5 @@
 import { install } from "./install/install.ts"; // first
+//import './install/install-stacks.ts'; // second
 import { Hono } from "hono";
 import { serveStatic } from "https://deno.land/x/hono@v3.11.7/middleware.ts";
 import { sessionMiddleware } from "./middleware/session.ts";
@@ -7,9 +8,9 @@ import { apiRoutes as userApiRoutes, viewRoutes as userViewRoutes } from "./modu
 import { apiRoutes as logsApiRoutes, viewRoutes as logsViewRoutes } from "./modules/logs/routes.ts";
 import { apiRoutes as dashboardApiRoutes, viewRoutes as dashboardViewRoutes } from "./modules/dashboard/routes.ts";
 import { apiRoutes as domainsApiRoutes, viewRoutes as domainsViewRoutes } from "./modules/domains/routes.ts";
+import { apiRoutes as mailApiRoutes, viewRoutes as mailViewRoutes } from "./modules/mail/routes.ts";
 import clientRoutes from "./modules/clients/routes.ts";
 import databaseRoutes from "./modules/databases/routes.ts";
-import mailRoutes from "./modules/mail/routes.ts";
 import filesRoutes, { createFileRoutes } from "./modules/files/routes.ts";
 import { getLogin, postLogin, getLogout, getProfile, postPasswordChange } from "./modules/login/controller.ts";
 import { logError } from "./utils/logger.ts";
@@ -38,7 +39,7 @@ app.route("/api/logs", logsApiRoutes);
 app.route("/api/domains", domainsApiRoutes);
 app.route("/api/clients", clientRoutes);
 app.route("/api/databases", databaseRoutes);
-app.route("/api/mail", mailRoutes);
+app.route("/api/mail", mailApiRoutes);
 app.route("/api/files", createFileRoutes({ rootPath: "/" }));
 
 // Dann erst die View Routes
@@ -46,6 +47,7 @@ app.route("/", dashboardViewRoutes);
 app.route("/users", userViewRoutes);
 app.route("/logs", logsViewRoutes);
 app.route("/domains", domainsViewRoutes);
+app.route("/mail", mailViewRoutes);
 app.route("/files", filesRoutes); // Add global file explorer route
 
 // Profile Routes
@@ -69,7 +71,7 @@ console.log(`Nebula läuft auf http://localhost:${port}`);
 run in docker:
 cd nebula
 docker run -it --rm `
->>   -v ${PWD}:/app `
->>   -w /app `
->>   -p 3000:3000  -p 81:80 `
->>   denoland/deno task dev
+   -v ${PWD}:/app `
+   -w /app `
+   -p 3000:3000  -p 81:80 `
+   denoland/deno task dev

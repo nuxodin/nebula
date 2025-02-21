@@ -1,0 +1,118 @@
+<script type="module">
+import { apiFetch } from '/public/js/utils.js';
+
+let mailAccounts = [];
+let currentMailToDelete = null;
+
+// E-Mail Konten laden
+async function loadMailAccounts() {
+  try {
+    const accounts = await apiFetch('/api/mail');
+    renderMailAccounts(accounts);
+  } catch (error) {
+    alert('Fehler beim Laden der E-Mail Konten: ' + error.message);
+  }
+}
+
+// E-Mail Konten anzeigen
+function renderMailAccounts(accountsToRender) {
+  const tbody = document.getElementById('mailGrid');
+  tbody.innerHTML = accountsToRender.map(account => `
+    <tr u2-href="/mail/${account.id}" item-id="${account.id}">
+      <td>
+        <a href="/mail/${account.id}">${account.mail_name}</a>
+      <td>
+        <small class="u2-badge ${account.status === 'aktiv' ? 'status-active' : 'status-inactive'}">
+          ${account.status}
+        </small>
+      <td>${account.domain_name}
+      <td>
+        <button class="u2-unstyle -delete" u2-confirm="E-Mail Konto ${account.mail_name} löschen?">
+          <i class="mdi mdi-delete"></i>
+        </button>
+  `).join('');
+}
+
+// Event-Listener für Löschen-Buttons
+document.getElementById('mailGrid').addEventListener('click', async (e) => {
+  if (e.target.classList.contains('-delete')) {
+    const id = e.target.closest('tr').getAttribute('item-id');
+    e.preventDefault();
+    await confirmDeleteMail(id);
+  }
+});
+
+async function confirmDeleteMail(id) {
+  try {
+    await apiFetch(`/api/mail/${id}`, {method: 'DELETE'});
+    loadMailAccounts();
+  } catch (error) {
+    alert(error.message || 'Fehler beim Löschen des E-Mail Kontos');
+  }
+}
+
+// Domains für Select-Box laden
+async function loadDomains() {
+  try {
+    const domains = await apiFetch('/api/domains');
+    const select = document.getElementById('domainSelect');
+    select.innerHTML = domains
+      .filter(domain => domain.status === 'aktiv')
+      .map(domain => `<option value="${domain.id}">${domain.name}</option>`)
+      .join('');
+  } catch (error) {
+    alert('Fehler beim Laden der Domains: ' + error.message);
+  }
+}
+
+// Modal-Funktionen
+window.showCreateMailModal = function() {
+  loadDomains();
+  document.getElementById('createMailModal').showModal();
+}
+
+window.closeCreateMailModal = function() {
+  document.getElementById('createMailModal').close();
+}
+
+window.showDeleteMailModal = function(mailName, id) {
+  currentMailToDelete = id;
+  document.getElementById('mailToDelete').textContent = mailName;
+  document.getElementById('deleteMailModal').showModal();
+}
+
+window.closeDeleteMailModal = function() {
+  document.getElementById('deleteMailModal').close();
+  currentMailToDelete = null;
+}
+
+// E-Mail Konto erstellen
+window.createMailAccount = async function() {
+  const domainId = document.getElementById('domainSelect').value;
+  const localPart = document.getElementById('localPart').value;
+  const password = document.getElementById('mailPassword').value;
+
+  if (!domainId || !localPart || !password) {
+    alert('Bitte füllen Sie alle Felder aus.');
+    return;
+  }
+
+  try {
+    await apiFetch('/api/mail', {
+      method: 'POST',
+      body: JSON.stringify({
+        domain_id: domainId,
+        local_part: localPart,
+        password: password
+      })
+    });
+
+    closeCreateMailModal();
+    loadMailAccounts();
+  } catch (error) {
+    alert('Fehler beim Erstellen des E-Mail Kontos: ' + error.message);
+  }
+}
+
+// Initial laden
+loadMailAccounts();</script>

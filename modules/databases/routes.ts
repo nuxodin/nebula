@@ -3,7 +3,7 @@ import { createDatabase, deleteDatabase, getDatabaseStats, changePassword } from
 
 const databaseRoutes = new Hono();
 
-databaseRoutes.post("/", async (c) => {
+databaseRoutes.post("/", async (c) => {  
   const body = await c.req.json();
   const result = await createDatabase(body);
   return c.json(result);

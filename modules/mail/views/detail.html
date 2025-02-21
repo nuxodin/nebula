@@ -1,0 +1,136 @@
+<div class="header">
+  <h1 id="pageTitle">E-Mail Konto</h1>
+  <div class="u2-toolbar">
+    <button class="u2-unstyle -delete btn-danger" u2-confirm="E-Mail Konto wirklich löschen?">
+      <i class="mdi mdi-delete"></i> Löschen
+    </button>
+  </div>
+</div>
+
+<div class="u2-grid">
+  <div class="card">
+    <h2>Basis Informationen</h2>
+    <table>
+      <tr>
+        <td>E-Mail Adresse
+        <td id="mailAddress">
+      <tr>
+        <td>Status
+        <td id="mailStatus">
+      <tr>
+        <td>Domain
+        <td id="mailDomain">
+      <tr>
+        <td>Erstellt am
+        <td id="mailCreated">
+      <tr>
+        <td>Speicherplatz
+        <td>
+          <span id="diskUsage">...</span>
+          <div style="margin-top: 0.5rem;">
+            <progress id="diskUsageBar" value="0" max="100" style="width:100%"></progress>
+          </div>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Passwort ändern</h2>
+    <form id="settingsForm">
+      <div>
+        <label>
+          Neues Passwort
+          <input type="password" id="newPassword" name="newPassword" required minlength="8" autocomplete="new-password">
+        </label>
+      </div>
+      <div>
+        <label>
+          Passwort wiederholen
+          <input type="password" id="confirmPassword" name="confirmPassword" required minlength="8" autocomplete="new-password">
+        </label>
+      </div>
+      <div class="u2-dialog-buttons">
+        <button type="submit" class="btn">Speichern</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>E-Mail Aliase</h2>
+    <form id="aliasForm">
+      <div>
+        <label>
+          Alias hinzufügen
+          <div class="u2-flex" style="gap:0.5rem">
+            <input type="text" id="aliasInput" placeholder="alias">
+            <button type="submit" class="btn">Hinzufügen</button>
+          </div>
+        </label>
+      </div>
+    </form>
+    <table style="margin-top:1rem">
+      <thead>
+        <tr>
+          <th>Alias
+          <th>Aktionen
+      <tbody id="aliasesList">
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Automatische Antwort</h2>
+    <form id="autoresponderForm">
+      <div>
+        <label>
+          <input type="checkbox" id="autoresponderEnabled">
+          Automatische Antwort aktivieren
+        </label>
+      </div>
+      <div id="autoresponderSettings" style="display: none;">
+        <div>
+          <label>
+            Betreff
+            <input type="text" id="autoresponderSubject">
+          </label>
+        </div>
+        <div>
+          <label>
+            Nachricht
+            <textarea id="autoresponderMessage" rows="4"></textarea>
+          </label>
+        </div>
+        <div class="u2-grid-2">
+          <div>
+            <label>
+              Start-Datum
+              <input type="date" id="autoresponderStartDate">
+            </label>
+          </div>
+          <div>
+            <label>
+              End-Datum
+              <input type="date" id="autoresponderEndDate">
+            </label>
+          </div>
+        </div>
+        <div class="u2-dialog-buttons">
+          <button type="submit" class="btn">Speichern</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Weiterleitungen</h2>
+    <form id="forwardersForm">
+      <div>
+        <label>
+          E-Mail Adressen (eine pro Zeile)
+          <textarea id="forwarders" rows="4"></textarea>
+        </label>
+      </div>
+      <div class="u2-dialog-buttons">
+        <button type="submit" class="btn">Speichern</button>
+      </div>
+    </form>
+  </div>
+</div>

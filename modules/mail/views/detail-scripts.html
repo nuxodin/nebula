@@ -1,0 +1,198 @@
+<script type="module">
+import { apiFetch } from '/public/js/utils.js';
+
+let currentAccount = null;
+
+// Mail-Details laden
+async function loadMailDetails() {
+  const id = window.location.pathname.split('/')[2];
+  
+  try {
+    const account = await apiFetch(`/api/mail/${id}`);
+    currentAccount = account;
+    
+    // Seitentitel und Überschrift aktualisieren
+    document.getElementById('pageTitle').textContent = `E-Mail Konto ${account.mail_name}`;
+    
+    // Basis Informationen setzen
+    document.getElementById('mailAddress').textContent = account.mail_name;
+    document.getElementById('mailStatus').innerHTML = `
+      <small class="u2-badge ${account.status === 'aktiv' ? 'status-active' : 'status-inactive'}">
+        ${account.status}
+      </small>`;
+    document.getElementById('mailDomain').textContent = account.domain_name;
+    document.getElementById('mailCreated').textContent = new Date(account.created_at).toLocaleString();
+
+    // Speicherplatz-Nutzung
+    const diskInfo = await apiFetch(`/api/mail/${id}/disk`);
+    document.getElementById('diskUsage').textContent = `${diskInfo.used} MB von ${diskInfo.total} MB`;
+    const usagePercent = (diskInfo.used / diskInfo.total) * 100;
+    document.getElementById('diskUsageBar').value = usagePercent;
+    
+    // Aliase laden
+    const aliasesList = document.getElementById('aliasesList');
+    aliasesList.innerHTML = account.aliases?.map(alias => `
+      <tr>
+        <td>${alias}
+        <td>
+          <button class="u2-unstyle" onclick="deleteAlias('${alias}')" u2-confirm="Alias ${alias} löschen?">
+            <i class="mdi mdi-delete"></i>
+          </button>
+    `).join('') || '';
+
+    // Autoresponder Einstellungen
+    document.getElementById('autoresponderEnabled').checked = account.autoresponder_enabled;
+    document.getElementById('autoresponderSettings').style.display = 
+      account.autoresponder_enabled ? 'block' : 'none';
+    
+    if (account.autoresponder_config) {
+      const config = JSON.parse(account.autoresponder_config);
+      document.getElementById('autoresponderSubject').value = config.subject || '';
+      document.getElementById('autoresponderMessage').value = config.message || '';
+      document.getElementById('autoresponderStartDate').value = config.startDate?.split('T')[0] || '';
+      document.getElementById('autoresponderEndDate').value = config.endDate?.split('T')[0] || '';
+    }
+
+    // Weiterleitungen
+    if (account.forwarders) {
+      document.getElementById('forwarders').value = JSON.parse(account.forwarders).join('\n');
+    }
+  } catch (error) {
+    alert('Fehler beim Laden der Mail-Details: ' + error.message);
+  }
+}
+
+// Passwort ändern
+document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const password = document.getElementById('newPassword').value;
+  const confirmPassword = document.getElementById('confirmPassword').value;
+
+  if (!password) {
+    alert('Bitte geben Sie ein neues Passwort ein.');
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    alert('Die Passwörter stimmen nicht überein.');
+    return;
+  }
+
+  try {
+    await apiFetch(`/api/mail/${currentAccount.id}/password`, {
+      method: 'POST',
+      body: JSON.stringify({ password })
+    });
+
+    alert('Passwort wurde geändert');
+    document.getElementById('newPassword').value = '';
+    document.getElementById('confirmPassword').value = '';
+  } catch (error) {
+    alert('Fehler beim Ändern des Passworts: ' + error.message);
+  }
+});
+
+// Alias hinzufügen
+document.getElementById('aliasForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const alias = document.getElementById('aliasInput').value;
+  if (!alias) {
+    alert('Bitte geben Sie einen Alias ein.');
+    return;
+  }
+
+  try {
+    await apiFetch(`/api/mail/${currentAccount.id}/alias`, {
+      method: 'POST',
+      body: JSON.stringify({ alias })
+    });
+
+    document.getElementById('aliasInput').value = '';
+    loadMailDetails();
+  } catch (error) {
+    alert('Fehler beim Hinzufügen des Aliases: ' + error.message);
+  }
+});
+
+// Alias löschen
+window.deleteAlias = async (alias) => {
+  try {
+    await apiFetch(`/api/mail/${currentAccount.id}/alias`, {
+      method: 'DELETE',
+      body: JSON.stringify({ alias })
+    });
+
+    loadMailDetails();
+  } catch (error) {
+    alert('Fehler beim Löschen des Aliases: ' + error.message);
+  }
+};
+
+// Autoresponder Toggle und Speichern
+document.getElementById('autoresponderEnabled').addEventListener('change', (e) => {
+  document.getElementById('autoresponderSettings').style.display = 
+    e.target.checked ? 'block' : 'none';
+});
+
+document.getElementById('autoresponderForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const data = {
+    autoresponder: {
+      enabled: document.getElementById('autoresponderEnabled').checked,
+      subject: document.getElementById('autoresponderSubject').value,
+      message: document.getElementById('autoresponderMessage').value,
+      startDate: document.getElementById('autoresponderStartDate').value || undefined,
+      endDate: document.getElementById('autoresponderEndDate').value || undefined
+    }
+  };
+
+  try {
+    await apiFetch(`/api/mail/${currentAccount.id}/autoresponder`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+
+    alert('Automatische Antwort wurde gespeichert');
+    loadMailDetails();
+  } catch (error) {
+    alert('Fehler beim Speichern der automatischen Antwort: ' + error.message);
+  }
+});
+
+// Weiterleitungen speichern
+document.getElementById('forwardersForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const forwarders = document.getElementById('forwarders').value
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line);
+
+  try {
+    await apiFetch(`/api/mail/${currentAccount.id}/forwarders`, {
+      method: 'PUT',
+      body: JSON.stringify({ forwarders })
+    });
+
+    alert('Weiterleitungen wurden gespeichert');
+    loadMailDetails();
+  } catch (error) {
+    alert('Fehler beim Speichern der Weiterleitungen: ' + error.message);
+  }
+});
+
+// Event-Listener für Löschen-Button
+document.querySelector('.-delete').addEventListener('click', async () => {
+  try {
+    await apiFetch(`/api/mail/${currentAccount.id}`, {
+      method: 'DELETE'
+    });
+    window.location.href = '/mail';
+  } catch (error) {
+    alert('Fehler beim Löschen des E-Mail Kontos: ' + error.message);
+  }
+});
+
+// Initial laden
+loadMailDetails();</script>

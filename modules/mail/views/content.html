@@ -1,0 +1,48 @@
+<div class="header">
+  <h1>E-Mail Konten</h1>
+  <div class="u2-toolbar">
+    <button onclick="showCreateMailModal()" class="btn">
+      <i class="mdi mdi-plus"></i> E-Mail Konto anlegen
+    </button>
+  </div>
+</div>
+
+<u2-table sortable>
+  <table>
+    <thead>
+      <tr>
+        <th>E-Mail Adresse
+        <th>Status
+        <th>Domain
+        <th width="33">Aktionen
+    <tbody id="mailGrid">
+  </table>
+</u2-table>
+
+<dialog id="createMailModal">
+  <form method="dialog">
+    <h2>E-Mail Konto anlegen</h2>
+    <div>
+      <label>
+        Domain
+        <select id="domainSelect" required></select>
+      </label>
+    </div>
+    <div>
+      <label>
+        Lokaler Teil
+        <input type="text" id="localPart" required>
+      </label>
+    </div>
+    <div>
+      <label>
+        Passwort
+        <input type="password" id="mailPassword" required>
+      </label>
+    </div>
+    <div class="u2-dialog-buttons">
+      <button type="button" onclick="closeCreateMailModal()">Abbrechen</button>
+      <button onclick="createMailAccount()">Erstellen</button>
+    </div>
+  </form>
+</dialog>

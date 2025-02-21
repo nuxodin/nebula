@@ -20,9 +20,9 @@ function renderLogs(logsToRender) {
     <tr>
       <td>${new Date(log.timestamp).toLocaleString()}
       <td>
-        <span class="status-badge ${log.level === 'error' ? 'status-inactive' : 'status-active'}">
+        <small class="u2-badge ${log.level === 'error' ? 'status-inactive' : 'status-active'}">
           ${log.level.toUpperCase()}
-        </span>
+        </small>
       <td>${log.message}
       <td>${log.source || '-'}
       <td>${log.user_login || '-'}

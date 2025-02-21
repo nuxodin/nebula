@@ -3,7 +3,7 @@ import { renderTemplate } from "../../utils/template.ts";
 import { getDashboardStats } from "./controller.ts";
 
 // API Routes
-const apiRoutes = new Hono();
+const apiRoutes = new Hono();  
 apiRoutes.get("/stats", getDashboardStats);
 
 // View Routes

@@ -54,6 +54,7 @@ export const startAndEnableService = async (service: string) => {
   } else {
     await runCommand("sh", ["-c", `${sudo} /etc/init.d/${service} start`]);
   }
+  console.log(`✅ ${service} wurde erfolgreich aktiviert und gestartet!`);
 };
 
 /**
@@ -75,3 +76,19 @@ export const installPackages = async (packages: string[]) => {
     Deno.exit(1);
   }
 };
+
+/**
+ * Reloads a service using systemctl, service, or direct commands
+ */
+export const reloadService = async (service: string) => {
+  console.log(`\n⚙️ ${service} wird neu geladen...`);
+  const sudo = await getSudo();
+
+  if (await isCommandAvailable("systemctl")) {
+    await runCommand("sh", ["-c", `${sudo} systemctl reload ${service}`]);
+  } else if (await isCommandAvailable("service")) {
+    await runCommand("sh", ["-c", `${sudo} service ${service} reload`]);
+  } else {
+    await runCommand("sh", ["-c", `${sudo} /etc/init.d/${service} reload`]);
+  }
+}
