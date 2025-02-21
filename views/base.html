@@ -15,14 +15,50 @@
       body { 
         background: #e0e7f5;
       }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        margin-top: 1rem;
+      }
+      th {
+        background: #f8fafc;
+        font-weight: 600;
+      }
+      td {
+        vertical-align: middle;
+      }
+      tr:hover td {
+        background: #f8fafc;
+      }
+      dialog {
+        background: white;
+        border-radius: 1rem;
+        padding: 3rem;
+        border:1px solid;
+        box-shadow: 0 .25rem .5rem rgba(0,0,0,.1);
+      }
+      .btn, button, input, select, textarea {
+        padding: .5rem .7rem;
+      }
+
+
+      dl.cd-left-right {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: .5rem;
+        & > :is( dt, dd ) { margin:0; }
+        & dt { font-weight: 700; }
+        & dd { text-align: right; }
+      }
       .layout {
         display: grid;
         grid-template-columns: var(--sidebar-width) 1fr;
         min-height: 100vh;
       }
       .sidebar {
-        background: #1e293b;
-        color: white;
         padding: 1rem;
       }
       .logo {
@@ -65,38 +101,8 @@
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         margin-bottom: 1rem;
       }
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 1rem;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        margin-top: 1rem;
-      }
-      th {
-        background: #f8fafc;
-        font-weight: 600;
-      }
-      td {
-        vertical-align: middle;
-      }
-      tr:hover td {
-        background: #f8fafc;
-      }
-      dialog {
-        background: white;
-        border-radius: 1rem;
-        padding: 3rem;
-        border:1px solid;
-        box-shadow: 0 .25rem .5rem rgba(0,0,0,0.1);
-      }
-      .btn, button, input, select, textarea {
-        padding: .5rem .7rem;
+      .u2-grid {
+        --u2-Items-width: 18rem;
       }
 
       .btn-icon {
@@ -150,7 +156,7 @@
   </head>
   <body>
     <div class="layout">
-      <aside class="sidebar">
+      <aside class="sidebar" u2-skin="invert">
         <div class="logo">🌌 Nebula</div>
         <nav>
           <a href="/" class="nav-item">
@@ -161,6 +167,9 @@
           </a>
           <a href="/users" class="nav-item">
             <i class="mdi mdi-account-group"></i> Benutzer
+          </a>
+          <a href="/files" class="nav-item">
+            <i class="mdi mdi-file"></i> Dateien
           </a>
           <a href="/logs" class="nav-item">
             <i class="mdi mdi-text-box-search"></i> Logs

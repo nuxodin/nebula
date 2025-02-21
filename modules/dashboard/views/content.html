@@ -4,7 +4,51 @@
 <div id="passwordChangedMessage" class="success-message" style="display: none; background: #ecfdf5; color: #059669; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
   Ihr Passwort wurde erfolgreich geändert.
 </div>
-<div class="grid">
+<div class="u2-grid">
+
+  <div class="card">
+    <div>
+      <div>
+        <h3>
+          <i class="mdi mdi-server" style="font-size: 2rem;"></i>
+          System Information
+        </h3>
+      </div>
+    </div>
+    <div style="margin-top: 1rem;">
+      <dl class="cd-left-right">
+        <dt>System</dt>
+        <dd id="systemInfo">...</dd>
+        
+        <dt>IP-Adresse</dt>
+        <dd id="ipAddress">...</dd>
+        
+        <dt>Uptime</dt>
+        <dd id="uptime">...</dd>
+      </dl>
+      
+      <div>
+        <p>
+          <strong>CPU</strong>
+          <span id="cpuPercentage">0%</span>
+          <progress id="cpuUsage" value="0" max="100" style="width:100%"></progress>
+        </p>
+        
+        <p>
+          <strong>RAM</strong>
+          <span id="ramPercentage">0%</span>
+          <progress id="ramUsage" value="0" max="100" style="width:100%"></progress>
+        </p>
+        
+        <p>
+          <strong>Disk</strong>
+          <span id="diskPercentage">0%</span>
+          <progress id="diskUsage" value="0" max="100" style="width:100%"></progress>
+        </p>
+      </div>
+    </div>
+  </div>
+
   <div class="card">
     <div class="stat">
       <div class="stat-info">
@@ -31,48 +75,7 @@
       Domain hinzufügen
     </a>
   </div>
-  <div class="card">
-    <div>
-      <div>
-        <h3>
-          <i class="mdi mdi-server" style="font-size: 2rem;"></i>
-          System Information
-        </h3>
-      </div>
-    </div>
-    <div style="margin-top: 1rem;">
-      <dl>
-        <dt><i class="mdi mdi-desktop-tower"></i> System</dt>
-        <dd id="systemInfo">...</dd>
-        
-        <dt><i class="mdi mdi-ip-network"></i> IP-Adresse</dt>
-        <dd id="ipAddress">...</dd>
-        
-        <dt><i class="mdi mdi-clock"></i> Uptime</dt>
-        <dd id="uptime">...</dd>
-      </dl>
-      
-      <div>
-        <div>
-          <h4>CPU</h4>
-          <progress id="cpuUsage" value="0" max="100"></progress>
-          <span id="cpuPercentage">0%</span>
-        </div>
-        
-        <div>
-          <h4>RAM</h4>
-          <progress id="ramUsage" value="0" max="100"></progress>
-          <span id="ramPercentage">0%</span>
-        </div>
-        
-        <div>
-          <h4>Disk</h4>
-          <progress id="diskUsage" value="0" max="100"></progress>
-          <span id="diskPercentage">0%</span>
-        </div>
-      </div>
-    </div>
-  </div>
+
   <div class="card">
     <div class="stat">
       <div class="stat-info">

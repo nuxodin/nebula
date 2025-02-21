@@ -1,12 +1,21 @@
 import { logInfo, logError } from "../../utils/logger.ts";
 import db from "../../utils/database.ts";
 import { renderTemplate } from "../../utils/template.ts";
+import { Context } from "hono";
 
 // GET /login - Render login page
-export const getLogin = async (c) => {
+export const getLogin = async (c: Context) => {
   try {
-    const loginHtml = await Deno.readTextFile("./modules/login/views/login.html");
-    return c.html(loginHtml);
+    const returnPath = String(c.get('returnPath') || '/');
+    
+    let content = await Deno.readTextFile("./modules/login/views/login.html");
+    //const scripts = await Deno.readTextFile("./modules/login/views/scripts.html");
+
+    // Ersetze den Platzhalter im Template
+    content = content.replace('value="RETURN_URL_PLACEHOLDER"', `value="${returnPath}"`);
+
+    return c.html(await renderTemplate("Login", content, "", ""));
+    //return c.html(await renderTemplate("Login", content, "", scripts));
   } catch (err) {
     logError("Fehler beim Laden der Login-Seite", "Auth", c, err);
     return c.text("Internal Server Error", 500);
@@ -14,39 +23,58 @@ export const getLogin = async (c) => {
 };
 
 // POST /login - Process login credentials
-export const postLogin = async (c) => {
+export async function postLogin(c: Context) {
   try {
-    const formData = await c.req.formData();
-    const login = formData.get("login");
-    const password = formData.get("password");
+    const formData = await c.req.parseBody();
+    const login = String(formData.login || '');
+    const password = String(formData.password || '');
+    const returnUrl = String(formData.returnUrl || '/');
 
     if (!login || !password) {
-      return c.html(await Deno.readTextFile("./modules/login/views/login.html") + '<p class="error-message">Login und Passwort sind erforderlich</p>');
+      let content = await Deno.readTextFile("./modules/login/views/login.html");
+      const scripts = await Deno.readTextFile("./modules/login/views/scripts.html");
+      
+      // Ersetze den Platzhalter und füge die Fehlermeldung hinzu
+      content = content.replace('value="RETURN_URL_PLACEHOLDER"', `value="${returnUrl}"`);
+      const scriptWithError = scripts + `
+        <script>
+          window.loginError = "Login und Passwort sind erforderlich";
+        </script>
+      `;
+      
+      return c.html(await renderTemplate("Login", content, "", scriptWithError));
     }
 
-    // Prüfe Credentials in der clients Tabelle
-    const users = db.queryEntries("SELECT * FROM clients WHERE login = ? AND password = ?", [login, password]);
-    
-    if (users.length === 0) {
-      logError(`Fehlgeschlagener Login-Versuch für Benutzer: ${login}`, "Auth", c);
-      return c.html(await Deno.readTextFile("./modules/login/views/login.html") + '<p class="error-message">Ungültige Zugangsdaten</p>');
+    const user = db.queryEntries(
+      "SELECT id, login FROM clients WHERE login = ? AND password = ?",
+      [login, password]
+    )[0];
+
+    if (!user) {
+      let content = await Deno.readTextFile("./modules/login/views/login.html");
+      const scripts = await Deno.readTextFile("./modules/login/views/scripts.html");
+      
+      // Ersetze den Platzhalter und füge die Fehlermeldung hinzu
+      content = content.replace('value="RETURN_URL_PLACEHOLDER"', `value="${returnUrl}"`);
+      const scriptWithError = scripts + `
+        <script>
+          window.loginError = "Ungültige Anmeldedaten";
+        </script>
+      `;
+      
+      return c.html(await renderTemplate("Login", content, "", scriptWithError));
     }
 
-    const user = users[0];
-    logInfo(`Benutzer ${login} hat sich erfolgreich angemeldet`, "Auth", c);
-
-    // Setze Session-Variablen
     const session = c.get('session');
-    await session.set('isLoggedIn', true);
     await session.set('userId', user.id);
     await session.set('userLogin', user.login);
-
-    return c.redirect('/');
+    
+    return c.redirect(returnUrl);
   } catch (err) {
-    logError("Fehler beim Login-Vorgang", "Auth", c, err);
+    logError("Fehler beim Login-Vorgang", "Login", c, err);
     return c.text("Internal Server Error", 500);
   }
-};
+}
 
 // GET /logout - Handle logout
 export const getLogout = async (c) => {

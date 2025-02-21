@@ -1,16 +1,13 @@
 import { Hono } from "hono";
-import { authMiddleware } from "../../middleware/auth.ts";
 import { renderTemplate } from "../../utils/template.ts";
 import { getDashboardStats } from "./controller.ts";
 
 // API Routes
 const apiRoutes = new Hono();
-apiRoutes.use(authMiddleware);
 apiRoutes.get("/stats", getDashboardStats);
 
 // View Routes
 const viewRoutes = new Hono();
-viewRoutes.use(authMiddleware);
 
 viewRoutes.get("/", async (c) => {
   try {

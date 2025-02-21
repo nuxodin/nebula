@@ -1,10 +1,7 @@
 import { Hono } from "hono";
-import { authMiddleware } from "../../middleware/auth.ts";
 import { createMailAccount, getAllMailAccounts, getMailAccountById, updateMailAccount, deleteMailAccount } from "./mail.ts";
 
 const mailRoutes = new Hono();
-
-mailRoutes.use(authMiddleware);
 
 mailRoutes.post("/", createMailAccount);
 mailRoutes.get("/", getAllMailAccounts);

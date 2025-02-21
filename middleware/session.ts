@@ -10,7 +10,7 @@ function generateSessionId(): string {
 
 export const sessionMiddleware = createMiddleware(async (c: Context, next: Next) => {
   // Get session ID from cookie or create new one
-  let sessionId = c.req.cookie()?.sessionId;
+  let sessionId = c.req.cookie()?.sessionId; // todo: c.req.cookie() is deprecated:  Use Cookie Middleware instead of c.req.cookie(). The c.req.cookie() will be removed in v4.
   if (!sessionId) {
     sessionId = generateSessionId();
     c.cookie('sessionId', sessionId, {

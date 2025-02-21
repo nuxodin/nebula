@@ -1,6 +1,5 @@
 import { Hono } from "hono";
-import { authMiddleware } from "../../middleware/auth.ts";
-import { getAllDomains, createDomain, deleteDomain, getDomainById } from "./controller.ts";
+import { getAllDomains, createDomain, deleteDomain, getDomainById, getDomainDetailView } from "./controller.ts";
 import { createFileRoutes } from "../files/routes.ts";
 import { config } from "../../utils/config.ts";
 import { renderTemplate } from "../../utils/template.ts";
@@ -15,9 +14,8 @@ function createDomainFilesHandler(domain: { name: string }) {
   });
 }
 
-// API Routes
+// API Routes  
 const apiRoutes = new Hono();
-apiRoutes.use(authMiddleware);
 
 // Standard Domain-API-Routen
 apiRoutes.get("/", getAllDomains);
@@ -49,7 +47,6 @@ apiRoutes.all("/:id/files/*", async (c) => {
 
 // View Routes
 const viewRoutes = new Hono();
-viewRoutes.use(authMiddleware);
 
 // Standard Domain-View-Routen
 viewRoutes.get("/", async (c) => {
@@ -58,11 +55,7 @@ viewRoutes.get("/", async (c) => {
   return c.html(await renderTemplate("Domains", content, "", scripts));
 });
 
-viewRoutes.get("/:id", async (c) => {
-  const content = await Deno.readTextFile("./modules/domains/views/detail.html");
-  const scripts = await Deno.readTextFile("./modules/domains/views/detail-scripts.html");
-  return c.html(await renderTemplate("Domain Details", content, "", scripts));
-});
+viewRoutes.get("/:id", getDomainDetailView);
 
 // Domain-Files View-Route - Diese Route muss VOR den anderen Files-Routen stehen
 viewRoutes.get("/:id/files", async (c) => {

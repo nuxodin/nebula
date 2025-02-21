@@ -1,14 +1,10 @@
 import { Hono } from "hono";
-import { authMiddleware } from "../../middleware/auth.ts";
 import { getFiles, uploadFile, createFile, deleteFile, renameFile, getFileContent, updateFileContent, getFilesView } from "./controller.ts";
 
 // Erstelle eine Factory-Funktion für die File-Routes
 export function createFileRoutes(options = { rootPath: "/" }) {
   const filesRoutes = new Hono();
   
-  // Entferne den globalen Auth-Middleware hier, da er bereits in der Parent-Route existiert
-  // filesRoutes.use(authMiddleware);
-
   // View route
   filesRoutes.get("/", (c) => getFilesView(c, options));
 

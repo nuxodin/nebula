@@ -1,6 +1,6 @@
 // install_hosting_stack.ts – Universelle Installation von Apache2, MariaDB, Postfix, Dovecot und Bind9 mit Deno
 
-import { installPackages, startAndEnableService } from "./utils/command.ts";
+import { installPackages, startAndEnableService } from "../utils/command.ts";
 
 // Setzt DEBIAN_FRONTEND auf noninteractive (für Docker und CI/CD)
 const setNonInteractive = () => {

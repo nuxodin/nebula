@@ -1,10 +1,7 @@
 import { Hono } from "hono";
-import { authMiddleware } from "../../middleware/auth.ts";
 import { getAllClients, createClient, deleteClient, getClientById, getCurrentUser } from "./clients.ts";
 
 const clientRoutes = new Hono();
-
-clientRoutes.use(authMiddleware);
 
 clientRoutes.get("/me", getCurrentUser);
 clientRoutes.get("/", getAllClients);

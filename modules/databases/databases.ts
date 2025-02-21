@@ -1,78 +1,152 @@
+import { runCommand } from "../../utils/command.ts";
+import { config } from "../../utils/config.ts";
+import { logError, logInfo } from "../../utils/logger.ts";
 import db from "../../utils/database.ts";
-import { logInfo, logError } from "../../utils/logger.ts";
 
-// Datenbank erstellen
-export const createDatabase = async (c) => {
-  try {
-    const { dom_id, name, type } = await c.req.json();
-    db.query("INSERT INTO databases (dom_id, name, type) VALUES (?, ?, ?)", [dom_id, name, type]);
-    logInfo(`Database ${name} created for domain ${dom_id}`);
-    return c.json({ message: "Database created" });
-  } catch (err) {
-    logError("Error creating database:", err);
-    return c.text("Internal Server Error", 500);
-  }
-};
+interface DatabaseOptions {
+  name: string;
+  type: 'mysql' | 'postgresql';
+  dom_id: number;
+  charset?: string;
+  collation?: string;
+}
 
-// Alle Datenbanken abrufen
-export const getAllDatabases = (c) => {
+export async function createDatabase(options: DatabaseOptions) {
   try {
-    const { domain_id } = c.req.query();
-    let databases;
-    
-    if (domain_id) {
-      databases = db.queryEntries("SELECT * FROM databases WHERE dom_id = ?", [domain_id]);
-    } else {
-      databases = db.queryEntries("SELECT * FROM databases");
+    const domain = db.queryEntries('SELECT * FROM domains WHERE id = ?', [options.dom_id])[0];
+    if (!domain) throw new Error('Domain not found');
+
+    // Überprüfe Datenbank-Limit
+    const dbCount = db.queryEntries<{count: number}>(
+      'SELECT COUNT(*) as count FROM databases WHERE dom_id = ?', 
+      [options.dom_id]
+    )[0].count;
+
+    if (dbCount >= config.max_databases_per_domain) {
+      throw new Error('Database limit reached for this domain');
     }
-    
-    logInfo("Fetched databases");
-    return c.json(databases);
-  } catch (err) {
-    logError("Error fetching databases:", err);
-    return c.text("Internal Server Error", 500);
-  }
-};
 
-// Datenbank nach ID abrufen
-export const getDatabaseById = (c) => {
-  try {
-    const { id } = c.req.param();
-    const database = db.query("SELECT * FROM databases WHERE id = ?", [id]);
-    if (database.length === 0) {
-      return c.text("Database not found", 404);
+    // Datenbankname mit Domain-Präfix
+    const dbName = `${domain.name.replace(/[^a-z0-9]/g, '_')}_${options.name}`;
+    const dbUser = `${dbName}_user`;
+    const dbPass = crypto.randomUUID();
+
+    if (options.type === 'mysql') {
+      await runCommand(`mysql -e "CREATE DATABASE \\\`${dbName}\\\` ${options.charset ? `CHARACTER SET ${options.charset}` : ''} ${options.collation ? `COLLATE ${options.collation}` : ''}"`);
+      await runCommand(`mysql -e "CREATE USER '${dbUser}'@'localhost' IDENTIFIED BY '${dbPass}'"`);
+      await runCommand(`mysql -e "GRANT ALL PRIVILEGES ON \\\`${dbName}\\\`.* TO '${dbUser}'@'localhost'"`);
+      await runCommand('mysql -e "FLUSH PRIVILEGES"');
+    } 
+    else if (options.type === 'postgresql') {
+      await runCommand(`createuser ${dbUser}`);
+      await runCommand(`psql -c "ALTER USER ${dbUser} WITH PASSWORD '${dbPass}'"`);
+      await runCommand(`createdb -O ${dbUser} ${dbName} ${options.charset ? `LC_CTYPE='${options.charset}'` : ''}`);
     }
-    logInfo(`Fetched database with id ${id}`);
-    return c.json(database[0]);
-  } catch (err) {
-    logError("Error fetching database:", err);
-    return c.text("Internal Server Error", 500);
-  }
-};
 
-// Datenbank aktualisieren
-export const updateDatabase = async (c) => {
-  try {
-    const { id } = c.req.param();
-    const { dom_id, name, type } = await c.req.json();
-    db.query("UPDATE databases SET dom_id = ?, name = ?, type = ? WHERE id = ?", [dom_id, name, type, id]);
-    logInfo(`Database ${id} updated`);
-    return c.json({ message: "Database updated" });
-  } catch (err) {
-    logError("Error updating database:", err);
-    return c.text("Internal Server Error", 500);
-  }
-};
+    // In Datenbank speichern
+    db.query(`
+      INSERT INTO databases (dom_id, name, type, db_user, db_pass)
+      VALUES (?, ?, ?, ?, ?)
+    `, [options.dom_id, dbName, options.type, dbUser, dbPass]);
 
-// Datenbank löschen
-export const deleteDatabase = (c) => {
-  try {
-    const { id } = c.req.param();
-    db.query("DELETE FROM databases WHERE id = ?", [id]);
-    logInfo(`Database ${id} deleted`);
-    return c.json({ message: "Database deleted" });
-  } catch (err) {
-    logError("Error deleting database:", err);
-    return c.text("Internal Server Error", 500);
+    logInfo(`Database ${dbName} created for domain ${domain.name}`, 'Databases');
+    return { success: true, database: { name: dbName, user: dbUser, password: dbPass } };
+  } catch (error) {
+    logError(`Error creating database: ${error.message}`, 'Databases');
+    throw error;
   }
-};
+}
+
+export async function deleteDatabase(databaseId: number) {
+  try {
+    const database = db.queryEntries('SELECT * FROM databases WHERE id = ?', [databaseId])[0];
+    if (!database) throw new Error('Database not found');
+
+    if (database.type === 'mysql') {
+      await runCommand(`mysql -e "DROP DATABASE IF EXISTS \\\`${database.name}\\\`"`);
+      await runCommand(`mysql -e "DROP USER IF EXISTS '${database.db_user}'@'localhost'"`);
+      await runCommand('mysql -e "FLUSH PRIVILEGES"');
+    } 
+    else if (database.type === 'postgresql') {
+      await runCommand(`dropdb ${database.name}`);
+      await runCommand(`dropuser ${database.db_user}`);
+    }
+
+    db.query('DELETE FROM databases WHERE id = ?', [databaseId]);
+    
+    logInfo(`Database ${database.name} deleted`, 'Databases');
+    return { success: true };
+  } catch (error) {
+    logError(`Error deleting database: ${error.message}`, 'Databases');
+    throw error;
+  }
+}
+
+export async function changePassword(databaseId: number, newPassword: string) {
+  try {
+    const database = db.queryEntries('SELECT * FROM databases WHERE id = ?', [databaseId])[0];
+    if (!database) throw new Error('Database not found');
+
+    if (database.type === 'mysql') {
+      await runCommand(`mysql -e "ALTER USER '${database.db_user}'@'localhost' IDENTIFIED BY '${newPassword}'"`);
+      await runCommand('mysql -e "FLUSH PRIVILEGES"');
+    } 
+    else if (database.type === 'postgresql') {
+      await runCommand(`psql -c "ALTER USER ${database.db_user} WITH PASSWORD '${newPassword}'"`);
+    }
+
+    db.query('UPDATE databases SET db_pass = ? WHERE id = ?', [newPassword, databaseId]);
+    
+    logInfo(`Password changed for database user ${database.db_user}`, 'Databases');
+    return { success: true };
+  } catch (error) {
+    logError(`Error changing database password: ${error.message}`, 'Databases');
+    throw error;
+  }
+}
+
+export async function getDatabaseStats(databaseId: number) {
+  try {
+    const database = db.queryEntries('SELECT * FROM databases WHERE id = ?', [databaseId])[0];
+    if (!database) throw new Error('Database not found');
+
+    let size = 0;
+    let tables = 0;
+
+    if (database.type === 'mysql') {
+      const result = await runCommand(`mysql -N -e "
+        SELECT 
+          ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) as size,
+          COUNT(*) as tables
+        FROM information_schema.tables 
+        WHERE table_schema = '${database.name}'
+      "`);
+      const [dbSize, tableCount] = result.stdout.trim().split('\t');
+      size = parseFloat(dbSize);
+      tables = parseInt(tableCount);
+    } 
+    else if (database.type === 'postgresql') {
+      const result = await runCommand(`psql -t -A -c "
+        SELECT 
+          pg_size_pretty(pg_database_size('${database.name}')) as size,
+          (SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public') as tables
+        FROM pg_database 
+        WHERE datname = '${database.name}'
+      "`);
+      const [dbSize, tableCount] = result.stdout.trim().split('|');
+      size = parseFloat(dbSize);
+      tables = parseInt(tableCount);
+    }
+
+    return { 
+      name: database.name,
+      type: database.type,
+      size,
+      tables,
+      user: database.db_user
+    };
+  } catch (error) {
+    logError(`Error getting database stats: ${error.message}`, 'Databases');
+    throw error;
+  }
+}

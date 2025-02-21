@@ -37,6 +37,12 @@
             border-radius: 4px;
             font-size: 1rem;
         }
+        .error-message {
+            color: #dc2626;
+            text-align: center;
+            margin-bottom: 1rem;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -45,6 +51,7 @@
             <h1>🌌 Nebula</h1>
             <p>Bitte melden Sie sich an</p>
         </div>
+        <div id="errorMessage" class="error-message"></div>
         <form method="POST" action="/login">
             <div class="form-group">
                 <label for="login">Benutzername</label>
@@ -54,8 +61,17 @@
                 <label for="password">Passwort</label>
                 <input type="password" id="password" name="password" required>
             </div>
+            <input type="hidden" name="returnUrl" value="RETURN_URL_PLACEHOLDER">
             <button type="submit" class="btn">Anmelden</button>
         </form>
     </div>
+    <script>
+        // Zeige Fehlermeldung an, wenn vorhanden
+        if (window.loginError) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = window.loginError;
+            errorDiv.style.display = 'block';
+        }
+    </script>
 </body>
 </html>
