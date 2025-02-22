@@ -16,11 +16,11 @@
       body { 
         background: #e0e7f5;
       }
+      h1 {
+        font-weight:200;
+      }
       table {
-        width: 100%;
-        border-collapse: collapse;
         background: white;
-        border-radius: 8px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         margin-top: 1rem;
       }
@@ -40,6 +40,14 @@
         padding: 3rem;
         border:1px solid;
         box-shadow: 0 .25rem .5rem rgba(0,0,0,.1);
+      }
+      label {
+        display:block;
+        margin-bottom: 1rem;
+        > :is(input:not([type="checkbox"], [type="radio"]), textarea, select) {
+          display: block;
+          width: 100%;
+        }
       }
       .btn, button, input, select, textarea {
         padding: .5rem .7rem;
@@ -88,9 +96,9 @@
       }
       .header {
         background: white;
-        padding: 1rem 2rem;
+        padding: 1rem 1.5rem;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        margin-bottom: 2rem;
+        margin-bottom: 1rem;
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -103,7 +111,6 @@
         border-radius: .3rem;
         padding: 1.5rem;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        margin-bottom: 1rem;
       }
       .u2-grid {
         --u2-Items-width: 25em;
@@ -171,6 +178,8 @@
           <a href="/mail" class="nav-item">
             <i class="mdi mdi-email"></i> E-Mail
           </a>
+          <a href="/prozess" class="nav-item">
+            <i class="mdi mdi-cogs"></i> Prozesse
           <a href="/logs" class="nav-item">
             <i class="mdi mdi-text-box-search"></i> Logs
           </a>

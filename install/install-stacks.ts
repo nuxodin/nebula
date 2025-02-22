@@ -37,16 +37,22 @@ const setupNameServer = async () => {
   await startAndEnableService("bind9");
 };
 
+// Überprüft und installiert Prozess-Tools
+const setupProcessTools = async () => {
+  console.log("\n📊 Überprüfung und Installation von Prozess-Tools...");
+  await installPackages(["procps"]);
+};
+
 // Hauptablauf
 async function main() {
   await setNonInteractive();
-  await setupApache();
+  // await setupApache();
   await setupMariaDB();
-  await setupMailServer();
-  await setupNameServer();
+  // await setupMailServer();
+  // await setupNameServer();
+  await setupProcessTools();
   console.log("\n🎉 Hosting-Stack erfolgreich installiert und gestartet!");
 }
 
-
 //await main();
-main();
+//main();

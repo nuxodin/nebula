@@ -1,5 +1,5 @@
 import { install } from "./install/install.ts"; // first
-//import './install/install-stacks.ts'; // second
+import './install/install-stacks.ts';
 import { Hono } from "hono";
 import { serveStatic } from "https://deno.land/x/hono@v3.11.7/middleware.ts";
 import { sessionMiddleware } from "./middleware/session.ts";
@@ -9,6 +9,7 @@ import { apiRoutes as logsApiRoutes, viewRoutes as logsViewRoutes } from "./modu
 import { apiRoutes as dashboardApiRoutes, viewRoutes as dashboardViewRoutes } from "./modules/dashboard/routes.ts";
 import { apiRoutes as domainsApiRoutes, viewRoutes as domainsViewRoutes } from "./modules/domains/routes.ts";
 import { apiRoutes as mailApiRoutes, viewRoutes as mailViewRoutes } from "./modules/mail/routes.ts";
+import { apiRoutes as prozessApiRoutes, viewRoutes as prozessViewRoutes } from "./modules/prozess/routes.ts";
 import clientRoutes from "./modules/clients/routes.ts";
 import databaseRoutes from "./modules/databases/routes.ts";
 import filesRoutes, { createFileRoutes } from "./modules/files/routes.ts";
@@ -40,6 +41,7 @@ app.route("/api/domains", domainsApiRoutes);
 app.route("/api/clients", clientRoutes);
 app.route("/api/databases", databaseRoutes);
 app.route("/api/mail", mailApiRoutes);
+app.route("/api/prozess", prozessApiRoutes);
 app.route("/api/files", createFileRoutes({ rootPath: "/" }));
 
 // Dann erst die View Routes
@@ -48,6 +50,7 @@ app.route("/users", userViewRoutes);
 app.route("/logs", logsViewRoutes);
 app.route("/domains", domainsViewRoutes);
 app.route("/mail", mailViewRoutes);
+app.route("/prozess", prozessViewRoutes);
 app.route("/files", filesRoutes); // Add global file explorer route
 
 // Profile Routes

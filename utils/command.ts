@@ -62,14 +62,19 @@ export const startAndEnableService = async (service: string) => {
  */
 export const installPackages = async (packages: string[]) => {
   const sudo = await getSudo();
+  console.log(`🔍 Verfügbare Paketmanager werden überprüft...`);
 
   if (await isCommandAvailable("apt")) {
+    console.log(`📦 apt wird verwendet, um Pakete zu installieren: ${packages.join(", ")}`);
     await runCommand("sh", ["-c", `${sudo} apt update && ${sudo} apt install -y ${packages.join(" ")}`]);
   } else if (await isCommandAvailable("yum")) {
+    console.log(`📦 yum wird verwendet, um Pakete zu installieren: ${packages.join(", ")}`);
     await runCommand("sh", ["-c", `${sudo} yum install -y ${packages.join(" ")}`]);
   } else if (await isCommandAvailable("dnf")) {
+    console.log(`📦 dnf wird verwendet, um Pakete zu installieren: ${packages.join(", ")}`);
     await runCommand("sh", ["-c", `${sudo} dnf install -y ${packages.join(" ")}`]);
   } else if (await isCommandAvailable("apk")) {
+    console.log(`📦 apk wird verwendet, um Pakete zu installieren: ${packages.join(", ")}`);
     await runCommand("sh", ["-c", `${sudo} apk update && ${sudo} apk add ${packages.join(" ")}`]);
   } else {
     console.error("❌ Kein unterstützter Paketmanager gefunden (apt, yum, dnf, apk).");

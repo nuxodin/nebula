@@ -1,0 +1,32 @@
+<script type="module">
+import { apiFetch } from '/public/js/utils.js';
+
+async function updateProcessList() {
+    try {
+        const processes = await apiFetch('/api/prozess/list');
+        const tbody = document.getElementById('processList');
+        
+        tbody.innerHTML = processes?.length ? processes.map(proc => `
+            <tr>
+                <td>${proc.name}
+                <td>${proc.domain || 'N/A'}
+                <td>${proc.user || 'N/A'}
+                <td>${proc.cpu?.toFixed(1)}%
+                <td>${proc.memory?.toFixed(1)}%
+                <td>${proc.diskRead || 0} KiB/s
+                <td>${proc.diskWrite || 0} KiB/s
+            </tr>
+        `).join('') : '<tr><td colspan="7">Keine Prozesse gefunden</td></tr>';
+    } catch (error) {
+        console.error('Fehler beim Laden der Prozesse:', error);
+        const tbody = document.getElementById('processList');
+        tbody.innerHTML = '<tr><td colspan="7" class="error">Fehler beim Laden der Prozesse</td></tr>';
+    }
+}
+ 
+// Initial update
+updateProcessList();
+
+// Aktualisiere alle 5 Sekunden
+setInterval(updateProcessList, 5000);
+</script>
