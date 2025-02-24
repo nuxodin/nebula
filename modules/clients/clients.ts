@@ -2,6 +2,7 @@ import db from "../../utils/database.ts";
 import { logInfo, logError } from "../../utils/logger.ts";
 
 export const getAllClients = (c) => {
+  console.log('this is used');
   try {
     const clients = db.queryEntries(`
       SELECT c.*,

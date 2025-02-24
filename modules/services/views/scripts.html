@@ -1,0 +1,87 @@
+<script type="module">
+    import { apiFetch } from '/public/js/utils.js';
+
+    // Make loadServices available globally
+    window.loadServices = loadServices;
+
+    // Initial load
+    loadServices();
+
+    async function loadServices() {
+        try {
+            const services = await apiFetch('/api/services');
+            renderServices(services);
+        } catch (error) {
+            alert('Fehler beim Laden der Services: ' + error.message);
+        }
+    }
+
+    function getStartTypeLabel(startType) {
+        if (!startType) return '';
+        const types = {
+            'auto': 'Automatisch',
+            'automatic': 'Automatisch',
+            'manual': 'Manuell',
+            'disabled': 'Deaktiviert',
+            'unknown': 'Unbekannt'
+        };
+        return types[startType.toLowerCase()] || startType;
+    }
+
+    function getStatusLabel(status) {
+        const states = {
+            'running': 'Läuft',
+            'stopped': 'Gestoppt',
+            'unknown': 'Unbekannt'
+        };
+        return states[status] || status;
+    }
+
+    function renderServices(services) {
+        const tbody = document.getElementById('servicesList');
+        tbody.innerHTML = '';
+
+        services.forEach(service => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${service.name}</td>
+                <td>${service.description}</td>
+                <td>
+                    <span class="starttype-badge starttype-${service.startType || 'unknown'}">
+                        ${getStartTypeLabel(service.startType)}
+                    </span>
+                </td>
+                <td>
+                    <span class="status-badge status-${service.status}">
+                        ${getStatusLabel(service.status)}
+                    </span>
+                </td>
+                <td>
+                    <button class="action-btn start-btn" onclick="controlService('${service.name}', 'start')"
+                            ${service.status === 'running' ? 'disabled' : ''}>
+                        <i class="mdi mdi-play"></i>
+                    </button>
+                    <button class="action-btn stop-btn" onclick="controlService('${service.name}', 'stop')"
+                            ${service.status === 'stopped' ? 'disabled' : ''}>
+                        <i class="mdi mdi-stop"></i>
+                    </button>
+                    <button class="action-btn restart-btn" onclick="controlService('${service.name}', 'restart')">
+                        <i class="mdi mdi-refresh"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    window.controlService = async function(serviceName, action) {
+        try {
+            const result = await apiFetch(`/api/services/${serviceName}/${action}`, {
+                method: 'POST'
+            });
+            await loadServices(); // Reload the services list
+        } catch (error) {
+            alert(error.message);
+        }
+    }
+</script>

@@ -1,19 +1,19 @@
-import { runCommand } from "./command.ts";
+import { run } from "./command.ts";
 
 export async function osInfo() {
     try {
         // Get system info (exact distribution and version)
         let systemInfo = Deno.build.os + " " + Deno.build.arch;
         if (Deno.build.os === "linux") {
-            const { output } = await runCommand("cat", ["/etc/os-release"], true);
+            const { output } = await run("cat", ["/etc/os-release"]);
             const releaseName = output.match(/PRETTY_NAME="(.*)"/)?.[1];
             systemInfo = releaseName ? releaseName : systemInfo;
         } else if (Deno.build.os === "darwin") {
-            const { output } = await runCommand("sw_vers", [], true);
+            const { output } = await run("sw_vers", []);
             const versionName = output.match(/ProductName:\s*(.*)/)?.[1];
             systemInfo = versionName ? versionName : systemInfo;
         } else if (Deno.build.os === "windows") {
-            const { output } = await runCommand("systeminfo", [], true);
+            const { output } = await run("systeminfo", []);
             const versionName = output.match(/OS Name:\s*(.*)/)?.[1];
             systemInfo = versionName ? versionName : systemInfo;
         }
@@ -52,17 +52,17 @@ export async function osInfo() {
         if (isWindows) {
             try {
                 // Windows CPU usage
-                const { output: cpuOut } = await runCommand("powershell", [
+                const { output: cpuOut } = await run("powershell", [
                     "-Command",
                     "Get-Counter '\\Processor(_Total)\\% Processor Time' | Select-Object -ExpandProperty CounterSamples | Select-Object -ExpandProperty CookedValue"
-                ], true);
+                ]);
                 cpuUsage = Math.round(parseFloat(cpuOut) || 0);
 
                 // Windows disk usage (C: drive)
-                const { output: diskOut } = await runCommand("powershell", [
+                const { output: diskOut } = await run("powershell", [
                     "-Command",
                     "(Get-PSDrive C | Select-Object Used,Free | ForEach-Object { $_.Used/($_.Used + $_.Free) * 100 })"
-                ], true);
+                ]);
                 diskUsage = Math.round(parseFloat(diskOut) || 0);
             } catch (shellError) {
                 console.error("Shell command error:", shellError);
@@ -70,17 +70,17 @@ export async function osInfo() {
         } else {
             try {
                 // Unix CPU usage
-                const { output: cpuOut } = await runCommand("sh", [
+                const { output: cpuOut } = await run("sh", [
                     "-c",
                     "top -bn1 | grep 'Cpu(s)' | sed 's/.*, *\\([0-9.]*\\)%* id.*/\\1/' | awk '{print 100 - $1}'"
-                ], true);
+                ]);
                 cpuUsage = Math.round(parseFloat(cpuOut) || 0);
 
                 // Unix disk usage
-                const { output: diskOut } = await runCommand("sh", [
+                const { output: diskOut } = await run("sh", [
                     "-c",
                     "df / | tail -1 | awk '{print $5}' | sed 's/%//'"
-                ], true);
+                ]);
                 diskUsage = parseInt(diskOut) || 0;
             } catch (shellError) {
                 console.error("Shell command error:", shellError);

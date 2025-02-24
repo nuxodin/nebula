@@ -1,0 +1,55 @@
+<script type="module">
+  import { apiFetch } from '/public/js/utils.js';
+
+  let allPackages = [];
+  
+  async function loadPackages() {
+    try {
+      const response = await apiFetch('/api/packages');
+      // Extract packages array from response
+      allPackages = response;
+      filterAndRenderPackages();
+    } catch (error) {
+      console.error('API error:', error);
+      tbody.innerHTML = `<tr><td colspan="4" class="text-center">Fehler beim Laden: ${error.message}</td></tr>`;
+    }
+  }
+
+  const tbody = document.getElementById('packageGrid');
+  const searchInput = document.getElementById('packageSearch');
+
+  // Search handler
+  searchInput.addEventListener('input', () => {
+    filterAndRenderPackages();
+  });
+
+  // Packages filtern und anzeigen
+  function filterAndRenderPackages() {
+    const searchTerm = searchInput.value.toLowerCase();
+    const filteredPackages = allPackages.filter(pkg => 
+      pkg.name.toLowerCase().includes(searchTerm) ||
+      pkg.version.toLowerCase().includes(searchTerm)
+    );
+    renderPackages(filteredPackages);
+  }
+
+  // Packages anzeigen
+  function renderPackages(packagesToRender) {
+    tbody.innerHTML = packagesToRender.map(pkg => `
+      <tr>
+        <td>${pkg.name}
+        <td>${pkg.version}
+        <td>
+          <small class="u2-badge ${pkg.installed ? 'status-active' : 'status-inactive'}">
+            ${pkg.installed ? 'Installiert' : 'Nicht installiert'}
+          </small>
+        <td>
+          <small class="u2-badge ${pkg.automatic ? 'status-auto' : 'status-manual'}">
+            ${pkg.automatic ? 'Automatisch' : 'Manuell'}
+          </small>
+      </tr>
+    `).join('');
+  }
+
+  loadPackages();
+</script>

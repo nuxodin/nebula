@@ -1,13 +1,26 @@
 <script type="module">
 import { apiFetch } from '/public/js/utils.js';
+import * as dialog from "https://cdn.jsdelivr.net/gh/u2ui/u2@x.x.x/js/dialog/dialog.min.js"
+
+
+async function killProcess(pid) {
+    try {
+        await apiFetch(`/api/prozess/${pid}`, { method: 'DELETE' });
+        await updateProcessList(); // Aktualisiere die Liste nach dem Beenden
+    } catch (error) {
+        console.error('Fehler beim Beenden des Prozesses:', error);
+        dialog.alert('Fehler beim Beenden des Prozesses: ' + error.message);
+    }
+}
 
 async function updateProcessList() {
     try {
-        const processes = await apiFetch('/api/prozess/list');
+        const processes = await apiFetch('/api/prozess');
         const tbody = document.getElementById('processList');
         
         tbody.innerHTML = processes?.length ? processes.map(proc => `
             <tr>
+                <td>${proc.pid}
                 <td>${proc.name}
                 <td>${proc.domain || 'N/A'}
                 <td>${proc.user || 'N/A'}
@@ -15,14 +28,21 @@ async function updateProcessList() {
                 <td>${proc.memory?.toFixed(1)}%
                 <td>${proc.diskRead || 0} KiB/s
                 <td>${proc.diskWrite || 0} KiB/s
+                <td>
+                    <button class="u2-unstyle" u2-confirm="Möchten Sie den Prozess ${proc.pid} wirklich beenden?" onclick="window.killProcess(${proc.pid})" title="Prozess beenden">
+                        <i class="mdi mdi-stop"></i>
+                    </button>
             </tr>
-        `).join('') : '<tr><td colspan="7">Keine Prozesse gefunden</td></tr>';
+        `).join('') : '<tr><td colspan="8">Keine Prozesse gefunden</td></tr>';
     } catch (error) {
         console.error('Fehler beim Laden der Prozesse:', error);
         const tbody = document.getElementById('processList');
-        tbody.innerHTML = '<tr><td colspan="7" class="error">Fehler beim Laden der Prozesse</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="error">Fehler beim Laden der Prozesse</td></tr>';
     }
 }
+
+// Make killProcess available globally
+window.killProcess = killProcess;
  
 // Initial update
 updateProcessList();

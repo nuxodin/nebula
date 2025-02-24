@@ -1,0 +1,63 @@
+<div class="header">
+  <h1>Terminal</h1>
+</div>
+
+<div class="terminal-container">
+  <div id="terminal-output" class="terminal-output"></div>
+  
+  <div class="terminal-input-container">
+    <div class="prompt">$</div>
+    <input type="text" id="terminal-input" class="terminal-input" placeholder="Befehl eingeben..." autofocus>
+  </div>
+</div>
+
+<style>
+.terminal-container {
+  background: #1e1e1e;
+  color: #fff;
+  padding: 1rem;
+  border-radius: 4px;
+  font-family: monospace;
+  margin-top: 1rem;
+}
+
+.terminal-output {
+  min-height: 300px;
+  max-height: 500px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  padding-bottom: 1rem;
+}
+
+.terminal-input-container {
+  display: flex;
+  align-items: center;
+  border-top: 1px solid #333;
+  padding-top: 0.5rem;
+}
+
+.prompt {
+  color: #0f0;
+  margin-right: 0.5rem;
+}
+
+.terminal-input {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-family: monospace;
+  flex-grow: 1;
+  outline: none;
+}
+
+.command-output {
+  margin: 0.5rem 0;
+  padding: 0.5rem;
+  background: rgba(255,255,255,0.05);
+  border-radius: 2px;
+}
+
+.error-output {
+  color: #f66;
+}
+</style>

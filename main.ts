@@ -10,6 +10,9 @@ import { apiRoutes as dashboardApiRoutes, viewRoutes as dashboardViewRoutes } fr
 import { apiRoutes as domainsApiRoutes, viewRoutes as domainsViewRoutes } from "./modules/domains/routes.ts";
 import { apiRoutes as mailApiRoutes, viewRoutes as mailViewRoutes } from "./modules/mail/routes.ts";
 import { apiRoutes as prozessApiRoutes, viewRoutes as prozessViewRoutes } from "./modules/prozess/routes.ts";
+import { apiRoutes as terminalApiRoutes, viewRoutes as terminalViewRoutes } from "./modules/terminal/routes.ts";
+import { apiRoutes as packagesApiRoutes, viewRoutes as packagesViewRoutes } from "./modules/packages/routes.ts";
+import { apiRoutes as servicesApiRoutes, viewRoutes as servicesViewRoutes } from "./modules/services/routes.ts";
 import clientRoutes from "./modules/clients/routes.ts";
 import databaseRoutes from "./modules/databases/routes.ts";
 import filesRoutes, { createFileRoutes } from "./modules/files/routes.ts";
@@ -42,7 +45,10 @@ app.route("/api/clients", clientRoutes);
 app.route("/api/databases", databaseRoutes);
 app.route("/api/mail", mailApiRoutes);
 app.route("/api/prozess", prozessApiRoutes);
+app.route("/api/terminal", terminalApiRoutes);
 app.route("/api/files", createFileRoutes({ rootPath: "/" }));
+app.route("/api/packages", packagesApiRoutes);
+app.route("/api/services", servicesApiRoutes);
 
 // Dann erst die View Routes
 app.route("/", dashboardViewRoutes);
@@ -51,7 +57,10 @@ app.route("/logs", logsViewRoutes);
 app.route("/domains", domainsViewRoutes);
 app.route("/mail", mailViewRoutes);
 app.route("/prozess", prozessViewRoutes);
+app.route("/terminal", terminalViewRoutes);
 app.route("/files", filesRoutes); // Add global file explorer route
+app.route("/packages", packagesViewRoutes);
+app.route("/services", servicesViewRoutes);
 
 // Profile Routes
 app.get("/profile", getProfile);
@@ -68,13 +77,3 @@ app.onError((err, c) => {
 Deno.serve({ port }, app.fetch);
 console.log(`Nebula läuft auf http://localhost:${port}`);
 
-
-/*
-
-run in docker:
-cd nebula
-docker run -it --rm `
-   -v ${PWD}:/app `
-   -w /app `
-   -p 3000:3000  -p 81:80 `
-   denoland/deno task dev

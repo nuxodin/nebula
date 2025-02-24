@@ -1,5 +1,4 @@
 import { Context, Next } from "hono";
-import { logInfo, logError } from "../utils/logger.ts";
 import { createMiddleware } from "hono/helper.ts";
 
 const store = new Map<string, Record<string, unknown>>();

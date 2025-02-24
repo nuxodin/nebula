@@ -1,12 +1,11 @@
 <div class="header">
-  <h1 id="pageTitle">Domain</h1>
+  <h1 id="pageTitle">Domains</h1>
 </div>
 
-<div class="domain-actions">
-  <a href="#addDomainModal" class="btn">
-    <i class="mdi mdi-plus"></i> Domain hinzufügen
-  </a>
-</div>
+<input type="search" id="domainSearch" placeholder="durchsuchen...">
+<a href="#addDomainModal" class="btn">
+  <i class="mdi mdi-plus"></i> hinzufügen
+</a>
 
 <u2-table sortable>
   <table>
@@ -22,16 +21,15 @@
   </table>
 </u2-table>
 
-<!-- Modal für neue Domain -->
 <dialog id="addDomainModal" u2-navigable class="u2x-modal">
   <h2>Neue Domain hinzufügen</h2>
   <form id="addDomainForm">
     <label>
       Domain Name
-      <input name="name" required placeholder="z.B. example.com" style="width: 100%">
+      <input name="name" required placeholder="z.B. example.com">
     </label>
     <div class="-buttons">
-      <button type="submit" class="btn">Domain hinzufügen</button>
+      <button>Domain hinzufügen</button>
       <button type="button" onclick="history.back()">Abbrechen</button>
     </div>
   </form>

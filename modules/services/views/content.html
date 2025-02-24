@@ -1,0 +1,116 @@
+<div class="container">
+    <div class="header">
+        <h1>System Services</h1>
+        <button class="refresh-btn" onclick="loadServices()">
+            <i class="fas fa-sync"></i> Aktualisieren
+        </button>
+    </div>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Service</th>
+                <th>Beschreibung</th>
+                <th>Starttyp</th>
+                <th>Status</th>
+                <th>Aktionen</th>
+            </tr>
+        </thead>
+        <tbody id="servicesList">
+            <!-- Services werden hier dynamisch eingefügt -->
+        </tbody>
+    </table>
+</div>
+
+<style>
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.refresh-btn {
+    padding: 0.5rem 1rem;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    cursor: pointer;
+}
+
+.refresh-btn:hover {
+    background-color: #e9ecef;
+}
+
+.status-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+}
+
+.status-running {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-stopped {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.status-unknown {
+    background-color: #e2e3e5;
+    color: #383d41;
+}
+
+.action-btn {
+    margin: 0 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+
+.start-btn {
+    background-color: #28a745;
+    color: white;
+}
+
+.stop-btn {
+    background-color: #dc3545;
+    color: white;
+}
+
+.restart-btn {
+    background-color: #ffc107;
+    color: black;
+}
+
+.action-btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.starttype-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    background-color: #e2e3e5;
+    color: #383d41;
+}
+
+.starttype-auto {
+    background-color: #cce5ff;
+    color: #004085;
+}
+
+.starttype-manual {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.starttype-disabled {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+</style>

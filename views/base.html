@@ -50,10 +50,8 @@
         }
       }
       .btn, button, input, select, textarea {
-        padding: .5rem .7rem;
+        padding: .6rem .7rem;
       }
-
-
       dl.cd-left-right {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -151,9 +149,6 @@
         border: 1px solid #e5e7eb;
         border-radius: 4px;
       }
-      .search {
-        border-color: #e5e7eb;
-      }
     </style>
     <!-- Slot für zusätzliche Styles -->
     ${styles}
@@ -178,8 +173,18 @@
           <a href="/mail" class="nav-item">
             <i class="mdi mdi-email"></i> E-Mail
           </a>
+          <a href="/services" class="nav-item">
+            <i class="mdi mdi-cogs"></i> Services
+          </a>
           <a href="/prozess" class="nav-item">
             <i class="mdi mdi-cogs"></i> Prozesse
+          </a>
+          <a href="/packages" class="nav-item">
+            <i class="mdi mdi-cogs"></i> Packages
+          </a>
+          <a href="/terminal" class="nav-item">
+            <i class="mdi mdi-console"></i> Terminal
+          </a>
           <a href="/logs" class="nav-item">
             <i class="mdi mdi-text-box-search"></i> Logs
           </a>
@@ -192,11 +197,9 @@
         </nav>
       </aside>
       <main class="content">
-        <!-- Slot für den Hauptinhalt -->
         ${content}
       </main>
     </div>
-    <!-- Slot für zusätzliche Scripts -->
     ${scripts}
   </body>
 </html>

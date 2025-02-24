@@ -1,21 +1,20 @@
 <div class="header">
   <h1 id="pageTitle">File Explorer</h1>
-  <div>
-    <a href="#uploadDialog">
-      <button>
-        <i class="mdi mdi-upload"></i> Upload File
-      </button>
-    </a>
-    <button data-action="newFile">
-      <i class="mdi mdi-file-plus"></i> New File
-    </button>
-    <button data-action="newFolder">
-      <i class="mdi mdi-folder-plus"></i> New Folder
-    </button>
-  </div>
 </div>
 
-<div class="file-explorer">
+<a href="#uploadDialog">
+  <button>
+    <i class="mdi mdi-upload"></i> Upload File
+  </button>
+</a>
+<button data-action="newFile">
+  <i class="mdi mdi-file-plus"></i> New File
+</button>
+<button data-action="newFolder">
+  <i class="mdi mdi-folder-plus"></i> New Folder
+</button>
+
+<div class="file-explorer" style="margin-top:1rem">
   <div class="file-tree">
     <div class="breadcrumb" id="pathBreadcrumb">
       <!-- Will be filled dynamically -->

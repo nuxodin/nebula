@@ -9,14 +9,15 @@ export function apiFetch(url, { method, data } = {}) {
         },
         body: JSON.stringify(data)
     }).then(response => {
-        if (response.ok) {
-            return response.json();
-        }
-        if (response.status !== 400) {
-            throw new Error(response.status + ' ' + response.statusText);
-        }
-        return response.json().then(error => {
-            throw new Error(error.message || 'unknown error');
+        return response.json().then(data => {
+            if (response.ok) return data;
+            if (data.error) throw new Error(data.error);
+            throw new Error(data.error || response.status + ' ' + response.statusText);
+        }).catch(error => {
+            if (response.status !== 400) {
+                throw new Error(response.status + ' ' + response.statusText);
+            }
+            throw error;
         });
     });
 }

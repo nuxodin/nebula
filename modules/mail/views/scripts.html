@@ -8,10 +8,22 @@ let currentMailToDelete = null;
 async function loadMailAccounts() {
   try {
     const accounts = await apiFetch('/api/mail');
-    renderMailAccounts(accounts);
+    mailAccounts = accounts;
+    filterAndRenderMailAccounts();
   } catch (error) {
     alert('Fehler beim Laden der E-Mail Konten: ' + error.message);
   }
+}
+
+// E-Mail Konten filtern und anzeigen
+function filterAndRenderMailAccounts() {
+  const searchTerm = document.getElementById('mailSearch')?.value.toLowerCase() || '';
+  const filteredAccounts = mailAccounts.filter(account => 
+    account.mail_name.toLowerCase().includes(searchTerm) ||
+    account.domain_name.toLowerCase().includes(searchTerm) ||
+    account.status.toLowerCase().includes(searchTerm)
+  );
+  renderMailAccounts(filteredAccounts);
 }
 
 // E-Mail Konten anzeigen
@@ -113,6 +125,9 @@ window.createMailAccount = async function() {
     alert('Fehler beim Erstellen des E-Mail Kontos: ' + error.message);
   }
 }
+
+// Search event listener
+document.getElementById('mailSearch')?.addEventListener('input', filterAndRenderMailAccounts);
 
 // Initial laden
 loadMailAccounts();</script>

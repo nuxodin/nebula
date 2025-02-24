@@ -1,25 +1,40 @@
 <script type="module">
-
-
+  import * as dialog from "https://cdn.jsdelivr.net/gh/u2ui/u2@x.x.x/js/dialog/dialog.min.js"
   import { apiFetch } from '/public/js/utils.js';
 
-
-  let domains = [];
+  let allDomains = [];
   let currentDomainToDelete = null;
   
   // Domains laden
   async function loadDomains() {
     try {
-      const domains = await apiFetch('/api/domains');
-      renderDomains(domains);
+      allDomains = await apiFetch('/api/domains');
+      filterAndRenderDomains();
     } catch (error) {
       alert('Fehler beim Laden der Domains: ' + error.message);
     }
   }
 
   const tbody = document.getElementById('domainGrid');
+  const searchInput = document.getElementById('domainSearch');
+
+  // Search handler
+  searchInput.addEventListener('input', () => {
+    filterAndRenderDomains();
+  });
 
   // Domains filtern und anzeigen
+  function filterAndRenderDomains() {
+    const searchTerm = searchInput.value.toLowerCase();
+    const filteredDomains = allDomains.filter(domain => 
+      domain.name.toLowerCase().includes(searchTerm) ||
+      (domain.owner_name || '').toLowerCase().includes(searchTerm) ||
+      domain.status.toLowerCase().includes(searchTerm)
+    );
+    renderDomains(filteredDomains);
+  }
+
+  // Domains anzeigen
   function renderDomains(domainsToRender) {
     tbody.innerHTML = domainsToRender.map(domain => `
       <tr u2-href="/domains/${domain.id}" item-id="${domain.id}">
@@ -35,7 +50,7 @@
             ${new Date(domain.created_at).toLocaleString()}
           </u2-time>
         <td>
-          <button class="u2-unstyle -delete" u2-confirm="Domain löschen? Inklusive zugehörige Datenbanken und E-Mail-Konten" xonclick="showDeleteDomainModal(${domain.id}, '${domain.name}')">
+          <button class="u2-unstyle -delete" u2-confirm="Domain löschen? Inklusive zugehörige Datenbanken und E-Mail-Konten">
             <i class="mdi mdi-delete"></i>
           </button>
     `).join('');
@@ -54,11 +69,10 @@
       const response = await apiFetch(`/api/domains/${id}`, {method: 'DELETE'});
       loadDomains();
     } catch (error) {
-      alert(error.message || 'Fehler beim Löschen der Domain');
+      dialog.alert(error.message || 'Fehler beim Löschen der Domain');
     }
   }
 
-  // Form Handler
   document.getElementById('addDomainForm').onsubmit = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
@@ -71,10 +85,9 @@
       loadDomains();
       e.target.reset();
     } catch (error) {
-      alert(error.message);
+      dialog.alert(error.message);
     }
-};
+  };
 
-loadDomains();
-
+  loadDomains();
 </script>

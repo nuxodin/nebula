@@ -1,0 +1,80 @@
+<script type="module">
+import { apiFetch } from '/public/js/utils.js';
+
+const terminalOutput = document.getElementById('terminal-output');
+const terminalInput = document.getElementById('terminal-input');
+
+async function executeCommand(command) {
+  try {
+    // Zeige den eingegebenen Befehl im Output an
+    appendToOutput(`$ ${command}`, 'command-line');
+    
+    const response = await apiFetch('/api/terminal', {
+      data: { command }
+    });
+
+    // Verarbeite die Ausgabe
+    if (response.output) {
+      appendToOutput(response.output, response.code === 0 ? '' : 'error-output');
+    }
+  } catch (error) {
+    appendToOutput(error.message || 'Fehler bei der Befehlsausführung', 'error-output');
+  }
+  
+  // Scrolle zum Ende des Outputs
+  terminalOutput.scrollTop = terminalOutput.scrollHeight;
+}
+
+function appendToOutput(text, className = '') {
+  const output = document.createElement('div');
+  output.textContent = text;
+  if (className) output.className = className;
+  terminalOutput.appendChild(output);
+}
+
+// Event-Listener für Tastatureingaben
+terminalInput.addEventListener('keypress', async (e) => {
+  if (e.key === 'Enter' && terminalInput.value.trim()) {
+    const command = terminalInput.value;
+    terminalInput.value = '';
+    await executeCommand(command);
+  }
+});
+
+// Behalte den Command-History
+let commandHistory = [];
+let historyIndex = -1;
+
+terminalInput.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (historyIndex < commandHistory.length - 1) {
+      historyIndex++;
+      terminalInput.value = commandHistory[commandHistory.length - 1 - historyIndex] || '';
+    }
+  } else if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (historyIndex > -1) {
+      historyIndex--;
+      terminalInput.value = historyIndex === -1 ? '' : 
+        commandHistory[commandHistory.length - 1 - historyIndex] || '';
+    }
+  }
+});
+
+terminalInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter' && terminalInput.value.trim()) {
+    commandHistory.push(terminalInput.value);
+    if (commandHistory.length > 50) commandHistory.shift();
+    historyIndex = -1;
+  }
+});
+
+// Fokussiere das Input-Feld beim Laden
+terminalInput.focus();
+
+// Behalte den Fokus auf dem Input-Feld
+document.addEventListener('click', () => {
+  terminalInput.focus();
+});
+</script>
