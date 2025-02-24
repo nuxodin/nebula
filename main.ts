@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import { serveStatic } from "https://deno.land/x/hono@v3.11.7/middleware.ts";
 import { sessionMiddleware } from "./middleware/session.ts";
 import { authMiddleware } from "./middleware/auth.ts";
-import { apiRoutes as userApiRoutes, viewRoutes as userViewRoutes } from "./modules/users/routes.ts";
+import { /*apiRoutes as userApiRoutes, */ viewRoutes as userViewRoutes } from "./modules/users/routes.ts";
 import { apiRoutes as logsApiRoutes, viewRoutes as logsViewRoutes } from "./modules/logs/routes.ts";
 import { apiRoutes as dashboardApiRoutes, viewRoutes as dashboardViewRoutes } from "./modules/dashboard/routes.ts";
 import { apiRoutes as domainsApiRoutes, viewRoutes as domainsViewRoutes } from "./modules/domains/routes.ts";
@@ -38,7 +38,7 @@ app.use('*', authMiddleware);
 
 // API Routes zuerst definieren für höhere Priorität
 app.route("/api/dashboard", dashboardApiRoutes);
-app.route("/api/users", userApiRoutes);
+//app.route("/api/users", userApiRoutes);
 app.route("/api/logs", logsApiRoutes);
 app.route("/api/domains", domainsApiRoutes);
 app.route("/api/clients", clientRoutes);

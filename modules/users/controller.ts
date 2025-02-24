@@ -2,6 +2,7 @@ import { logInfo, logError } from "../../utils/logger.ts";
 import { renderTemplate } from "../../utils/template.ts";
 import db from "../../utils/database.ts";
 
+
 // View Controller
 export const getUserView = async (c) => {
   try {
@@ -15,7 +16,10 @@ export const getUserView = async (c) => {
 };
 
 // API Controllers
+/*
 export const getAllUsers = async (c) => {
+  console.log('USED????????????????');
+
   try {
     const users = db.queryEntries(`
       SELECT c.*,
@@ -32,6 +36,7 @@ export const getAllUsers = async (c) => {
 };
 
 export const registerUser = async (c) => {
+  console.log('USED????????????????');
   try {
     const { login, email, password } = await c.req.json();
     
@@ -58,6 +63,7 @@ export const registerUser = async (c) => {
 };
 
 export const deleteUser = async (c) => {
+  console.log('USED????????????????');
   try {
     const { id } = c.req.param();
     const user = db.queryEntries("SELECT login FROM clients WHERE id = ?", [id])[0];
@@ -77,6 +83,7 @@ export const deleteUser = async (c) => {
 };
 
 export const getUserById = async (c) => {
+  console.log('USED????????????????');
   try {
     const { id } = c.req.param();
     const user = db.queryEntries("SELECT * FROM clients WHERE id = ?", [id])[0];
@@ -92,3 +99,4 @@ export const getUserById = async (c) => {
   }
 };
 
+*/
