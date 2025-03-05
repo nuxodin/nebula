@@ -1,0 +1,179 @@
+<div class="header">
+  <h1 id="pageTitle">Datenbank</h1>
+  <div>
+    <button class="btn-icon" onclick="exportDatabase()" title="Datenbank exportieren">
+      <i class="mdi mdi-database-export"></i>
+    </button>
+    <button class="btn-icon" onclick="showImportDialog()" title="SQL importieren">
+      <i class="mdi mdi-database-import"></i>
+    </button>
+    <button class="btn-icon btn-danger" onclick="deleteDatabase()" title="Datenbank löschen">
+      <i class="mdi mdi-delete"></i>
+    </button>
+  </div>
+</div>
+
+<div class="u2-grid" style="margin-top:1rem">
+  <div class="card">
+    <h2>Basis Informationen</h2>
+    <table>
+      <tr>
+        <td>Name
+        <td id="dbName">
+      <tr>
+        <td>Typ
+        <td id="dbType">
+      <tr>
+        <td>Domain
+        <td id="dbDomain">
+      <tr>
+        <td>Server
+        <td id="dbServer">
+      <tr>
+        <td>Größe
+        <td id="dbSize">
+      <tr>
+        <td>Tabellen
+        <td id="dbTables">
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Aktionen</h2>
+    <div class="actions" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:0.5rem">
+      <button onclick="showCopyDialog()">
+        <i class="mdi mdi-content-copy"></i> Kopieren
+      </button>
+      <button onclick="checkDatabase()">
+        <i class="mdi mdi-database-check"></i> Überprüfen
+      </button>
+      <button onclick="optimizeDatabase()">
+        <i class="mdi mdi-database-cog"></i> Optimieren
+      </button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Zugangsdaten</h2>
+    <table>
+      <tr>
+        <td>Benutzer
+        <td id="dbUser">
+      <tr>
+        <td>Passwort
+        <td>
+          <button onclick="showChangePasswordDialog()">Ändern</button>
+    </table>
+  </div>
+</div>
+
+
+
+<div class="card" style="margin-top:1rem">
+  <h2>Tabellen</h2>
+  <u2-table sortable>
+    <table>
+      <thead>
+        <tr>
+          <th>Name
+          <th>Zeilen
+          <th>Größe
+          <th>Engine
+          <th>Encoding
+          <th width="100">Aktionen
+      <tbody id="tablesGrid">
+    </table>
+  <u2-table>
+</div>
+
+
+
+<dialog id="changePasswordDialog" u2-navigable class="u2x-modal">
+  <h2>Passwort ändern</h2>
+  <form id="passwordForm" onsubmit="return changePassword(event)">
+    <div class="u2-table">
+      <div>
+        <label>
+          <div>Neues Passwort</div>
+          <div>
+            <input type="password" id="newPassword" required>
+          </div>
+        </label>
+      </div>
+    </div>
+    <div class="u2-flex" style="justify-content: space-between; margin-top:1em">
+      <button type="submit">Speichern</button>
+      <button type="button" onclick="closeChangePasswordDialog()">Abbrechen</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="copyDialog" u2-navigable class="u2x-modal">
+  <h2>Datenbank kopieren</h2>
+  <form id="copyForm" onsubmit="return copyDatabase(event)">
+    <div class="u2-table">
+      <div>
+        <label>
+          <div>Name der neuen Datenbank</div>
+          <div>
+            <input type="text" id="copyName" required>
+          </div>
+        </label>
+      </div>
+    </div>
+    <div class="u2-flex" style="justify-content: space-between; margin-top:1em">
+      <button type="submit">Kopieren</button>
+      <button type="button" onclick="document.getElementById('copyDialog').close()">Abbrechen</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="importDialog" u2-navigable class="u2x-modal">
+  <h2>SQL importieren</h2>
+  <form id="importForm" onsubmit="return importDatabase(event)">
+    <div class="u2-table">
+      <div>
+        <label>
+          <div>SQL-Datei</div>
+          <div>
+            <input type="file" id="importFile" accept=".sql" required>
+          </div>
+        </label>
+      </div>
+    </div>
+    <div class="u2-flex" style="justify-content: space-between; margin-top:1em">
+      <button type="submit">Importieren</button>
+      <button type="button" onclick="document.getElementById('importDialog').close()">Abbrechen</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="tableDetailsDialog" u2-navigable class="u2x-modal">
+  <h2>Tabellendetails: <span id="tableDetailsName"></span></h2>
+  <div id="tableDetailsContent">
+    <h3>Spalten</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Name
+          <th>Typ
+          <th>Null
+          <th>Default
+          <th>Extra
+      <tbody id="columnsList">
+    </table>
+    
+    <h3>Indizes</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Name
+          <th>Spalten
+          <th>Typ
+      <tbody id="indexesList">
+    </table>
+  </div>
+  <div class="u2-flex" style="justify-content: flex-end; margin-top:1em">
+    <button onclick="document.getElementById('tableDetailsDialog').close()">Schließen</button>
+  </div>
+</dialog>

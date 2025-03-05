@@ -22,16 +22,10 @@ export function objToRoutes(routes: Hono, obj, parentPath = "/") {
       objToRoutes(routes, fn, currentPath);
       continue;
     }
-    else if (key === 'get') {
-      console.log(parentPath);
-      routes.get(`${parentPath}`, fnToApi(fn));
-    }
-    else if (key === 'post') routes.post(`${parentPath}`, fnToApi(fn));
-    else if (key === 'delete') routes.delete(`${parentPath}`, fnToApi(fn));
-    else if (key === 'put') routes.put(`${parentPath}`, fnToApi(fn));
-    else {
-      // default to get
-      routes.get(currentPath, fnToApi(fn));
-    }
+    else if (key === 'get') routes.get(parentPath, fnToApi(fn));
+    else if (key === 'post') routes.post(parentPath, fnToApi(fn));
+    else if (key === 'delete') routes.delete(parentPath, fnToApi(fn));
+    else if (key === 'put') routes.put(parentPath, fnToApi(fn));
+    else routes.get(currentPath, fnToApi(fn));
   }
 }

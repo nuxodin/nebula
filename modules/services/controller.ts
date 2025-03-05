@@ -17,12 +17,12 @@ export const getServicesView = async (c: Context) => {
 
 // Service helper functions
 async function getWindowsServices() {
-    const { output } = await run("sc", ["query"]);
+    const { stdout } = await run("sc", ["query"]);
     const services = [];
     let currentService: any = {};
 
     // Get basic info first
-    const lines = output.split("\n");
+    const lines = stdout.split("\n");
     for (const line of lines) {
         const serviceLine = line.trim();
         if (serviceLine.startsWith("SERVICE_NAME:")) {
@@ -52,7 +52,7 @@ async function getWindowsServices() {
         try {
             // Get config info
             const configResult = await run("sc", ["qc", service.originalName]);
-            const configLines = configResult.output.split("\n");
+            const configLines = configResult.stdout.split("\n");
 
             for (const line of configLines) {
                 const trimmedLine = line.trim();
@@ -66,7 +66,7 @@ async function getWindowsServices() {
 
             // Get description
             const descResult = await run("sc", ["qdescription", service.originalName]);
-            const descLines = descResult.output.split("\n");
+            const descLines = descResult.stdout.split("\n");
             if (descLines.length > 1) {
                 service.description = descLines[1].trim();
             }
@@ -83,8 +83,8 @@ async function getLinuxServices() {
 
     if (await isCommandAvailable("systemctl")) {
         // Systemd
-        const { output } = await run("systemctl", ["list-units", "--type=service", "--all", "--no-pager", "--no-legend"]);
-        const lines = output.split("\n");
+        const { stdout } = await run("systemctl", ["list-units", "--type=service", "--all", "--no-pager", "--no-legend"]);
+        const lines = stdout.split("\n");
 
         for (const line of lines) {
             const parts = line.trim().split(/\s+/);
@@ -94,11 +94,11 @@ async function getLinuxServices() {
 
                 try {
                     // Get additional service info
-                    const { output: statusOutput } = await run("systemctl", ["status", parts[0], "--no-pager"]);
+                    const { stdout: statusOutput } = await run("systemctl", ["status", parts[0], "--no-pager"]);
                     const description = statusOutput.split("\n")
                         .find(line => !line.startsWith(" ") && !line.includes("●"))?.trim() || "";
 
-                    const { output: showOutput } = await run("systemctl", ["show", parts[0], "--property=UnitFileState"]);
+                    const { stdout: showOutput } = await run("systemctl", ["show", parts[0], "--property=UnitFileState"]);
                     const startType = showOutput.includes("enabled") ? "auto" :
                         showOutput.includes("disabled") ? "disabled" : "manual";
 
@@ -132,8 +132,8 @@ async function getLinuxServices() {
         }
 
         if (serviceCommand === "service") {
-            const { output } = await run("service", ["--status-all"]);
-            const lines = output.split("\n");
+            const { stdout } = await run("service", ["--status-all"]);
+            const lines = stdout.split("\n");
 
 
             for (const line of lines) {
@@ -149,12 +149,12 @@ async function getLinuxServices() {
                         let startType = "unknown";
 
                         if (await isCommandAvailable("chkconfig")) {
-                            const { output: chkConfigOutput } = await run("chkconfig", ["--list", name]);
+                            const { stdout: chkConfigOutput } = await run("chkconfig", ["--list", name]);
                             startType = chkConfigOutput.includes(":on") ? "auto" : "manual";
                         }
 
                         try {
-                            const { output: scriptContent } = await run("cat", [`/etc/init.d/${name}`]);
+                            const { stdout: scriptContent } = await run("cat", [`/etc/init.d/${name}`]);
                             const descMatch = scriptContent.match(/^#\s*description:\s*(.+)$/m);
                             description = descMatch ? descMatch[1].trim() : "";
                         } catch {
@@ -183,8 +183,8 @@ async function getLinuxServices() {
         } else {
             // Direct init.d script handling
             try {
-                const { output } = await run("ls", ["-1", "/etc/init.d"]);
-                const services = output.split("\n").filter(name => name.trim());
+                const { stdout } = await run("ls", ["-1", "/etc/init.d"]);
+                const services = stdout.split("\n").filter(name => name.trim());
 
                 for (const name of services) {
                     try {
@@ -193,7 +193,7 @@ async function getLinuxServices() {
 
                         let description = "";
                         try {
-                            const { output: scriptContent } = await run("cat", [`/etc/init.d/${name}`]);
+                            const { stdout: scriptContent } = await run("cat", [`/etc/init.d/${name}`]);
                             const descMatch = scriptContent.match(/^#\s*description:\s*(.+)$/m);
                             description = descMatch ? descMatch[1].trim() : "";
                         } catch {
@@ -222,17 +222,10 @@ async function getLinuxServices() {
 // API Controllers
 export const api = {
     get: async function (_c: Context) {
-        try {
-            // Get list of services based on OS
-            const services = Deno.build.os === "windows"
-                ? await getWindowsServices()
-                : await getLinuxServices();
-
-            return services;
-        } catch (err) {
-            logError("Error fetching services:", "Services", _c, err);
-            return [];
-        }
+        const services = Deno.build.os === "windows"
+            ? await getWindowsServices()
+            : await getLinuxServices();
+        return services;
     },
     ':name': {
         start: {
@@ -295,10 +288,8 @@ export const api = {
 
                     // On Linux, we try to use the native restart command if available
                     if (Deno.build.os !== "windows" && await isCommandAvailable("systemctl")) {
-                        const { code, output } = await run("systemctl", ["restart", serviceName], { sudo: true });
-                        if (code !== 0) {
-                            throw new Error(output);
-                        }
+                        const { code, stderr } = await run("systemctl", ["restart", serviceName], { sudo: true });
+                        if (code !== 0) throw new Error(stderr);
                     } else {
                         // Fallback to stop + start
                         await stopService(serviceName);

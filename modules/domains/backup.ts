@@ -1,5 +1,5 @@
 import { ensureDir } from "https://deno.land/std/fs/mod.ts";
-import { runCommand } from "../../utils/command.ts";
+import { run } from "../../utils/command.ts";
 import { config } from "../../utils/config.ts";
 import { logError, logInfo } from "../../utils/logger.ts";
 import db from "../../utils/database.ts";
@@ -25,7 +25,7 @@ export async function createBackup(domainId: number, options: BackupOptions) {
     
     // Dateien sichern
     if (options.includeFiles !== false) {
-      tasks.push(runCommand(`tar -czf ${backupDir}/files.tar.gz -C ${config.vhosts_root}/${domain.name} .`));
+      tasks.push(run(`tar -czf ${backupDir}/files.tar.gz -C ${config.vhosts_root}/${domain.name} .`));
     }
 
     // Datenbanken sichern
@@ -33,11 +33,11 @@ export async function createBackup(domainId: number, options: BackupOptions) {
       const databases = db.queryEntries('SELECT * FROM databases WHERE dom_id = ?', [domainId]);
       for (const database of databases) {
         if (database.type === 'mysql') {
-          tasks.push(runCommand(
+          tasks.push(run(
             `mysqldump --single-transaction ${database.name} > ${backupDir}/${database.name}.sql`
           ));
         } else if (database.type === 'postgresql') {
-          tasks.push(runCommand(
+          tasks.push(run(
             `pg_dump ${database.name} > ${backupDir}/${database.name}.sql`
           ));
         }
@@ -48,13 +48,13 @@ export async function createBackup(domainId: number, options: BackupOptions) {
     if (options.includeMailData !== false) {
       const mailDir = `/var/mail/${domain.name}`;
       if (await Deno.stat(mailDir).catch(() => null)) {
-        tasks.push(runCommand(`tar -czf ${backupDir}/mail.tar.gz -C ${mailDir} .`));
+        tasks.push(run(`tar -czf ${backupDir}/mail.tar.gz -C ${mailDir} .`));
       }
     }
 
     // Konfigurationen sichern
     if (options.includeConfigs !== false) {
-      tasks.push(runCommand(`tar -czf ${backupDir}/configs.tar.gz -C ${config.vhosts_root}/${domain.name}/conf .`));
+      tasks.push(run(`tar -czf ${backupDir}/configs.tar.gz -C ${config.vhosts_root}/${domain.name}/conf .`));
     }
 
     // Alle Backup-Tasks ausführen
@@ -83,13 +83,13 @@ export async function restoreBackup(domainId: number, backupPath: string, option
     if (!domain) throw new Error('Domain not found');
 
     // Domain temporär deaktivieren
-    await runCommand(`a2dissite ${domain.name}`);
-    await runCommand('systemctl reload apache2');
+    await run(`a2dissite ${domain.name}`);
+    await run('systemctl reload apache2');
 
     // Dateien wiederherstellen
     if (options.includeFiles !== false) {
-      await runCommand(`rm -rf ${config.vhosts_root}/${domain.name}/*`);
-      await runCommand(`tar -xzf ${backupPath}/files.tar.gz -C ${config.vhosts_root}/${domain.name}`);
+      await run(`rm -rf ${config.vhosts_root}/${domain.name}/*`);
+      await run(`tar -xzf ${backupPath}/files.tar.gz -C ${config.vhosts_root}/${domain.name}`);
     }
 
     // Datenbanken wiederherstellen
@@ -97,9 +97,9 @@ export async function restoreBackup(domainId: number, backupPath: string, option
       const databases = db.queryEntries('SELECT * FROM databases WHERE dom_id = ?', [domainId]);
       for (const database of databases) {
         if (database.type === 'mysql') {
-          await runCommand(`mysql ${database.name} < ${backupPath}/${database.name}.sql`);
+          await run(`mysql ${database.name} < ${backupPath}/${database.name}.sql`);
         } else if (database.type === 'postgresql') {
-          await runCommand(`psql ${database.name} < ${backupPath}/${database.name}.sql`);
+          await run(`psql ${database.name} < ${backupPath}/${database.name}.sql`);
         }
       }
     }
@@ -108,17 +108,17 @@ export async function restoreBackup(domainId: number, backupPath: string, option
     if (options.includeMailData !== false && await Deno.stat(`${backupPath}/mail.tar.gz`).catch(() => null)) {
       const mailDir = `/var/mail/${domain.name}`;
       await ensureDir(mailDir);
-      await runCommand(`tar -xzf ${backupPath}/mail.tar.gz -C ${mailDir}`);
+      await run(`tar -xzf ${backupPath}/mail.tar.gz -C ${mailDir}`);
     }
 
     // Konfigurationen wiederherstellen
     if (options.includeConfigs !== false) {
-      await runCommand(`tar -xzf ${backupPath}/configs.tar.gz -C ${config.vhosts_root}/${domain.name}/conf`);
+      await run(`tar -xzf ${backupPath}/configs.tar.gz -C ${config.vhosts_root}/${domain.name}/conf`);
     }
 
     // Domain wieder aktivieren
-    await runCommand(`a2ensite ${domain.name}`);
-    await runCommand('systemctl reload apache2');
+    await run(`a2ensite ${domain.name}`);
+    await run('systemctl reload apache2');
 
     logInfo(`Backup restored for ${domain.name}`, 'Backup');
     return { success: true };

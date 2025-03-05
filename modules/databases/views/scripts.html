@@ -1,0 +1,98 @@
+<script type="module">
+import { apiFetch } from '/public/js/utils.js';
+
+loadAll();
+
+async function loadAll() {
+    await Promise.all([
+        loadDatabases(),
+        loadDomains(),
+        loadServers()
+    ]);
+}
+
+async function loadDatabases() {
+    try {
+        const databases = await apiFetch('/api/databases');
+        renderDatabases(databases);
+    } catch (error) {
+        alert('Fehler beim Laden der Datenbanken: ' + error.message);
+    }
+}
+
+async function loadDomains() {
+    try {
+        const domains = await apiFetch('/api/domains');
+        const select = document.getElementById('domainSelect');
+        select.innerHTML = '<option value="">Bitte wählen...</option>' + 
+            domains.map(domain => `<option value="${domain.id}">${domain.name}</option>`).join('');
+    } catch (error) {
+        alert('Fehler beim Laden der Domains: ' + error.message);
+    }
+}
+
+async function loadServers() {
+    try {
+        const servers = await apiFetch('/api/database_servers');
+        const select = document.getElementById('serverSelect');
+        select.innerHTML = '<option value="">Bitte wählen...</option>' + 
+            servers.map(server => `<option value="${server.id}">${server.host} (${server.type})</option>`).join('');
+    } catch (error) {
+        alert('Fehler beim Laden der Datenbankserver: ' + error.message);
+    }
+}
+
+function renderDatabases(databases) {
+    const tbody = document.getElementById('databaseGrid');
+    tbody.innerHTML = databases.map(db => `
+        <tr u2-href="/databases/${db.id}">
+            <td><a href="/databases/${db.id}">${db.name}</a>
+            <td>${db.type}
+            <td>${db.dom_id ? `<a href="/domains/${db.dom_id}">${db.domain_name}</a>` : '-'}
+            <td>${db.server_id ? `<a href="/database_servers/${db.server_id}">${db.host}:${db.port}</a>` : `${db.host}:${db.port}`}
+            <td>${db.db_user}
+            <td>
+                <u2-bytes>${db.size}</u2-bytes>
+            <td>${typeof db.tables === 'number' ? db.tables : '-'}
+            <td>
+                <button class="u2-unstyle" onclick="deleteDatabase(${db.id}, '${db.name}')" title="Datenbank löschen">
+                    <i class="mdi mdi-delete"></i>
+                </button>
+        </tr>
+    `).join('');
+}
+
+// Add database form handler
+document.getElementById('addDatabaseForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData);
+
+    try {
+        const result = await apiFetch('/api/databases', {data});
+
+        if (result.success) {
+            e.target.reset();
+            document.getElementById('addDatabaseModal').close();
+            loadDatabases();
+        } else {
+            throw new Error(result.error);
+        }
+    } catch (error) {
+        alert('Fehler beim Erstellen der Datenbank: ' + error.message);
+    }
+};
+
+window.deleteDatabase = async function(id, name) {
+    if (!confirm(`Datenbank "${name}" wirklich löschen?`)) return;
+    
+    try {
+        await apiFetch(`/api/databases/${id}`, {
+            method: 'DELETE'
+        });
+        loadDatabases();
+    } catch (error) {
+        alert('Fehler beim Löschen der Datenbank: ' + error.message);
+    }
+};
+</script>

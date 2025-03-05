@@ -1,0 +1,68 @@
+<div class="header">
+  <h1>Profil</h1>
+</div>
+
+<div class="u2-grid">
+  <div class="card">
+    <h2>Passwort ändern</h2>
+    <form id="passwordForm">
+      <input type="text" name="username" value="admin" autocomplete="username" readonly hidden>
+      <label>
+        Aktuelles Passwort
+        <input type="password" name="current" required autocomplete="current-password">
+      </label>
+      <label>
+        Neues Passwort
+        <input type="password" name="password" required autocomplete="new-password">
+      </label>
+      <label>
+        Neues Passwort bestätigen
+        <input type="password" name="confirm" required autocomplete="new-password">
+      </label>
+      <div style="display: flex; gap: 1rem;">
+        <button type="submit" class="btn">Passwort ändern</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Platz für zukünftige Profilfunktionen -->
+  <div class="card">
+    <h2>Profil-Informationen</h2>
+    <table>
+      <tr>
+        <th>Benutzername
+        <td id="userLogin">
+      <tr>
+        <th>E-Mail
+        <td id="userEmail">
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Passkeys</h2>
+    <p>
+      <small>
+      Passkeys sind WebAuthn-Anmeldeinformationen, mit denen Sie sich über Fingerabdruck, Gesichtserkennung, 
+      Gerätepasswort oder PIN authentifizieren können. Sie können als Passwort-Ersatz oder als 2FA-Methode verwendet werden.
+      </small>
+    </p>
+
+    <h3>Ihre Passkeys</h3>
+    <div id="passkeys-list" class="passkeys-list">
+      <div class="loading">Lädt...</div>
+    </div>
+  </div>
+</div>
+
+<style>
+.passkey-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1rem;
+  margin: 0.5rem 0;
+  background: #f8fafc;
+  border-radius: .25rem;
+  border: 1px solid #e5e7eb;
+}
+</style>

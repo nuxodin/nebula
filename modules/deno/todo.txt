@@ -1,0 +1,95 @@
+TODO: Deno für viele Domains einrichten
+
+    Zentrale Deno-Installation vorbereiten
+        Deno global installieren oder dvm zentral bereitstellen:
+        bash
+
+    sudo mv /root/.dvm /opt/dvm
+    sudo chmod -R o+rx /opt/dvm
+    sudo ln -s /opt/dvm/bin/dvm /usr/local/bin/dvm
+
+Testen mit einer Domain
+
+    Manuell einen Deno-Prozess als Benutzer starten:
+    bash
+
+runuser -u ne-do-21 -- bash -c 'cd /var/www/vhosts/deno333.ch/deno-app && PORT=3021 /opt/dvm/bin/dvm use latest && nohup deno task start &'
+Prüfen, ob der Prozess läuft:
+bash
+
+    ps aux | grep deno
+
+Systemd-Dienst für Skalierung erstellen
+
+    Vorlage für einen systemd-Dienst erstellen (z. B. für ne-do-21):
+    bash
+
+sudo nano /etc/systemd/system/deno-ne-do-21.service
+Inhalt:
+text
+[Unit]
+Description=Deno Service für ne-do-21
+After=network.target
+[Service]
+User=ne-do-21
+Group=psacln
+WorkingDirectory=/var/www/vhosts/deno333.ch/deno-app
+Environment="PORT=3021"
+ExecStart=/opt/dvm/bin/dvm use latest && /usr/bin/deno task start
+Restart=always
+[Install]
+WantedBy=multi-user.target
+Dienst aktivieren und starten:
+bash
+
+    sudo systemctl daemon-reload
+    sudo systemctl enable deno-ne-do-21
+    sudo systemctl start deno-ne-do-21
+
+Automatisierung für viele Domains
+
+    Skript schreiben, um Dienste dynamisch zu erstellen:
+    bash
+
+    # Beispiel-Skript (anpassen!)
+    linuxUser="ne-do-XX"
+    domainPath="/var/www/vhosts/xyz.ch/deno-app"
+    port="XXXX"
+    cat > /etc/systemd/system/deno-${linuxUser}.service <<EOF
+    [Unit]
+    Description=Deno Service für ${linuxUser}
+    After=network.target
+    [Service]
+    User=${linuxUser}
+    Group=psacln
+    WorkingDirectory=${domainPath}
+    Environment="PORT=${port}"
+    ExecStart=/opt/dvm/bin/dvm use latest && /usr/bin/deno task start
+    Restart=always
+    [Install]
+    WantedBy=multi-user.target
+    EOF
+    sudo systemctl daemon-reload
+    sudo systemctl enable deno-${linuxUser}
+    sudo systemctl start deno-${linuxUser}
+    Skript für alle Domains ausführen (z. B. via Schleife über Domain-Liste).
+
+Überprüfung nach OS-Neustart
+
+    Server neu starten:
+    bash
+
+sudo reboot
+Prüfen, ob Dienste automatisch gestartet sind:
+bash
+
+    systemctl status deno-ne-do-21
+    ps aux | grep deno
+
+Fehlerbehebung und Optimierung
+
+    Logs der Dienste prüfen, falls Fehler auftreten:
+    bash
+
+journalctl -u deno-ne-do-21
+Sicherstellen, dass /opt/dvm für alle Benutzer zugänglich ist.

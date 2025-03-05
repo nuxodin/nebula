@@ -1,0 +1,79 @@
+<div class="header">
+  <h1>DNS Records</h1>
+</div>
+
+<div class="search-bar">
+  <select id="domainFilter">
+    <option value="">Alle Domains</option>
+  </select>
+  <select id="typeFilter">
+    <option value="">Alle Typen</option>
+    <option value="A">A</option>
+    <option value="AAAA">AAAA</option>
+    <option value="CNAME">CNAME</option>
+    <option value="MX">MX</option>
+    <option value="TXT">TXT</option>
+    <option value="NS">NS</option>
+  </select>
+  <input type="search" id="dnsSearch" placeholder="DNS Records durchsuchen...">
+</div>
+
+<button onclick="editDnsRecordModal.showModal()" class="btn">
+  <i class="mdi mdi-plus"></i> hinzufügen
+</button>
+
+<u2-table sortable>
+  <table>
+    <thead>
+      <tr>
+        <th>Domain
+        <th>Type
+        <th>Name
+        <th style="width:100%; min-width:20rem">Content
+        <th style="width:6rem; min-width:6rem">TTL
+        <th style="width:4rem; mim-width:4rem">Priority
+        <th width="33">Aktionen
+    <tbody id="dnsGrid">
+  </table>
+</u2-table>
+
+<dialog id="editDnsRecordModal" u2-navigable class="u2x-modal" style="top: 2rem; margin-top:0; width: 30rem;">
+  <h2>DNS Record hinzufügen</h2>
+  <form id="editDnsRecordForm">
+    <input type="hidden" name="id">
+    <label>
+      Domain
+      <select name="domain_id" required></select>
+    </label>
+    <label>
+        Type
+        <select name="type" required>
+          <option value="A">A</option>
+          <option value="AAAA">AAAA</option>
+          <option value="CNAME">CNAME</option>
+          <option value="MX">MX</option>
+          <option value="TXT">TXT</option>
+          <option value="NS">NS</option>
+        </select>
+    </label>
+    <label>
+      Name
+      <input name="name" placeholder="subdomain" pattern="[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*">
+    </label>
+    <label>
+      Content
+      <input name="content" required>
+    </label>
+    <label>
+      TTL
+      <input name="ttl" type="number" value="" placeholder="optional" min="60" max="86400">
+    </label>
+    <label id="priorityField" style="display:none">
+      Priority
+      <input name="priority" type="number" min="0" max="65535" value="10">
+    </label>
+    <div class="-buttons">
+      <button>Speichern</button>
+    </div>
+  </form>
+</dialog>

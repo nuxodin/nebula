@@ -1,24 +1,16 @@
 import { Hono } from "hono";
-import { getFiles, uploadFile, createFile, deleteFile, renameFile, getFileContent, updateFileContent, getFilesView } from "./controller.ts";
+import { renderTemplate } from "../../utils/template.ts";
+import { objToRoutes } from "../../utils/routes.ts";
+import { getFilesView, api } from "./controller.ts";
 
-// Erstelle eine Factory-Funktion für die File-Routes
-export function createFileRoutes(options = { rootPath: "/" }) {
-  const filesRoutes = new Hono();
-  
-  // View route
-  filesRoutes.get("/", (c) => getFilesView(c, options));
 
-  // API routes mit rootPath
-  filesRoutes.get("/list", (c) => getFiles(c, options));
-  filesRoutes.post("/upload", (c) => uploadFile(c, options));
-  filesRoutes.post("/", (c) => createFile(c, options));
-  filesRoutes.delete("/", (c) => deleteFile(c, options));
-  filesRoutes.post("/rename", (c) => renameFile(c, options));
-  filesRoutes.get("/content", (c) => getFileContent(c, options));
-  filesRoutes.put("/content", (c) => updateFileContent(c, options));
+const apiRoutes = new Hono();
+objToRoutes(apiRoutes, api);
 
-  return filesRoutes;
-}
+// View Routes
+const viewRoutes = new Hono();
+viewRoutes.get("/", async (c) => {
+  return getFilesView(c, { rootPath: "/" });
+});
 
-// Exportiere Standard-Route für globalen Dateisystem-Zugriff
-export default createFileRoutes();
+export { apiRoutes, viewRoutes };

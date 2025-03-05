@@ -1,0 +1,234 @@
+<script type="module">
+import { apiFetch } from '/public/js/utils.js';
+import * as dialog from "https://cdn.jsdelivr.net/gh/u2ui/u2@x.x.x/js/dialog/dialog.min.js";
+
+async function loadComponents() {
+    try {
+        const [available, installed] = await Promise.all([
+            apiFetch('/api/components'),
+            apiFetch('/api/components/installed')
+        ]);
+        renderComponents(groupByCategory(available), installed);
+    } catch (error) {
+        console.error('Fehler beim Laden der Komponenten:', error);
+        dialog.alert('Fehler beim Laden der Komponenten: ' + error.message);
+    }
+}
+
+function groupByCategory(components) {
+    const grouped = {};
+    for (const [name, component] of Object.entries(components)) {
+        const category = component.category || 'other';
+        if (!grouped[category]) {
+            grouped[category] = {};
+        }
+        grouped[category][name] = component;
+    }
+    return grouped;
+}
+
+function renderComponents(grouped, installed) {
+    const grid = document.getElementById('components-grid');
+    grid.innerHTML = '';
+    
+    // Sortiere Kategorien
+    const sortOrder = ['webserver', 'database', 'language', 'ssl', 'tools', 'other'];
+    const categories = Object.keys(grouped).sort((a, b) => {
+        const indexA = sortOrder.indexOf(a);
+        const indexB = sortOrder.indexOf(b);
+        return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
+    });
+
+    // Erstelle Sektionen für jede Kategorie
+    categories.forEach(category => {
+        const components = grouped[category];
+        if (!Object.keys(components).length) return;
+
+        const section = document.createElement('div');
+        section.className = 'card';
+        section.id = category;
+
+        const title = document.createElement('h2');
+        title.textContent = getCategoryTitle(category);
+        
+        const list = document.createElement('div');
+        list.className = 'component-list';
+        
+        // Füge Komponenten zur Liste hinzu
+        Object.entries(components).forEach(([name, config]) => {
+            if (config.versions) {
+                Object.entries(config.versions).forEach(([version, versionConfig]) => {
+                    const isInstalled = installed[`${name}@${version}`];
+                    list.appendChild(createComponentCard(name, version, isInstalled));
+                });
+            } else {
+                const isInstalled = installed[name];
+                list.appendChild(createComponentCard(name, null, isInstalled));
+            }
+        });
+
+        section.appendChild(title);
+        section.appendChild(list);
+        grid.appendChild(section);
+    });
+}
+
+function getCategoryTitle(category) {
+    const titles = {
+        'webserver': 'Webserver',
+        'database': 'Datenbanken',
+        'language': 'Programmiersprachen',
+        'ssl': 'SSL & Zertifikate',
+        'tools': 'Tools',
+        'other': 'Andere'
+    };
+    return titles[category] || category;
+}
+
+function createComponentCard(name, version, installed) {
+    const card = document.createElement('div');
+    card.className = 'component-card';
+    
+    const title = document.createElement('h3');
+    title.textContent = version ? `${name} ${version}` : name;
+    
+    const status = document.createElement('div');
+    status.className = 'status';
+    console.log(installed, name, version);
+    if (installed == null) {
+        status.innerHTML = '❌ <span>Nicht installiert</span>';
+    } else if (installed === 1) {
+        status.innerHTML = '✅ <span>Installiert</span>';
+    } else {
+        status.innerHTML = '⏳ <span>Installation läuft...</span>';
+    }
+    
+    const button = document.createElement('button');
+    button.textContent = installed ? 'Neuinstallieren' : 'Installieren';
+    button.onclick = () => installComponent(name, version);
+    
+    card.appendChild(title);
+    card.appendChild(status);
+    card.appendChild(button);
+    
+    return card;
+}
+
+async function installComponent(name, version) {
+    try {
+        const button = event.target;
+        const status = button.previousElementSibling;
+        
+        button.disabled = true;
+        status.innerHTML = '⏳ <span>Installation läuft...</span>';
+        
+        // Wartezeit für UI-Feedback
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const response = await apiFetch('/api/components/install', {
+            post: { component: name, version }
+        });
+        
+        if (!response.success) {
+            throw new Error(response.error || 'Unbekannter Fehler bei der Installation');
+        }
+
+        // Warte kurz bevor wir neu laden, damit der Nutzer das Feedback sieht
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Nach erfolgreicher Installation neu laden
+        await loadComponents();
+        dialog.alert(response.message || `${name} ${version || ''} wurde installiert.`);
+        
+    } catch (error) {
+        console.error('Installationsfehler:', error);
+        dialog.alert('Installationsfehler: ' + error.message);
+        
+        // UI zurücksetzen
+        const button = event.target;
+        button.disabled = false;
+        const status = button.previousElementSibling;
+        await loadComponents(); // Aktualisiere den Status
+    }
+}
+
+// Initiale Komponenten laden
+loadComponents();
+</script>
+
+<style>
+.component-card {
+    background: white;
+    border-radius: .4rem;
+    padding: 1rem;
+    margin-bottom: 10px;
+    background: rgba(0 0 0 / 3%);
+}
+
+.component-card .status {
+    margin-bottom: 10px;
+    font-size: 0.9em;
+}
+
+.progress-bar {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 300px;
+    height: 40px;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: #4CAF50;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    white-space: nowrap;
+}
+
+.install-progress {
+    position: relative;
+    height: 20px;
+    background: #f0f0f0;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 5px 0;
+}
+
+.progress-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: #4CAF50;
+    transition: width 0.3s ease;
+}
+
+.install-progress span {
+    position: absolute;
+    width: 100%;
+    text-align: center;
+    line-height: 20px;
+    color: #000;
+    mix-blend-mode: difference;
+}
+
+.component-card button:disabled {
+    background: #cccccc;
+    cursor: not-allowed;
+}
+</style>

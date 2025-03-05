@@ -1,0 +1,275 @@
+<script type="module">
+import { apiFetch } from '/public/js/utils.js';
+
+let allDnsRecords = [];
+let allDomains = [];
+
+// DNS Records laden
+async function loadDnsRecords() {
+  try {
+    const [records, domains] = await Promise.all([
+      apiFetch('/api/dns'),
+      apiFetch('/api/domains')
+    ]);
+    allDnsRecords = records;
+    allDomains = domains;
+    
+    // Domain-Selects aktualisieren (Filter und Modal)
+    const domainSelects = [
+      document.querySelector('[name="domain_id"]'),
+      document.getElementById('domainFilter')
+    ];
+    
+    domainSelects.forEach(select => {
+      select.innerHTML = `
+        ${select === domainFilter ? '<option value="">Alle Domains</option>' : ''}
+        ${domains.map(domain => `<option value="${domain.id}">${domain.name}</option>`).join('')}
+      `;
+    });
+    
+    filterAndRenderRecords();
+  } catch (error) {
+    alert('Fehler beim Laden der DNS Records: ' + error.message);
+  }
+}
+
+const tbody = document.getElementById('dnsGrid');
+const searchInput = document.getElementById('dnsSearch');
+const typeFilter = document.getElementById('typeFilter');
+const editForm = document.getElementById('editDnsRecordForm');
+const editModal = document.getElementById('editDnsRecordModal');
+const domainFilter = document.getElementById('domainFilter');
+
+// Event Listeners für Filter
+searchInput.addEventListener('input', filterAndRenderRecords);
+typeFilter.addEventListener('change', filterAndRenderRecords);
+domainFilter.addEventListener('change', filterAndRenderRecords);
+
+// DNS Records filtern und anzeigen
+function filterAndRenderRecords() {
+  const searchTerm = searchInput.value.toLowerCase();
+  const selectedType = typeFilter.value;
+  const selectedDomain = domainFilter.value;
+  
+  const filteredRecords = allDnsRecords.filter(record => {
+    const matchesSearch = 
+      record.domain_name.toLowerCase().includes(searchTerm) ||
+      record.name.toLowerCase().includes(searchTerm) ||
+      record.value.toLowerCase().includes(searchTerm);
+    
+    const matchesType = selectedType === '' || record.record_type === selectedType;
+    const matchesDomain = selectedDomain === '' || record.domain_id === parseInt(selectedDomain);
+    
+    return matchesSearch && matchesType && matchesDomain;
+  });
+  
+  renderRecords(filteredRecords);
+}
+
+// Helper-Funktion für DNS-Record-Validierung
+function configureDnsInput(input, type) {
+  switch(type) {
+    case 'A':
+      input.placeholder = '192.168.1.1';
+      input.pattern = '[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}';
+      break;
+    case 'AAAA':
+      input.placeholder = '2001:0db8:85a3:0000:0000:8a2e:0370:7334';
+      input.pattern = '(?:[A-F0-9]{1,4}:){7}[A-F0-9]{1,4}';
+      break;
+    case 'CNAME':
+      input.placeholder = 'example.com.';
+      input.removeAttribute('pattern');
+      break;
+    case 'MX':
+      input.placeholder = 'mail.example.com';
+      input.removeAttribute('pattern');
+      break;
+    case 'TXT':
+      input.placeholder = 'v=spf1 include:_spf.example.com ~all';
+      input.removeAttribute('pattern');
+      break;
+    case 'NS':
+      input.placeholder = 'ns1.example.com.';
+      input.removeAttribute('pattern');
+      break;
+  }
+}
+
+// DNS Records anzeigen
+function renderRecords(records) {
+  tbody.innerHTML = records.map(record => `
+    <tr data-id="${record.id}">
+      <td>${record.domain_name}
+      <td>
+        <span class="dns-type ${record.record_type.toLowerCase()}">${record.record_type}</span>
+      <td>${record.name}
+      <td data-field="value">
+        <input type="text" value="${record.value}" style="width:100%">
+      <td data-field="ttl">
+        <input type="number" value="${record.ttl}" style="width:100%" min="60" max="86400">
+      <td data-field="priority">
+        ${record.record_type === 'MX' ? `<input type="number" value="${record.priority || 10}" style="width:100%" min="0" max="65535">` : ''}
+      <td>
+        <button class="u2-unstyle -delete" onclick="deleteRecord(${record.id})">
+          <i class="mdi mdi-delete"></i>
+        </button>
+  `).join('');
+
+  // Konfiguriere Input-Felder und füge Event Listener hinzu
+  tbody.querySelectorAll('tr').forEach(row => {
+    const record = allDnsRecords.find(r => r.id === parseInt(row.dataset.id));
+    if (!record) return;
+
+    const valueInput = row.querySelector('[data-field="value"] input');
+    if (valueInput) {
+      configureDnsInput(valueInput, record.record_type);
+      valueInput.addEventListener('change', () => {
+        if (!valueInput.checkValidity()) {
+          alert('Ungültiger Wert für diesen Record-Typ');
+          valueInput.value = record.value;
+          return;
+        }
+        const cell = valueInput.closest('[data-field]');
+        updateRecord(cell, valueInput.value);
+      });
+    }
+
+    // TTL und Priority Input Event Listener
+    ['ttl', 'priority'].forEach(field => {
+      const input = row.querySelector(`[data-field="${field}"] input`);
+      if (input) {
+        input.addEventListener('change', () => {
+          const value = parseInt(input.value);
+          if (isNaN(value) || value < parseInt(input.min) || value > parseInt(input.max)) {
+            alert(`Ungültiger Wert. Bitte eine Zahl zwischen ${input.min} und ${input.max} eingeben.`);
+            input.value = record[field] || (field === 'priority' ? 10 : 3600);
+            return;
+          }
+          const cell = input.closest('[data-field]');
+          updateRecord(cell, value);
+        });
+      }
+    });
+  });
+}
+
+// Typ-spezifische Validierung beim Hinzufügen/Bearbeiten
+editForm.querySelector('[name="type"]').addEventListener('change', function() {
+  const contentInput = editForm.querySelector('[name="content"]');
+  const priorityField = document.getElementById('priorityField');
+  const type = this.value;
+  
+  // Toggle priority field for MX records
+  priorityField.style.display = type === 'MX' ? 'block' : 'none';
+  priorityField.querySelector('input').required = type === 'MX';
+  
+  configureDnsInput(contentInput, type);
+});
+
+// DNS Record aktualisieren
+async function updateRecord(cell, value) {
+  const row = cell.closest('tr');
+  const recordId = row.dataset.id;
+  const field = cell.dataset.field;
+
+  try {
+    const record = allDnsRecords.find(r => r.id === parseInt(recordId));
+    if (!record) return;
+
+    const updatedRecord = { 
+      ...record,
+      [field]: value,
+      type: record.record_type,
+      content: field === 'value' ? value : record.value
+    };
+    
+    await apiFetch(`/api/dns/${recordId}`, {put:updatedRecord});
+
+    // Update local data
+    Object.assign(record, { 
+      [field]: value,
+      type: record.record_type,
+      content: field === 'value' ? value : record.value 
+    });
+  } catch (error) {
+    alert('Fehler beim Aktualisieren des DNS Records: ' + error.message);
+    // Reset to original value
+    const input = cell.querySelector('input');
+    if (input) {
+      input.value = record[field];
+    }
+  }
+}
+
+// DNS Record löschen
+async function deleteRecord(id) {
+  if (!confirm('DNS Record wirklich löschen?')) return;
+
+  try {
+    await apiFetch(`/api/dns/${id}`, { method: 'DELETE' });
+    allDnsRecords = allDnsRecords.filter(r => r.id !== id);
+    filterAndRenderRecords();
+  } catch (error) {
+    alert('Fehler beim Löschen des DNS Records: ' + error.message);
+  }
+}
+
+// Form Handler - DNS Record hinzufügen/bearbeiten
+editForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const formData = Object.fromEntries(new FormData(editForm));
+  const type = formData.type;
+
+  try {
+    const response = await apiFetch('/api/dns', {
+      post: {
+        ...formData,
+        type: type,
+        content: formData.content,
+        priority: type === 'MX' ? parseInt(formData.priority) || 10 : null
+      }
+    });
+
+    if (response.success) {
+      await loadDnsRecords(); // Neu laden
+      editForm.reset();
+      editModal.close();
+    }
+  } catch (error) {
+    alert('Fehler beim Speichern des DNS Records: ' + error.message);
+  }
+});
+
+// Initial laden
+loadDnsRecords();
+
+// Globale Funktionen exportieren
+window.deleteRecord = deleteRecord;
+</script>
+
+<style>
+.search-bar {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.search-bar input {
+  flex: 1;
+}
+
+.dns-type {
+  padding: 0.2em 0.5em;
+  border-radius: 3px;
+  font-size: 0.9em;
+  font-weight: bold;
+}
+
+.dns-type.a { background: #e3f2fd; color: #1565c0; }
+.dns-type.aaaa { background: #e8f5e9; color: #2e7d32; }
+.dns-type.cname { background: #f3e5f5; color: #7b1fa2; }
+.dns-type.mx { background: #fff3e0; color: #ef6c00; }
+.dns-type.txt { background: #f1f8e9; color: #558b2f; }
+.dns-type.ns { background: #fce4ec; color: #c2185b; }
+</style>

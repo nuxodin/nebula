@@ -1,0 +1,65 @@
+<div class="header">
+    <h1>Login</h1>
+</div>
+
+<div class="card" style="max-width:33rem; margin: 2rem auto;">
+    <form id="loginForm">
+        <label>
+            Benutzername
+            <input name="login" required>
+        </label>
+        <label>
+            Passwort
+            <input type="password" name="password" required>
+        </label>
+
+        <div id="error" class="error"></div>
+
+        <button style="margin-top:1rem">
+            Mit Passwort anmelden
+        </button>
+
+        <div class="separator">oder</div>
+
+        <button type="button" id="passkeyButton" class="u2-unstyle">
+            <i class="mdi mdi-fingerprint"></i>
+            Mit Passkey anmelden
+        </button>
+    </form>
+</div>
+
+<style>
+.separator {
+    text-align: center;
+    color: #64748b;
+    margin: 1rem 0;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.separator::before,
+.separator::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #e5e7eb;
+}
+
+.hint {
+    color: #64748b;
+    margin-top: 0.5rem;
+}
+
+.error {
+    color: #dc2626;
+    background: #fee2e2;
+    padding: 0.5rem;
+    border-radius: 4px;
+    display: none;
+}
+
+.error:not(:empty) {
+    display: block;
+}
+</style>

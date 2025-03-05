@@ -79,10 +79,7 @@ document.getElementById('settingsForm').addEventListener('submit', async (e) => 
   }
 
   try {
-    await apiFetch(`/api/mail/${currentAccount.id}/password`, {
-      method: 'POST',
-      body: JSON.stringify({ password })
-    });
+    await apiFetch(`/api/mail/${currentAccount.id}/password`, {password});
 
     alert('Passwort wurde geändert');
     document.getElementById('newPassword').value = '';

@@ -44,18 +44,16 @@
         services.forEach(service => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${service.name}</td>
-                <td>${service.description}</td>
+                <td>${service.name}
+                <td>${service.description}
                 <td>
                     <span class="starttype-badge starttype-${service.startType || 'unknown'}">
                         ${getStartTypeLabel(service.startType)}
                     </span>
-                </td>
                 <td>
                     <span class="status-badge status-${service.status}">
                         ${getStatusLabel(service.status)}
                     </span>
-                </td>
                 <td>
                     <button class="action-btn start-btn" onclick="controlService('${service.name}', 'start')"
                             ${service.status === 'running' ? 'disabled' : ''}>
@@ -68,7 +66,7 @@
                     <button class="action-btn restart-btn" onclick="controlService('${service.name}', 'restart')">
                         <i class="mdi mdi-refresh"></i>
                     </button>
-                </td>
+                
             `;
             tbody.appendChild(tr);
         });

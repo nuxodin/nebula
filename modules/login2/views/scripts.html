@@ -1,0 +1,88 @@
+<script src="https://unpkg.com/@simplewebauthn/browser@13.1.0/dist/bundle/index.umd.min.js"></script>
+<script type="module">
+import { apiFetch } from '/public/js/utils.js';
+
+const { startRegistration, startAuthentication } = SimpleWebAuthnBrowser;
+
+// Event-Handler für Passkey-Button
+document.getElementById('passkeyButton').addEventListener('click', async () => {
+    const error = document.getElementById('error');
+    error.textContent = '';
+    
+    try {
+        // Hole Authentifizierungsoptionen vom Server
+        const options = await apiFetch('/api/login2/get-auth-options', {post:{}});
+
+        // Starte Authentifizierung
+        const authResponse = await startAuthentication(options);
+
+        // Verifiziere die Authentifizierung mit vollständiger Response
+        const verifyResult = await apiFetch('/api/login2/verify-auth', {
+            post: {
+                assertion: authResponse
+            }
+        });
+
+        if (verifyResult.success) {
+            window.location.href = '/';
+        } else {
+            error.textContent = verifyResult.error || 'Authentifizierung fehlgeschlagen';
+        }
+    } catch (err) {
+        error.textContent = err.message || 'Ein Fehler ist aufgetreten';
+        console.error('Passkey-Fehler:', err);
+    }
+});
+
+// Formular-Handler für normalen Passwort-Login
+document.getElementById('loginForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const error = document.getElementById('error');
+    error.textContent = '';
+
+    try {
+        const formData = {
+            login: form.login.value,
+            password: form.password.value
+        };
+
+        const result = await apiFetch('/api/login2/login', {post:formData});
+
+        if (result.success) {
+            // Normaler Passwort-Login erfolgreich
+            const shouldRegister = confirm('Möchten Sie dieses Gerät für zukünftige Anmeldungen registrieren?');
+
+            if (shouldRegister) {
+                try {
+                    // Registrierungsoptionen vom Server holen
+                    const options = await apiFetch('/api/login2/register-device', {post:{}});
+
+                    // WebAuthn Registrierung starten
+                    const regResponse = await startRegistration(options);
+                    const deviceName = prompt('Gerätename:', 'Mein Gerät') || 'Unbenanntes Gerät';
+                    
+                    // Registrierung verifizieren
+                    const verifyResult = await apiFetch('/api/login2/verify-registration', {
+                        post: {
+                            ...regResponse,
+                            deviceName
+                        }
+                    });
+
+                    if (verifyResult.success) {
+                        alert('Gerät erfolgreich registriert!');
+                    }
+                } catch (err) {
+                    console.error('Fehler bei der Geräteregistrierung:', err);
+                }
+            }
+            window.location.href = '/';
+        } else {
+            error.textContent = result.error || 'Login fehlgeschlagen';
+        }
+    } catch (err) {
+        error.textContent = err.message || 'Ein Fehler ist aufgetreten';
+    }
+};
+</script>

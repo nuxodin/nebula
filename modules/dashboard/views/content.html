@@ -24,7 +24,9 @@
         <dd id="ipAddress">...</dd>
         
         <dt>Uptime</dt>
-        <dd id="uptime">...</dd>
+        <dd>
+          <u2-time type="relative" second id="uptime">...</u2-time>
+        </dd>
       </dl>
       
       <div>
@@ -62,13 +64,11 @@
     <table style="margin-bottom: 1rem;">
       <thead>
         <tr>
-          <th>Domain</th>
-          <th>Status</th>
-        </tr>
-      </thead>
+          <th>Domain
+          <th>Status
       <tbody id="domainList">
-        <tr><td colspan="2">Lädt...</td></tr>
-      </tbody>
+        <tr>
+          <td colspan="2">Lädt...
     </table>
     <a href="/domains#addDomainModal" class="btn">
       <i class="mdi mdi-plus"></i>
@@ -89,13 +89,10 @@
     <table style="margin-bottom: 1rem;">
       <thead>
         <tr>
-          <th>Benutzer</th>
-          <th>Rolle</th>
-        </tr>
-      </thead>
+          <th>Benutzer
+          <th>E-Mail Adresse
       <tbody id="userList">
-        <tr><td colspan="2">Lädt...</td></tr>
-      </tbody>
+        <tr><td colspan="2">Lädt...
     </table>
     <a href="/users#addUserModal" class="btn">
       <i class="mdi mdi-plus"></i>
@@ -114,14 +111,34 @@
     <table>
       <thead>
         <tr>
-          <th>Zeit</th>
-          <th>Ereignis</th>
-        </tr>
-      </thead>
+          <th>Zeit
+          <th>Ereignis
       <tbody id="activityList">
-        <tr><td colspan="2">Lädt...</td></tr>
-      </tbody>
+        <tr><td colspan="2">Lädt...
     </table>
   </div>
+
+  <div class="card">
+    <h2>Tools</h2>
+  
+    <button onclick="restartNebula()" class="btn btn-warning">
+        Restart Nebula
+    </button>
+  </div>
+  
 </div>
+
+
+<script>
+async function restartNebula() {
+    if (!confirm('Are you sure you want to restart Nebula?')) return;
+    try {
+        const response = await fetch('/api/nebula/restart', {post:{}});
+        if (!response.ok) throw new Error('Restart failed');
+        alert('Nebula is restarting...');
+    } catch (error) {
+        alert('Failed to restart Nebula: ' + error.message);
+    }
+}
+</script>
 

@@ -17,21 +17,3 @@ export const authMiddleware = createMiddleware(async (c: Context, next: Next) =>
   return next();
 });
 
-
-
-
-
-/* old zzz
-export async function authMiddleware(c: Context, next: () => Promise<Response>) {
-  const session = c.get('session');
-  const isLoggedIn = await session.get('userId');
-
-  if (!isLoggedIn) {
-    // Speichere nur den Pfad im Context
-    c.set('returnPath', c.req.path);
-    return getLogin(c);
-  }
-
-  return next();
-}
-*/

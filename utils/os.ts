@@ -5,16 +5,16 @@ export async function osInfo() {
         // Get system info (exact distribution and version)
         let systemInfo = Deno.build.os + " " + Deno.build.arch;
         if (Deno.build.os === "linux") {
-            const { output } = await run("cat", ["/etc/os-release"]);
-            const releaseName = output.match(/PRETTY_NAME="(.*)"/)?.[1];
+            const { stdout } = await run("cat", ["/etc/os-release"]);
+            const releaseName = stdout.match(/PRETTY_NAME="(.*)"/)?.[1];
             systemInfo = releaseName ? releaseName : systemInfo;
         } else if (Deno.build.os === "darwin") {
-            const { output } = await run("sw_vers", []);
-            const versionName = output.match(/ProductName:\s*(.*)/)?.[1];
+            const { stdout } = await run("sw_vers", []);
+            const versionName = stdout.match(/ProductName:\s*(.*)/)?.[1];
             systemInfo = versionName ? versionName : systemInfo;
         } else if (Deno.build.os === "windows") {
-            const { output } = await run("systeminfo", []);
-            const versionName = output.match(/OS Name:\s*(.*)/)?.[1];
+            const { stdout } = await run("systeminfo", []);
+            const versionName = stdout.match(/OS Name:\s*(.*)/)?.[1];
             systemInfo = versionName ? versionName : systemInfo;
         }
 
@@ -28,9 +28,9 @@ export async function osInfo() {
             ipAddress = "127.0.0.1";
         }
         
-        // Get uptime using performance.now()
-        const uptimeMs = performance.now();
-        const uptimeHours = Math.floor(uptimeMs / (1000 * 60 * 60));
+        const uptimeDate = new Date();
+        uptimeDate.setTime(uptimeDate.getTime() - performance.now());
+
         
         // Get memory usage using Deno.systemMemoryInfo()
         let memUsage = 0;
@@ -52,14 +52,14 @@ export async function osInfo() {
         if (isWindows) {
             try {
                 // Windows CPU usage
-                const { output: cpuOut } = await run("powershell", [
+                const { stdout: cpuOut } = await run("powershell", [
                     "-Command",
                     "Get-Counter '\\Processor(_Total)\\% Processor Time' | Select-Object -ExpandProperty CounterSamples | Select-Object -ExpandProperty CookedValue"
                 ]);
                 cpuUsage = Math.round(parseFloat(cpuOut) || 0);
 
                 // Windows disk usage (C: drive)
-                const { output: diskOut } = await run("powershell", [
+                const { stdout: diskOut } = await run("powershell", [
                     "-Command",
                     "(Get-PSDrive C | Select-Object Used,Free | ForEach-Object { $_.Used/($_.Used + $_.Free) * 100 })"
                 ]);
@@ -70,14 +70,14 @@ export async function osInfo() {
         } else {
             try {
                 // Unix CPU usage
-                const { output: cpuOut } = await run("sh", [
+                const { stdout: cpuOut } = await run("sh", [
                     "-c",
                     "top -bn1 | grep 'Cpu(s)' | sed 's/.*, *\\([0-9.]*\\)%* id.*/\\1/' | awk '{print 100 - $1}'"
                 ]);
                 cpuUsage = Math.round(parseFloat(cpuOut) || 0);
 
                 // Unix disk usage
-                const { output: diskOut } = await run("sh", [
+                const { stdout: diskOut } = await run("sh", [
                     "-c",
                     "df / | tail -1 | awk '{print $5}' | sed 's/%//'"
                 ]);
@@ -90,7 +90,7 @@ export async function osInfo() {
         return {
             system: systemInfo,
             ipAddress,
-            uptime: `${uptimeHours}h`,
+            uptime: uptimeDate.toISOString(),
             cpuUsage,
             memoryUsage: memUsage,
             diskUsage

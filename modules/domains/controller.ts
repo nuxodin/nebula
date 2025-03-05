@@ -1,340 +1,161 @@
-import { Context } from "hono";
 import db from "../../utils/database.ts";
-import { logError, logInfo } from "../../utils/logger.ts";
-import { createDomain } from "./createDomain.ts";
+import { ensureDir, copy } from "https://deno.land/std/fs/mod.ts";
 import { config } from "../../utils/config.ts";
-import { runCommand } from "../../utils/command.ts";
-import { renderTemplate } from "../../utils/template.ts";
+import { logInfo, logError } from "../../utils/logger.ts";
+import { join } from "https://deno.land/std/path/mod.ts";
+import { run } from "../../utils/command.ts";
+import { generateWebserverConfig } from "./generateWebserverConfig.ts";
 
-// View Controllers
-export const getDomainView = async (c) => {
-  try {
-    const content = await Deno.readTextFile("./modules/domains/views/content.html");
-    const scripts = await Deno.readTextFile("./modules/domains/views/scripts.html");
-    return c.html(await renderTemplate("Domains", content, "", scripts));
-  } catch (err) {
-    logError("Fehler beim Laden der Domains-Übersicht", "Domains", c, err);
-    return c.text("Internal Server Error", 500);
-  }
-};
-
-export const getDomainFilesView = async (c) => {
-  console.error("is this used?");
-  try {
-    const { id } = c.req.param();
-    const domain = db.queryEntries("SELECT name FROM domains WHERE id = ?", [id])[0];
-    if (!domain) {
-      return c.text("Domain nicht gefunden", 404);
-    }
-    const content = await Deno.readTextFile("./modules/domains/views/files.html");
-    const scripts = await Deno.readTextFile("./modules/domains/views/files-scripts.html");
-    return c.html(await renderTemplate(`Dateiverwaltung - ${domain.name}`, content, "", scripts));
-  } catch (err) {
-    logError("Fehler beim Laden der Dateiverwaltung", "Domains", c, err);
-    return c.text("Internal Server Error", 500);
-  }
-};
-
-
-
-export const api = {
-  get:function() {
-    return db.queryEntries(`
-      SELECT d.*, 
-             c.login as owner_name,
-             h.ip_address,
-             h.ftp_username,
-             h.php_memory_limit
-      FROM domains d
-      LEFT JOIN clients c ON d.owner_id = c.id
-      LEFT JOIN hosting h ON d.id = h.dom_id
-    `);
-  },
-  post: async function(c) {
-    const data = await c.req.json();
-    // const session = c.get('session');
-    // const userId = await session.get('userId');
-    const userId = await c.get('session').get('userId');
-    return await createDomain({
-      name: data.name,
-      owner_id: userId,
-      php_version: String(data.php_version || config.default_php_version),
-      document_root: String(data.document_root || config.default_document_root),
-      webspace_limit: Number(data.webspace_limit || config.default_webspace_limit),
-      traffic_limit: Number(data.traffic_limit || config.default_traffic_limit)
-    });
-  },
-  ':id': {
-    get: async function(c) {
-      const { id } = c.req.param();
-    
-      const domain = db.queryEntries(`
-        SELECT d.*, 
-               c.login as owner_name,
-               h.ip_address,
-               h.htype,
-               h.ftp_username,
-               h.php_memory_limit
-        FROM domains d
-        LEFT JOIN clients c ON d.owner_id = c.id
-        LEFT JOIN hosting h ON d.id = h.dom_id
-        WHERE d.id = ?
-      `, [id])[0];
-  
-      if (!domain) {
-        return c.json({ error: "Domain not found" }, 404);
-      }
-  
-      // Datenbanken separat abrufen
-      domain.databases = db.queryEntries(`
-        SELECT name, type
-        FROM databases
-        WHERE dom_id = ?
-      `, [id]);
-  
-      // E-Mail-Konten separat abrufen
-      domain.mail_accounts = db.queryEntries(`
-        SELECT id, mail_name
-        FROM mail
-        WHERE dom_id = ?
-      `, [id]);
-  
-      return domain;
-    },
-    delete: async function(c) {
-      const { id } = c.req.param();
-      const domain = db.queryEntries("SELECT name FROM domains WHERE id = ?", [id])[0];
-      
-      if (!domain) {
-        return c.text("Domain nicht gefunden", 404);
-      }
-  
-      // Lösche Domain-Verzeichnis
-      const domainPath = `${config.vhosts_root}/${domain.name}`;
-      try {
-        await Deno.remove(domainPath, { recursive: true });
-      } catch (err) {
-        logError(`Fehler beim Löschen des Domain-Verzeichnisses ${domainPath}`, "Domains", c, err);
-        // Wir setzen fort, auch wenn das Verzeichnis nicht gelöscht werden konnte
-      }
-      
-      // Lösche alle abhängigen Datensätze
-      db.query("DELETE FROM dns_records WHERE domain_id = ?", [id]);
-      db.query("DELETE FROM hosting WHERE dom_id = ?", [id]);
-      db.query("DELETE FROM databases WHERE dom_id = ?", [id]);
-      db.query("DELETE FROM mail WHERE dom_id = ?", [id]);
-      db.query("DELETE FROM domains WHERE id = ?", [id]);
-      
-      logInfo(`Domain ${domain?.name} wurde gelöscht`, "Domains", c);
-      return c.json({ message: "Domain deleted" });
-    }      
-  }
-
-
-};
-
-
-
-export const getDomainDetailView = async (c) => {
-  try {
-    const { id } = c.req.param();
-    
-    // todo: brauchen wir das alles?
-    const domain = db.queryEntries(`
-      SELECT d.*, 
-             c.login as owner_name,
-             h.ip_address,
-             h.htype,
-             h.ftp_username,
-             h.php_memory_limit
-      FROM domains d
-      LEFT JOIN clients c ON d.owner_id = c.id
-      LEFT JOIN hosting h ON d.id = h.dom_id
-      WHERE d.id = ?
-    `, [id])[0];
-
-    if (!domain) {
-      return c.text("Domain not found", 404);
-    }
-
-    const content = await Deno.readTextFile("./modules/domains/views/detail/content.html");
-    const scripts = await Deno.readTextFile("./modules/domains/views/detail/scripts.html");
-    return c.html(await renderTemplate(`Domain ${domain.name}`, content, "", scripts));
-  } catch (err) {
-    logError("Fehler beim Abrufen der Domain-Details", "Domains", c, err);
-    return c.text("Internal Server Error", 500);
-  }
-};
-
-// Get domain list with statistics
-/* todo: add things to api?
-export async function getDomains(c: Context) {
-  try {
-    const domains = db.queryEntries(`
-      SELECT 
-        d.*,
-        h.ip_address,
-        h.php_memory_limit,
-        (SELECT COUNT(*) FROM databases WHERE dom_id = d.id) as db_count,
-        (SELECT COUNT(*) FROM mail WHERE dom_id = d.id) as mail_count
-      FROM domains d
-      LEFT JOIN hosting h ON h.dom_id = d.id
-    `);
-
-    // Disk usage berechnen für jede Domain
-    for (const domain of domains) {
-      try {
-        const { stdout } = await runCommand(`du -sb ${config.vhosts_root}/${domain.name}`);
-        domain.disk_usage = parseInt(stdout.split('\t')[0]);
-      } catch {
-        domain.disk_usage = 0;
-      }
-    }
-
-    return c.json(domains);
-  } catch (err) {
-    logError("Error fetching domains", "Domains", c, err);
-    return c.json({ error: "Internal server error" }, 500);
-  }
+interface DomainOptions {
+  name: string;
+  owner_id: number;
+  runtime?: string;
+  runtime_version?: string;
+  ssl_enabled?: boolean;
+  webspace_limit?: number;
+  traffic_limit?: number;
 }
-*/
 
-
-// Update domain settings
-export async function updateDomain(c: Context) {
+export async function createDomain(options: DomainOptions) {
   try {
-    const domainId = c.req.param('id');
-    const data = await c.req.json();
-    
-    // Update domain settings
-    db.query(`
-      UPDATE domains 
-      SET php_version = ?, document_root = ?, webspace_limit = ?, traffic_limit = ?
-      WHERE id = ?
+    // Prüfe ob Domain bereits existiert
+    const exists = db.queryEntries('SELECT id FROM domains WHERE name = ?', [options.name])[0];
+    if (exists) throw new Error("Domain existiert bereits");
+
+    // Erstelle Domain in der Datenbank
+
+    const { id: domain_id } = db.queryEntries(`
+      INSERT INTO domains (
+        name, owner_id, runtime, runtime_version
+      ) VALUES (?, ?, ?, ?)
+      RETURNING id
     `, [
-      data.php_version,
-      data.document_root,
-      data.webspace_limit,
-      data.traffic_limit,
-      domainId
-    ]);
+      options.name,
+      options.owner_id,
+      options.runtime || config.default_runtime,
+      options.runtime_version || config.default_runtime_version
+    ])[0];
 
-    // Update hosting settings
-    db.query(`
-      UPDATE hosting 
-      SET php_memory_limit = ?
-      WHERE dom_id = ?
-    `, [data.php_memory_limit, domainId]);
+    await createDirectory(domain_id);
+    await createTemplate(domain_id);
 
-    // Regenerate Apache config
-    const domain = db.queryEntries('SELECT * FROM domains WHERE id = ?', [domainId])[0];
-    const vhostPath = `${config.vhosts_root}/${domain.name}/conf/vhost.conf`;
+    if (options.runtime === 'deno') {
+      import('../deno/runtime.ts').then(({ denoRuntime }) => {
+        denoRuntime.initDomain(domain_id);
+      });
+    }
+
+    // erstelle ein system benutzer für die domain
+    if (Deno.build.os !== "windows") {
+      const domainPath = join(config.vhosts_root, options.name);
+      const linuxUser = `ne-do-${domain_id}`;
+      await run('adduser', ['--system', '--group', '--home', domainPath, linuxUser], { sudo: true });
+      await run('chown', ['-R', `${linuxUser}:${linuxUser}`, domainPath], { sudo: true });
+    }
+
+    await createDefaultDnsRecords(domain_id);
     
-    // Regenerate and write new vhost config
-    const apacheConfig = generateVhostConfig(domain);
-    await Deno.writeTextFile(vhostPath, apacheConfig);
-    
-    // Reload Apache
-    await runCommand('systemctl reload apache2');
+    // Webserver-Konfiguration generieren (ersetzt createApacheConf und createNginxConf)
+    await generateWebserverConfig(domain_id);
 
-    return c.json({ success: true });
-  } catch (err) {
-    logError("Error updating domain", "Domains", c, err);
-    return c.json({ error: err.message }, 500);
+    logInfo(`Domain ${options.name} wurde erstellt`, "Domains");
+    return { success: true, id: domain_id };
+  } catch (error) {
+    logError(`Fehler beim Erstellen der Domain: ${error.message}`, "Domains");
+    throw error;
   }
 }
 
-// Generate Apache vhost configuration
-function generateVhostConfig(domain: any) {
-  const domainPath = `${config.vhosts_root}/${domain.name}`;
-  return `
-<VirtualHost *:80>
-    ServerName ${domain.name}
-    ServerAlias www.${domain.name}
-    DocumentRoot "${domainPath}/${domain.document_root}"
-    
-    CustomLog "${domainPath}/logs/access.log" combined
-    ErrorLog "${domainPath}/logs/error.log"
-    
-    <Directory "${domainPath}/${domain.document_root}">
-        Options Indexes FollowSymLinks MultiViews
-        AllowOverride All
-        Require all granted
-        
-        # PHP Settings
-        php_admin_value open_basedir "${domainPath}/:/tmp:/var/tmp"
-        php_admin_value upload_tmp_dir /tmp
-        php_admin_value session.save_path /tmp
-        
-        # Resource Limits
-        php_admin_value memory_limit ${domain.php_memory_limit || config.php_memory_limit}
-        php_admin_value max_execution_time ${config.php_max_execution_time}
-        php_admin_value post_max_size ${config.php_post_max_size}
-        php_admin_value upload_max_filesize ${config.php_upload_max_filesize}
-    </Directory>
+// Entfernen oder auskommentieren der alten createNginxConf und createApacheConf Funktionen,
+// da diese jetzt durch generateWebserverConfig ersetzt werden
+// async function createNginxConf(domain_id: number) { ... }
+// async function createApacheConf(domain_id: number) { ... }
 
-    # PHP-FPM Configuration
-    <FilesMatch \\.php$>
-        SetHandler "proxy:unix:/run/php/php${domain.php_version}-fpm.sock|fcgi://localhost"
-    </FilesMatch>
+async function createDirectory(domain_id: number) {
+  const domain = db.queryEntries(`SELECT * FROM domains WHERE id = ?`,[domain_id])[0];
+  if (!domain) throw new Error("Domain not found");  
 
-    # Additional Security Headers
-    Header always set X-Frame-Options "SAMEORIGIN"
-    Header always set X-XSS-Protection "1; mode=block"
-    Header always set X-Content-Type-Options "nosniff"
-</VirtualHost>
-
-${domain.ssl_enabled ? generateSSLConfig(domain) : ''}`;
-}
-
-// Generate SSL configuration if enabled
-function generateSSLConfig(domain: any) {
-  const domainPath = `${config.vhosts_root}/${domain.name}`;
-  const sslPath = `${config.ssl_cert_dir}/${domain.name}`;
+  // Verwende den OS-spezifischen Pfad aus der Konfiguration
+  const domainPath = join(config.vhosts_root, domain.name);
   
-  return `
-<VirtualHost *:443>
-    ServerName ${domain.name}
-    ServerAlias www.${domain.name}
-    DocumentRoot "${domainPath}/${domain.document_root}"
-    
-    SSLEngine on
-    SSLCertificateFile "${sslPath}/cert.pem"
-    SSLCertificateKeyFile "${sslPath}/privkey.pem"
-    SSLCertificateChainFile "${sslPath}/chain.pem"
-    
-    # SSL Settings
-    SSLProtocol all -SSLv3 -TLSv1 -TLSv1.1
-    SSLCipherSuite ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384
-    SSLHonorCipherOrder off
-    SSLSessionTickets off
-    
-    # HSTS
-    Header always set Strict-Transport-Security "max-age=63072000"
-    
-    # Logs
-    CustomLog "${domainPath}/logs/ssl_access.log" combined
-    ErrorLog "${domainPath}/logs/ssl_error.log"
-    
-    <Directory "${domainPath}/${domain.document_root}">
-        Options Indexes FollowSymLinks MultiViews
-        AllowOverride All
-        Require all granted
-        
-        # PHP Settings
-        php_admin_value open_basedir "${domainPath}/:/tmp:/var/tmp"
-        php_admin_value upload_tmp_dir /tmp
-        php_admin_value session.save_path /tmp
-        
-        # Resource Limits
-        php_admin_value memory_limit ${domain.php_memory_limit || config.php_memory_limit}
-        php_admin_value max_execution_time ${config.php_max_execution_time}
-        php_admin_value post_max_size ${config.php_post_max_size}
-        php_admin_value upload_max_filesize ${config.php_upload_max_filesize}
-    </Directory>
-
-    <FilesMatch \\.php$>
-        SetHandler "proxy:unix:/run/php/php${domain.php_version}-fpm.sock|fcgi://localhost"
-    </FilesMatch>
-</VirtualHost>`;
+  const paths = [
+    join(domainPath, "httpdocs"),
+    join(domainPath, "logs"),
+    join(domainPath, "conf"),
+    join(domainPath, "tmp")
+  ];
+  
+  // Verzeichnisse erstellen
+  for (const path of paths) {
+    await ensureDir(path);
+    logInfo(`Verzeichnis erstellt: ${path}`, "Domains");
+  }
 }
+
+// todo: add full folder contents not only index.html
+async function createTemplate(domain_id: number) {
+  const domain = db.queryEntries(`SELECT * FROM domains WHERE id = ?`,[domain_id])[0];
+  if (!domain) throw new Error("Domain not found");
+
+  const domainPath = join(config.vhosts_root, domain.name, "httpdocs", "index.html");
+  const templatePath = join(Deno.cwd(), "data", "templates", "default", "index.html");
+  
+  try {
+    await copy(templatePath, domainPath);
+    logInfo(`Template kopiert nach ${domainPath}/httpdocs`, "Domains");
+  } catch (error) {
+    logError(`Fehler beim Kopieren des Templates: ${error.message}`, "Domains");
+  }
+}
+
+async function createDefaultDnsRecords(domain_id: number) {
+  const domain = db.queryEntries('SELECT * FROM domains WHERE id = ?', [domain_id])[0];
+  if (!domain) throw new Error("Domain not found");
+
+  // Standardmäßige DNS Records
+  const records = [{
+      domain_id,
+      record_type: 'NS',
+      name: '@',
+      value: config.dns_primary_ns,
+    },{
+      domain_id,
+      record_type: 'NS',
+      name: '@',
+      value: config.dns_secondary_ns,
+    },{
+      domain_id,
+      record_type: 'A',
+      name: '@',
+      value: config.default_ip === 'auto' ? '127.0.0.1' : config.default_ip,
+    },{
+      domain_id,
+      record_type: 'CNAME',
+      name: 'www',
+      value: '@',
+    },{
+      domain_id,
+      record_type: 'MX',
+      name: '@',
+      value: '@'      
+    },{
+      domain_id,
+      record_type: 'TXT',
+      name: '@',
+      value: 'v=spf1 a mx -all'
+    }
+  ];
+
+  // Records in die Datenbank einfügen
+  for (const record of records) {
+    db.query(`
+      INSERT INTO dns_records (domain_id, record_type, name, value)
+      VALUES (?, ?, ?, ?)
+    `, [record.domain_id, record.record_type, record.name, record.value]);
+  }
+
+  // Generiere die Bind Zone-Datei
+  //await writeZoneFile(domain_id);
+  logInfo(`DNS-Records erstellt für ${domain.name}`, "Domains");
+}
+

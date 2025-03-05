@@ -1,0 +1,37 @@
+<style>
+    .error-message {
+        color: #dc2626;
+        text-align: center;
+        margin-bottom: 1rem;
+        display: none;
+    }
+</style>
+
+<div class="card" style="max-width:30rem; margin:3rem auto;">
+    <div style="text-align:center; margin-bottom: 2rem;">
+        <h1>🌌 Nebula</h1>
+        <p>Bitte melden Sie sich an</p>
+    </div>
+    <div id="errorMessage" class="error-message"></div>
+    <form method="POST" action="/login">
+        <label>
+            Benutzername
+            <input type="text" id="login" name="login" required autofocus>
+        </label>
+        <label>
+            Passwort
+            <input type="password" id="password" name="password" required>
+        </label>
+        <input type="hidden" name="returnUrl" value="RETURN_URL_PLACEHOLDER">
+        <div class="u2-flex" style="margin-top:1.6rem; justify-content: end;">
+            <button>Anmelden</button>
+        </div>
+    </form>
+</div>
+<script>
+    if (window.loginError) {
+        const errorDiv = document.getElementById('errorMessage');
+        errorDiv.textContent = window.loginError;
+        errorDiv.style.display = 'block';
+    }
+</script>

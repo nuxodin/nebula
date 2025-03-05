@@ -138,7 +138,7 @@ export async function killProcess(pid: number): Promise<boolean> {
     }   
 
     if (result.code !== 0) {
-        console.error(`Fehler beim Beenden des Prozesses ${pid}:`, result.output);
+        console.error(`Fehler beim Beenden des Prozesses ${pid}:`, result.stderr);
         return false;
     }
     return true;

@@ -1,6 +1,7 @@
 // install_hosting_stack.ts – Universelle Installation von Apache2, MariaDB, Postfix, Dovecot und Bind9 mit Deno
 
 import { installPackages, startService } from "../utils/command.ts";
+import { install } from './install.ts';
 
 // Setzt DEBIAN_FRONTEND auf noninteractive (für Docker und CI/CD)
 const setNonInteractive = () => {
@@ -56,11 +57,14 @@ const setupProcessTools = async () => {
 // Hauptablauf
 async function main() {
   await setNonInteractive();
+  // curl and unzip
+  await installPackages(['curl', 'unzip']);
   await setupProcessTools();
-  await setupApache();
-  await setupMariaDB();
-  await setupNameServer();
-  await setupMailServer();
+
+  //await setupApache();
+  //await setupMariaDB();
+  //await setupNameServer();
+  //await setupMailServer();
   console.log("\n🎉 Hosting-Stack erfolgreich installiert und gestartet!");
 }
 
@@ -70,5 +74,3 @@ const isWindows = Deno.build.os === "windows";
 if (!isWindows) {
   main();
 }
-
-//main();

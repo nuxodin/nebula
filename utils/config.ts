@@ -1,41 +1,36 @@
 // Server-weite Konfigurationseinstellungen
 export const config = {
   // Plesk-ähnliche Pfad-Konfigurationen
-  vhosts_root: "./var/www/vhosts",
-  httpd_vhosts: "./var/www/vhosts",
+  hostname: 'localhost',
+
+  vhosts_root: '/var/www/vhosts',  
   
   // Domain-Standardeinstellungen
-  default_document_root: "httpdocs",
-  default_php_version: "8.2",
-  available_php_versions: ["7.4", "8.0", "8.1", "8.2"],
   default_webspace_limit: 1024, // MB
   default_traffic_limit: 10240, // MB
   
   // Server-Einstellungen
   default_ip: "auto",
-  default_webserver: "apache",
-  server_hostname: "server.nebula.local",
   
   // SSL-Einstellungen
-  ssl_cert_dir: "./var/www/ssl",
+  ssl_cert_dir: "../nebula-data/ssl",
+
   lets_encrypt_enabled: true,
   
-  // Datenbank-Einstellungen
-  default_db_type: "mysql",
-  db_host: "localhost",
-  allowed_db_types: ["mysql", "postgresql"],
-  max_databases_per_domain: 25,
-  
-  // Mail-Einstellungen
-  mail_enabled: true,
-  default_mail_quota: 1024, // MB
-  max_mail_accounts: 100,
-  spam_protection: true,
-  virus_protection: true,
+  // DNS-Einstellungen
+  get bind_zones_dir() {
+    return Deno.build.os === 'windows' ? 'C:\\ProgrmData\\Nebula\\bind\\zones' : '/etc/bind/zones';
+  },
+  bind_auto_reload: true,
+  dns_primary_ns: "ns1.nebula.local",
+  dns_secondary_ns: "ns2.nebula.local",
+  dns_hostmaster: "hostmaster.nebula.local",
   
   // Backup-Einstellungen
   backup_enabled: true,
-  backup_directory: "./var/www/backups",
+  get backup_directory() {
+    return Deno.build.os === 'windows' ? 'C:\\ProgramData\\Nebula\\dumps' : '/var/lib/nebula/dumps';
+  },
   backup_keep_days: 30,
   backup_types: ["full", "incremental"],
   
@@ -50,3 +45,7 @@ export const config = {
   php_upload_max_filesize: "32M",
   php_post_max_size: "32M"
 };
+
+if (Deno.build.os === 'windows') {
+  config.vhosts_root = 'C:\\Inetpub\\vhosts';
+}

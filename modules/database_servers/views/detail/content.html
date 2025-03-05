@@ -1,0 +1,57 @@
+<div class="header">
+  <h1 id="pageTitle">Datenbankserver</h1>
+</div>
+
+<div class="u2-grid">
+  <div class="card">
+    <h2>Server Informationen</h2>
+    <table>
+      <tr>
+        <td>Host
+        <td id="serverHost">
+      <tr>
+        <td>Port
+        <td id="serverPort">
+      <tr>
+        <td>Typ
+        <td id="serverType">
+      <tr>
+        <td>Version
+        <td id="serverVersion">
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Datenbanken</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Name
+          <th>Status
+          <th width="100">Aktionen
+      <tbody id="databaseList">
+    </table>
+  </div>
+
+
+</div>
+
+<div class="card" style="margin-top:1rem">
+    <h2>Aktive Prozesse</h2>
+    <u2-table sortable>
+        <table style="white-space: nowrap">
+            <thead>
+            <tr>
+                <th>ID
+                <th>DB
+                <th>User
+                <th>Host
+                <th>State
+                <th>Info
+                <th>Time (ms)
+                <th>Memory
+                <th width="33">Aktionen
+            <tbody id="processList">
+        </table>
+    </u2-table>
+</div>

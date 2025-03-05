@@ -20,30 +20,24 @@
   </table>
 </u2-table>
 
-<dialog id="createMailModal">
+<dialog id="createMailModal" class="u2x-modal">
   <form method="dialog">
     <h2>E-Mail Konto anlegen</h2>
-    <div>
-      <label>
-        Domain
-        <select id="domainSelect" required></select>
-      </label>
-    </div>
-    <div>
-      <label>
-        Lokaler Teil
-        <input type="text" id="localPart" required>
-      </label>
-    </div>
-    <div>
-      <label>
-        Passwort
-        <input type="password" id="mailPassword" required>
-      </label>
-    </div>
-    <div class="u2-dialog-buttons">
-      <button type="button" onclick="closeCreateMailModal()">Abbrechen</button>
+    <label>
+      Domain
+      <select id="domainSelect" required></select>
+    </label>
+    <label>
+      Lokaler Teil
+      <input type="text" id="localPart" required>
+    </label>
+    <label>
+      Passwort
+      <input type="password" id="mailPassword" required>
+    </label>
+    <div class="-buttons">
       <button onclick="createMailAccount()">Erstellen</button>
+      <button type="button" onclick="closeCreateMailModal()">Abbrechen</button>
     </div>
   </form>
 </dialog>

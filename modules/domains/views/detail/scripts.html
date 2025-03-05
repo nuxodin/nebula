@@ -1,23 +1,33 @@
 <script type="module">
 import { apiFetch } from '/public/js/utils.js';
 
+let currentDomainId;
+
 // Domain-Details laden
 async function loadDomainDetails() {
-  const id = window.location.pathname.split('/')[2]; // Get domain ID from URL
+  currentDomainId = window.location.pathname.split('/')[2]; // Get domain ID from URL
 
   // Set file manager link
-  document.getElementById('fileManagerLink').href = `./${id}/files`;
+  document.getElementById('fileManagerLink').href = `./${currentDomainId}/files`;
 
   try {
     // Domain Hauptdaten laden
-    const domain = await apiFetch(`/api/domains/${id}`);
+    const domain = await apiFetch(`/api/domains/${currentDomainId}`);
     
     // Seitentitel und Überschrift aktualisieren
     document.getElementById('pageTitle').textContent = `Domain ${domain.name}`;
     
     // Basis Informationen setzen
     document.getElementById('domainName').innerHTML = `
-      <a href="https://${domain.name}" target="_blank">${domain.name}</a>`;
+      <a href="https://${domain.name}" target="_blank">
+        ${domain.name}
+        <i class="mdi mdi-open-in-new"></i>
+      </a>
+      
+      <a href="//${domain.name}.preview.${location.hostname}:81" target="_blank">
+        Preview
+        <i class="mdi mdi-open-in-new"></i>
+      </a>`;
     document.getElementById('domainStatus').innerHTML = `
       <small class="u2-badge ${domain.status.toLowerCase() === 'aktiv' ? 'status-active' : 'status-inactive'}">
         ${domain.status}
@@ -25,19 +35,26 @@ async function loadDomainDetails() {
     document.getElementById('domainOwner').textContent = domain.owner_name;
     document.getElementById('domainCreated').textContent = new Date(domain.created_at).toLocaleString();
     
-    // Hosting Informationen
-    document.getElementById('hostingType').textContent = domain.htype || 'Nicht konfiguriert';
-    document.getElementById('ipAddress').textContent = domain.ip_address || 'Nicht zugewiesen';
-    document.getElementById('phpVersion').textContent = domain.php_version || 'Standard';
-    document.getElementById('ftpUsername').textContent = domain.ftp_username || 'Nicht konfiguriert';
+    // Runtime-Informationen setzen
+    document.getElementById('runtime').textContent = getRuntimeDisplayName(domain.runtime);
+    document.getElementById('runtimeArgs').textContent = domain.runtime_version || 'Standard';
+    
+    // Web Space & SSL Informationen
+    document.getElementById('sslStatus').innerHTML = domain.ssl_enabled ? 
+      '<small class="u2-badge status-active">Aktiv</small>' : 
+      '<small class="u2-badge status-inactive">Inaktiv</small>';
+    document.getElementById('sslExpiry').textContent = domain.ssl_expires_at ? 
+      new Date(domain.ssl_expires_at).toLocaleString() : 'Nicht verfügbar';
+    document.getElementById('webspaceLimit').textContent = `${domain.webspace_limit || 'Unbegrenzt'} MB`;
+    document.getElementById('trafficLimit').textContent = `${domain.traffic_limit || 'Unbegrenzt'} MB`;
 
     // Datenbanken anzeigen
     const databasesList = document.getElementById('databasesList');
     if (Array.isArray(domain.databases) && domain.databases.length > 0) {
       databasesList.innerHTML = domain.databases.map(db => `
         <tr>
-          <td>${db.name}</td>
-          <td>${db.type}</td>
+          <td><a href="/databases/${db.id}">${db.name}</a>
+          <td>${db.type}
         </tr>
       `).join('');
     } else {
@@ -48,7 +65,7 @@ async function loadDomainDetails() {
     document.getElementById('mailsList').innerHTML = Array.isArray(domain.mail_accounts) && domain.mail_accounts.length ?
       domain.mail_accounts.map(mail => `
         <tr>
-          <td><a href="/mail/${mail.id}">${mail.mail_name}</a></td>
+          <td><a href="/mail/${mail.id}">${mail.mail_name}</a>
         </tr>
       `).join('') :
       '<p>Keine E-Mail Konten konfiguriert</p>';
@@ -58,12 +75,17 @@ async function loadDomainDetails() {
   }
 }
 
+// Hilfsfunktion zur Anzeige des lesbareren Runtime-Namens
+function getRuntimeDisplayName(runtime) {
+  switch (runtime) {
+    case 'static': return 'Static Hosting';
+    case 'deno': return 'Deno';
+    default: return runtime || 'Unbekannt';
+  }
+}
+
 // Initial load
 loadDomainDetails();
 
-document.addEventListener('DOMContentLoaded', async () => {
-    // Setze die Domain-ID in den Files-Link
-    const domainId = window.location.pathname.split('/')[2];
-    document.getElementById('domainId').textContent = domainId;
-});
 </script>
+

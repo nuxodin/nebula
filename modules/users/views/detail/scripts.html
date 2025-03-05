@@ -1,0 +1,62 @@
+<script type="module">
+import { apiFetch } from '/public/js/utils.js';
+
+const userId = location.pathname.match(/\/users\/(\d+)/)[1];
+loadUser();
+
+async function loadUser() {
+    const user = await apiFetch('/api/users/' + userId);
+    document.getElementById('userLogin').textContent = user.login;
+    document.getElementById('userEmail').textContent = user.email;
+    
+    const domainsTable = document.getElementById('userDomains');
+    if (user.domains?.length) {
+        domainsTable.innerHTML = user.domains
+            .map(domain => `
+                <tr>
+                    <td><a href="/domains/${domain.id}">${domain}</a></td>
+                </tr>
+            `).join('');
+    } else {
+        domainsTable.innerHTML = '<tr><td>Keine Domains</td></tr>';
+    }
+}
+
+window.deleteUser = async function() {
+    if (!confirm('Benutzer wirklich löschen?')) return;
+    try {
+        await apiFetch('/api/users/' + userId, { method: 'DELETE' });
+        location.href = '/users';
+    } catch (error) {
+        alert('Fehler beim Löschen des Benutzers: ' + error.message);
+    }
+};
+
+window.showChangePasswordDialog = function() {
+    document.getElementById('changePasswordDialog').showModal();
+};
+
+window.closeChangePasswordDialog = function() {
+    document.getElementById('changePasswordDialog').close();
+};
+
+window.changePassword = async function(event) {
+    event.preventDefault();
+    
+    const pw1 = document.getElementById('newPassword');
+    const pw2 = document.getElementById('confirmPassword');
+    
+    if (pw1.value !== pw2.value) {
+        alert('Passwörter stimmen nicht überein');
+        return;
+    }
+    
+    try {
+        await apiFetch('/api/users/' + userId + '/password', { password: pw1.value });
+        
+        closeChangePasswordDialog();
+        pw1.value = pw2.value = '';
+    } catch (error) {
+        alert('Fehler beim Ändern des Passworts: ' + error.message);
+    }
+};</script>

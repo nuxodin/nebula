@@ -3,10 +3,6 @@
 /**
  * Runs a shell command and returns the exit code and output
  */
-export async function runCommand(command: string, args: string[] = [], silent = false) {
-  console.error(`deprescated: runCommand is deprecated, use run instead`);
-  return run(command, args, { silent });
-}
 
 export async function run(
   command: string, 
@@ -41,11 +37,19 @@ export async function run(
   });
 
   const result = await process.output();
-  const output = new TextDecoder().decode(result.stdout) + new TextDecoder().decode(result.stderr);
+  const stdout = new TextDecoder().decode(result.stdout);
+  const stderr = new TextDecoder().decode(result.stderr);
 
-  if (!silent) console.log(output);
+  if (!silent) {
+    console.log(stdout);
+    console.error(stderr);
+  }
 
-  return { code: result.code, output };
+  return { 
+    code: result.code, 
+    stdout, 
+    stderr
+  };
 }
 
 
@@ -91,16 +95,39 @@ export const installPackages = async (packages: string[]) => {
       for (const cmd of pm.commands) {
         const result = await run(pm.name, cmd, {sudo:true, silent:false});
         if (result.code !== 0) {
-          throw new Error(`❌ Fehler beim Ausführen von '${pm.name} ${cmd.join(" ")}': ${result.output}`);
+          throw new Error(`❌ Fehler beim Ausführen von '${pm.name} ${cmd.join(" ")}': (code ${result.code}) ${result.stderr}`);
         }
       }
       console.log(`✅ Pakete ${packages.join(", ")} wurden erfolgreich installiert!`);
-      return;
+      return true;
     }
   }
 
   console.error(`❌ Kein unterstützter Paketmanager gefunden (${isWindows ? "winget" : "apt, yum, dnf, apk"}).`);
   Deno.exit(1);
+};
+
+/**
+ * Checks if a package is installed using the appropriate package manager (apt, yum, dnf, apk)
+ */
+export const isPackageInstalled = async (pkg: string): Promise<boolean> => {
+  const isWindows = Deno.build.os === "windows";
+  const cmds = isWindows 
+    ? [["winget", `list ${pkg}`]]
+    : [
+        ["dpkg", `-l ${pkg}`],    // Debian/Ubuntu
+        ["rpm", `-q ${pkg}`],     // RedHat/CentOS
+        ["pacman", `-Qs ${pkg}`], // Arch
+        ["apk", `info ${pkg}`]    // Alpine
+      ];
+
+  for (const [cmd, args] of cmds) {
+    if (await isCommandAvailable(cmd)) {
+      const { code, stdout } = await run(cmd, args.split(" "), {silent: true});
+      if (code === 0 && stdout.includes(pkg)) return true;
+    }
+  }
+  return false;
 };
 
 
@@ -125,7 +152,7 @@ export const startService = async (service: string) => {
   if (result.code === 0) {
     console.log(`✅ Dienst ${service} wurde erfolgreich gestartet!`);
   } else {
-    throw new Error(`❌ Fehler beim Starten von ${service}: ${result.output}`);
+    throw new Error(`❌ Fehler beim Starten von ${service}: ${result.stderr}`);
   }
 };
 
@@ -150,7 +177,7 @@ export const stopService = async (service: string) => {
   if (result.code === 0) {
     console.log(`✅ ${service} wurde erfolgreich gestoppt!`);
   } else {
-    throw new Error(`❌ Fehler beim Stoppen von ${service}: ${result.output}`);
+    throw new Error(`❌ Fehler beim Stoppen von ${service}: ${result.stderr}`);
   }
 }
 

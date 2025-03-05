@@ -7,7 +7,7 @@
   // Benutzer laden
   async function loadUsers() {
     try {
-      const users = await apiFetch('/api/clients');
+      users = await apiFetch('/api/users');
       renderUsers(users);
     } catch (error) {
       alert('Fehler beim Laden der Benutzer: ' + error.message);
@@ -18,8 +18,9 @@
   function renderUsers(usersToRender) {
     const tbody = document.getElementById('userGrid');
     tbody.innerHTML = usersToRender.map(user => `
-      <tr>
-        <td>${user.login}
+      <tr u2-href="/users/${user.id}">
+        <td>
+          <a href="/users/${user.id}">${user.login}</a>
         <td>${user.email || '-'}
         <td>
           <small class="u2-badge status-active">Aktiv</small>
@@ -32,30 +33,30 @@
   }
 
   // Modal Funktionen
-  function showAddUserModal() {
+  window.showAddUserModal = function() {
     document.getElementById('addUserModal').showModal();
   }
 
-  function hideAddUserModal() {
+  window.hideAddUserModal = function() {
     document.getElementById('addUserModal').close();
   }
 
-  function showDeleteUserModal(id, login) {
+  window.showDeleteUserModal = function(id, login) {
     currentUserToDelete = id;
     document.getElementById('deleteUserName').textContent = login;
     document.getElementById('deleteUserModal').showModal();
   }
 
-  function hideDeleteUserModal() {
+  window.hideDeleteUserModal = function() {
     currentUserToDelete = null;
     document.getElementById('deleteUserModal').close();
   }
 
-  async function confirmDeleteUser() {
+  window.confirmDeleteUser = async function() {
     if (!currentUserToDelete) return;
 
     try {
-      await apiFetch(`/api/clients/${currentUserToDelete}`, {
+      await apiFetch(`/api/users/${currentUserToDelete}`, {
         method: 'DELETE'
       });
       loadUsers();
@@ -86,9 +87,7 @@
     };
     
     try {
-      await apiFetch('/api/clients', {
-        data
-      });
+      await apiFetch('/api/users', {data});
       hideAddUserModal();
       loadUsers();
       e.target.reset();

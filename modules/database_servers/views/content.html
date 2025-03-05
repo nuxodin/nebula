@@ -1,0 +1,57 @@
+<div class="header">
+  <h1>Datenbankserver</h1>
+</div>
+
+<u2-table sortable>
+  <a href="#addServerModal">
+    <button>
+        <i class="mdi mdi-plus"></i>
+        verbinden
+    </button>
+  </a>
+  <table>
+    <thead>
+      <tr>
+        <th>Host
+        <th>Port
+        <th>Typ
+        <th>Version
+        <th>Login
+        <th>Datenbanken
+        <th width="100">Aktionen
+    <tbody id="serverList">
+  </table>
+</u2-table>
+
+<dialog id="addServerModal" u2-navigable class="u2x-modal">
+  <h2>Datenbankserver hinzufügen</h2>
+  <form id="addServerForm">
+    <label>
+      Host
+      <input name="host" required>
+    </label>
+    <label>
+      Port
+      <input name="port" type="number" required>
+    </label>
+    <label>
+      Typ
+      <select name="type" required>
+        <option value="mysql">MySQL</option>
+        <option value="postgresql">PostgreSQL</option>
+      </select>
+    </label>
+    <label>
+      Admin Login
+      <input name="admin_login" required>
+    </label>
+    <label>
+      Admin Passwort
+      <input name="admin_password" type="password" required>
+    </label>
+    <div class="-buttons">
+      <button>Speichern</button>
+    </div>
+  </form>
+</dialog>
+

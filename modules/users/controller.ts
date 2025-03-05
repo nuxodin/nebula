@@ -1,10 +1,12 @@
+import { Context } from "hono";
 import { logInfo, logError } from "../../utils/logger.ts";
 import { renderTemplate } from "../../utils/template.ts";
 import db from "../../utils/database.ts";
+import { hash } from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
+import { CDPSession } from 'https://deno.land/x/puppeteer@16.2.0/mod.ts';
 
-
-// View Controller
-export const getUserView = async (c) => {
+// View Controllers
+export const getUserView = async (c: Context) => {
   try {
     const content = await Deno.readTextFile("./modules/users/views/content.html");
     const scripts = await Deno.readTextFile("./modules/users/views/scripts.html");
@@ -15,88 +17,131 @@ export const getUserView = async (c) => {
   }
 };
 
-// API Controllers
-/*
-export const getAllUsers = async (c) => {
-  console.log('USED????????????????');
-
+export const getUserDetailView = async (c: Context) => {
   try {
-    const users = db.queryEntries(`
+    const { id } = c.req.param();
+    const user = db.queryEntries(`
       SELECT c.*,
-             COUNT(d.id) as domain_count
+             COUNT(d.id) as domain_count,
+             GROUP_CONCAT(d.name) as domains
       FROM clients c
       LEFT JOIN domains d ON c.id = d.owner_id
+      WHERE c.id = ?
       GROUP BY c.id
-    `);
-    return c.json(users);
+    `, [id])[0];
+
+    if (!user) {
+      return c.text("Benutzer nicht gefunden", 404);
+    }
+
+    const content = await Deno.readTextFile("./modules/users/views/detail/content.html");
+    const scripts = await Deno.readTextFile("./modules/users/views/detail/scripts.html");
+    return c.html(await renderTemplate(`Benutzer ${user.login}`, content, "", scripts));
   } catch (err) {
-    logError("Fehler beim Laden der Benutzer", "Users", c, err);
-    return c.json({ error: "Fehler beim Laden der Benutzer" }, 500);
+    logError("Fehler beim Laden der Benutzer-Details", "Users", c, err);
+    return c.text("Internal Server Error", 500);
   }
 };
 
-export const registerUser = async (c) => {
-  console.log('USED????????????????');
-  try {
-    const { login, email, password } = await c.req.json();
+// API Controllers
+export const api = {
+  get: function(_c: Context) {
+    return db.queryEntries("SELECT id, login, email FROM clients");
+  },
+  post: async function(c: Context) {
+    const data = await c.req.json();
     
+    // Prüfen ob Benutzer oder Email bereits existiert
     const existing = db.queryEntries(
       "SELECT * FROM clients WHERE login = ? OR email = ?",
-      [login, email]
+      [data.login, data.email]
     );
     
     if (existing.length > 0) {
-      return c.json({ error: "Benutzername oder E-Mail existiert bereits" }, 400);
+      return { error: "Benutzername oder E-Mail existiert bereits" };
     }
     
+    // Hash password before storing
+    const hashedPassword = await hash(data.password);
+    
+    // Benutzer erstellen
     const result = db.queryEntries(
       "INSERT INTO clients (login, email, password) VALUES (?, ?, ?) RETURNING id",
-      [login, email, password]
+      [data.login, data.email, hashedPassword]
     );
     
-    logInfo(`Benutzer ${login} wurde erstellt`, "Users", c);
-    return c.json({ id: result[0].id, login, email });
-  } catch (err) {
-    logError("Fehler beim Erstellen des Benutzers", "Users", c, err);
-    return c.json({ error: "Internal Server Error" }, 500);
-  }
-};
+    logInfo(`Benutzer ${data.login} wurde erstellt`, "Users", c);
+    return { id: result[0].id, login: data.login, email: data.email };
+  },
+  ':id': {
+    get: function(c: Context) {
+      const { id } = c.req.param();
+      const user = db.queryEntries(`
+        SELECT c.*,
+               COUNT(d.id) as domain_count,
+               GROUP_CONCAT(d.name) as domains
+        FROM clients c
+        LEFT JOIN domains d ON d.owner_id = c.id
+        WHERE c.id = ?
+        GROUP BY c.id
+      `, [id])[0];
 
-export const deleteUser = async (c) => {
-  console.log('USED????????????????');
-  try {
-    const { id } = c.req.param();
-    const user = db.queryEntries("SELECT login FROM clients WHERE id = ?", [id])[0];
-    
-    if (!user) {
-      return c.json({ error: "Benutzer nicht gefunden" }, 404);
+      if (!user) {
+        return { error: "Benutzer nicht gefunden" };
+      }
+
+      return user;
+    },
+    delete: function(c: Context) {
+      const { id } = c.req.param();
+      
+      const user = db.queryEntries("SELECT * FROM clients WHERE id = ?", [id])[0];
+      if (!user) {
+        return { error: "Benutzer nicht gefunden" };
+      }
+      
+      const domains = db.queryEntries<{count: number}>("SELECT COUNT(*) as count FROM domains WHERE owner_id = ?", [id])[0];
+      if (domains.count > 0) {
+        return { error: "Benutzer hat noch Domains und kann nicht gelöscht werden" };
+      }
+      
+      db.query("DELETE FROM clients WHERE id = ?", [id]);
+      logInfo(`Benutzer ${user.login} wurde gelöscht`, "Users", c);
+      return { message: "Benutzer gelöscht" };
+    },
+    'password': {
+      post: async function(c: Context) {
+        const { id } = c.req.param();
+        const { password } = await c.req.json();
+        
+        const user = db.queryEntries("SELECT login FROM clients WHERE id = ?", [id])[0];
+        if (!user) {
+          return { error: "Benutzer nicht gefunden" };
+        }
+        
+        const hashedPassword = await hash(password);
+        db.query("UPDATE clients SET password = ? WHERE id = ?", [hashedPassword, id]);
+        logInfo(`Passwort für Benutzer ${user.login} wurde geändert`, "Users", c);
+        return { success: true };
+      }
     }
-    
-    db.query("DELETE FROM clients WHERE id = ?", [id]);
-    logInfo(`Benutzer ${user.login} wurde gelöscht`, "Users", c);
-    
-    return c.json({ message: "Benutzer wurde gelöscht" });
-  } catch (err) {
-    logError("Fehler beim Löschen des Benutzers", "Users", c, err);
-    return c.json({ error: "Internal Server Error" }, 500);
-  }
-};
+  },
+  'me': {
+    get: function(c: Context) {
+      const session = c.get('session');
+      const userId = session.get('userId');
 
-export const getUserById = async (c) => {
-  console.log('USED????????????????');
-  try {
-    const { id } = c.req.param();
-    const user = db.queryEntries("SELECT * FROM clients WHERE id = ?", [id])[0];
-    
-    if (!user) {
-      return c.json({ error: "Benutzer nicht gefunden" }, 404);
+      const user = db.queryEntries(`
+        SELECT id, login, email
+        FROM clients 
+        WHERE id = ?
+      `, [userId])[0];
+
+      if (!user) {
+        throw new Error("Benutzer nicht gefunden");
+      }
+
+      return user;
     }
-    
-    return c.json(user);
-  } catch (err) {
-    logError("Fehler beim Laden des Benutzers", "Users", c, err);
-    return c.json({ error: "Internal Server Error" }, 500);
   }
 };
-
-*/

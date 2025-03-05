@@ -1,0 +1,374 @@
+<script type="module">
+import { apiFetch } from '/public/js/utils.js';
+import * as dialog from "https://cdn.jsdelivr.net/gh/u2ui/u2@x.x.x/js/dialog/dialog.min.js";
+
+const endpoint = '/api'+location.pathname;
+
+let currentPath = '/';
+const urlParams = new URLSearchParams(window.location.search);
+const filePath = urlParams.get('file');
+currentPath = filePath ? decodeUrlPath(filePath) : '/';
+
+await loadFiles();
+
+// rename / delete
+document.addEventListener('click', (e) => {
+  const button = e.target.closest('[data-action]');
+  if (!button) return;
+  const path = button.closest('tr').dataset.path;
+
+  if (button.dataset.action === 'rename') {
+    dialog.prompt('Rename', name).then(newName => {
+        if (!newName) return;
+        const newPath = path.split(/[\/\\]/).slice(0, -1).join('/') + '/' + newName;
+        apiFetch(endpoint+'/rename', {post: { oldPath: path, newPath }})
+          .then(() => loadFiles())
+          .catch(error => dialog.alert('Fehler beim Umbenennen: ' + error.message));
+      });
+  } else if (button.dataset.action === 'delete') {
+    deleteItem(path);    
+  }
+});
+
+document.querySelector('#newFile').onclick = createNewFile;
+document.querySelector('#newFolder').onclick = createNewFolder;
+
+// Upload handling
+document.getElementById('uploadBtn').onclick = (e) => {
+  document.getElementById('fileUpload').click();
+};
+
+document.getElementById('fileUpload').onchange = async (e) => {
+  if (e.target.files.length) {
+    await uploadFiles(e.target.files);
+    e.target.value = ''; // Reset input after upload
+  }
+};
+
+// Drag & Drop handling
+document.querySelector('.file-tree').addEventListener('dragover', (e) => {
+  e.preventDefault();
+  e.currentTarget.classList.add('drag-over');
+});
+
+document.querySelector('.file-tree').addEventListener('dragleave', (e) => {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+});
+
+document.querySelector('.file-tree').addEventListener('drop', async (e) => {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  const items = e.dataTransfer.items;
+  const entries = [];
+  
+  // Handle dropped items (files or directories)
+  for (let item of items) {
+    if (item.kind === 'file') {
+      const entry = item.webkitGetAsEntry();
+      if (entry) {
+        entries.push(entry);
+      }
+    }
+  }
+  
+  const files = await getAllFileEntries(entries);
+  await uploadFiles(files);
+});
+
+// Directory picker support
+if ('showDirectoryPicker' in window) {
+  const uploadBtn = document.getElementById('uploadBtn');
+  const folderBtn = document.createElement('button');
+  folderBtn.innerHTML = '<i class="mdi mdi-folder-upload"></i> Upload Folder';
+  uploadBtn.after(folderBtn);
+  
+  folderBtn.onclick = async () => {
+    try {
+      const dirHandle = await window.showDirectoryPicker();
+      const files = await getFilesFromDirectoryHandle(dirHandle);
+      await uploadFiles(files);
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        dialog.alert('Error selecting folder: ' + err.message);
+      }
+    }
+  };
+}
+
+// Helper to get all files from a FileSystemDirectoryHandle
+async function getFilesFromDirectoryHandle(dirHandle, path = '') {
+  const files = [];
+  for await (const entry of dirHandle.values()) {
+    const entryPath = path ? `${path}/${entry.name}` : entry.name;
+    if (entry.kind === 'file') {
+      const file = await entry.getFile();
+      Object.defineProperty(file, 'webkitRelativePath', {
+        value: entryPath
+      });
+      files.push(file);
+    } else if (entry.kind === 'directory') {
+      const subFiles = await getFilesFromDirectoryHandle(entry, entryPath);
+      files.push(...subFiles);
+    }
+  }
+  return files;
+}
+
+// Helper to recursively get all file entries
+async function getAllFileEntries(entries) {
+  const files = [];
+  
+  async function processEntry(entry, path = '') {
+    if (entry.isFile) {
+      const file = await new Promise((resolve) => entry.file(resolve));
+      Object.defineProperty(file, 'webkitRelativePath', {
+        value: path ? `${path}/${entry.name}` : entry.name
+      });
+      files.push(file);
+    } else if (entry.isDirectory) {
+      const reader = entry.createReader();
+      const entries = await new Promise((resolve) => {
+        reader.readEntries(resolve);
+      });
+      const entryPath = path ? `${path}/${entry.name}` : entry.name;
+      for (const entry of entries) {
+        await processEntry(entry, entryPath);
+      }
+    }
+  }
+  
+  for (const entry of entries) {
+    await processEntry(entry);
+  }
+  
+  return files;
+}
+
+// Handle file upload with progress
+async function uploadFiles(files) {
+  if (!files.length) return;
+  
+  const formData = new FormData();
+  formData.append('path', currentPath);
+  
+  for (const file of files) {
+    // If file has a webkitRelativePath, create necessary subdirectories
+    if (file.webkitRelativePath) {
+      const subPath = file.webkitRelativePath.split('/').slice(0, -1).join('/');
+      if (subPath) {
+        try {
+          await apiFetch(endpoint, {
+            post: { 
+              path: join(currentPath, subPath), 
+              type: 'directory' 
+            }
+          });
+        } catch (err) { // Ignore directory already exists errors
+          console.log('Directory creation error (might already exist):', err);
+        }
+      }
+      formData.append('file', file, file.webkitRelativePath);
+    } else {
+      formData.append('file', file);
+    }
+  }
+
+  try {
+    await apiFetch(endpoint+'/upload', { formData });
+    loadFiles();
+  } catch (error) {
+    dialog.alert('Error uploading files: ' + error.message);
+  }
+}
+
+// Load files and directories
+async function loadFiles() {
+  const listPath = encodeURIComponent(currentPath);
+  const data = await apiFetch(endpoint+'/list?path=' + listPath);
+  if (data.error) throw new Error(data.error);
+
+  renderPath();
+
+  if (Array.isArray(data)) {
+    renderFiles(data);
+  } else {
+    previewFile(currentPath);
+    return;
+  }
+
+}
+
+// Render path breadcrumb
+function renderPath() {
+  const parts = [];
+  let pathToProcess = currentPath;
+  if (pathToProcess) {
+    const cleanPath = pathToProcess.replace(/^[\/\\]+/, '');
+    parts.push(...cleanPath.split(/[\/\\]/).filter(p => p));
+  }
+  let currentPathBuild = '/';
+  const rootUrl = new URL(window.location.href);
+  rootUrl.searchParams.set('file', encodePathForUrl(currentPathBuild));
+  
+  let html = `<a href="${rootUrl.toString()}">Root</a>`;
+  
+  // Pfad aufbauen
+  for (let i = 0; i < parts.length; i++) {
+    currentPathBuild = join(currentPathBuild, parts[i]);
+    const pathUrl = new URL(window.location.href);
+    pathUrl.searchParams.set('file', encodePathForUrl(currentPathBuild));
+    html += ` / <a href="${pathUrl.toString()}">${parts[i]}</a>`;
+  }
+  
+  document.getElementById('pathBreadcrumb').innerHTML = html;
+}
+
+// Render files and directories
+function renderFiles(items) {
+  const tbody = document.getElementById('fileList');
+  tbody.innerHTML = '';
+
+  // Parent directory link (..)
+  if (currentPath !== '/') {
+    const parentPath = currentPath.split(/[\/\\]/).slice(0, -1).join('/');
+    const parentUrl = new URL(window.location.href);
+    parentUrl.searchParams.set('file', encodePathForUrl(parentPath));
+    
+    tbody.innerHTML += `
+      <tr class="file-row" data-path="${parentPath}">
+        <td><i class="mdi mdi-folder-up file-icon"></i>
+        <td><a href="${parentUrl}">..</a>
+        <td>-
+        <td>-
+        <td>
+      </tr>
+    `;
+  }
+
+  items.forEach(item => {
+    const isDirectory = item.isDirectory;
+    const name = item.name;
+    const icon = isDirectory ? 'mdi-folder' : 'mdi-file-document';
+    const itemUrl = new URL(window.location.href);
+    const itemPath = `${currentPath}/${name}`;
+
+    itemUrl.searchParams.set('file', encodePathForUrl(itemPath));
+    
+    tbody.innerHTML += `
+      <tr class="file-row" data-path="${itemPath}">
+        <td><input type="checkbox">
+        <td><i class="mdi ${icon} file-icon"></i>
+        <td><a href="${itemUrl}">${name}</a>
+        <td>${item.mtime ? `<u2-time datetime="${item.mtime}" type="relative" minute mode=short>${item.mtime}</u2-time>` : '-'}
+        <td>${item.size != null ? `<u2-bytes>${item.size}</u2-bytes>` : '-'}
+        <td><small>${item.permissions}</small>
+        <td><small>${item.ownerName}</small>
+        <td><small>${item.groupName}</small>
+        <td>
+          <button class="u2-unstyle" data-action="rename" title="Rename">
+            <i class="mdi mdi-rename"></i>
+          </button>
+          <button class="u2-unstyle" data-action="delete" title="Delete">
+            <i class="mdi mdi-delete"></i>
+          </button>
+    `;
+  });
+}
+
+// File preview
+async function previewFile(path) {
+  try {
+    const content = await apiFetch(endpoint+'/content?path=' + encodeURIComponent(path));
+    document.getElementById('fileContent').value = content;
+    document.getElementById('previewTitle').textContent = path.split(/[\/\\]/).pop();
+    setupEditor(path);
+    setTimeout(() => {
+      console.log(document.getElementById('filePreview'))
+      document.getElementById('filePreview').showModal();
+    }, 10);
+  } catch (error) {
+    dialog.alert('Fehler beim Laden der Datei: ' + error.message);
+  }
+}
+
+// Set up editor with save functionality
+function setupEditor(path) {
+  const textarea = document.getElementById('fileContent');
+  textarea.onkeydown = async function(e) {
+    if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      await saveFile(path);
+    }
+  };
+}
+
+// Save file content
+async function saveFile(path) {
+  try {
+    const content = document.getElementById('fileContent').value;
+    await apiFetch(endpoint+'/content', {put: { path, content }});
+  } catch (error) {
+    dialog.alert('Fehler beim Speichern der Datei: ' + error.message);
+  }
+}
+
+// File operations
+async function createNewFile(type='file') {
+  const text = type === 'file' ? 'File' : 'Folder';
+  const name = await dialog.prompt(text+' name:');
+  if (!name) return;
+  try {
+    const path = join(currentPath, name);
+    await apiFetch(endpoint, {post: { path, type }});
+    await loadFiles();
+  } catch (error) {
+    dialog.alert('Fehler beim Erstellen Datei / Ordner: ' + error.message);
+  }
+}
+
+async function createNewFolder() {
+  await createNewFile('directory');
+}
+
+async function deleteItem(path) {
+  const ok = await dialog.confirm('Sind Sie sicher, dass Sie dieses Element löschen möchten?');
+  if (!ok) return;
+  try {
+    await apiFetch(endpoint, {del: { path }});
+    loadFiles();
+  } catch (error) {
+    dialog.alert('Fehler beim Löschen: ' + error.message);
+  }
+}
+
+// Hilfsfunktion zum Verbinden von Pfaden
+function join(...parts) {
+  if (!parts.length) return '';
+  // Konvertiere alle Teile zu Backslashes
+  //parts = parts.map(p => p.replace(/\//g, '\\'));
+  let result = parts[0].replace(/[\\/]+$/g, '');
+  // Sicherstellen, dass Laufwerksbuchstaben korrekt formatiert sind
+  if (/^[A-Za-z]:$/.test(result)) {
+    result += '\\';
+  } else if (/^[A-Za-z]:[^\\]/.test(result)) {
+    result = result.replace(/^([A-Za-z]:)(.*)$/, (_, drive, rest) => drive + '\\' + rest);
+  }
+  for (let i = 1; i < parts.length; i++) {
+    let part = parts[i].replace(/^[\\/]+/g, '').replace(/[\\/]+$/g, '');
+    result += '/' + part;
+    //result += '\\' + part;
+  }
+  return result;
+}
+
+// URL-Helper Funktionen
+function encodePathForUrl(path) {
+  return encodeURIComponent(path.replace(/\\/g, '/'));
+}
+
+function decodeUrlPath(encodedPath) {
+  return decodeURIComponent(encodedPath);//.replace(/\//g, '\\');
+}
+
+</script>

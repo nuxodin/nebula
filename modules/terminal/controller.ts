@@ -19,26 +19,17 @@ export const getTerminalView = async (c: Context) => {
 export const api = {
   post: async (c: Context) => {
     const { command } = await c.req.json();
-    if (!command) {
-        throw new Error("No command provided");
-    }
+    if (!command) throw new Error("No command provided");    
 
-    const [cmd, ...args] = command.split(' ');
-    let result = null;
-
-    return await run(cmd, args, { sudo: true });
-
-    try {
-        result = await run(cmd, args, { sudo: true });
+    // use sh for linux
+    if (Deno.build.os !== "windows") {
+        const result = await run("sh", ["-c", command], { sudo: true });
+        return result;
+    } else {
         return {
-            output: result.output,
-            code: result.code
-        };
-    } catch (err) {
-        return {
-            output: result.output,
-            code: result.code
-        };
+            stderr: "Windows wird noch nicht unterstützt"
+        }
     }
   }
+
 };

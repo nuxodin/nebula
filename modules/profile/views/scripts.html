@@ -1,0 +1,90 @@
+<script type="module">
+import { apiFetch } from '/public/js/utils.js';
+import * as dialog from "https://cdn.jsdelivr.net/gh/u2ui/u2@x.x.x/js/dialog/dialog.min.js";
+
+// on passwordForm change
+document.getElementById('passwordForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const data = Object.fromEntries(new FormData(e.target));
+  if (data.password !== data.confirm) {
+    alert('Die neuen Passwörter stimmen nicht überrein.');
+    return;
+  }
+  try {
+    await apiFetch('/api/profile/password', {post: data});
+    dialog.alert('Passwort erfolgreich geändert');
+    e.target.reset();
+  } catch (error) {
+    dialog.alert(error.message);
+  }
+});
+
+// Profildaten laden
+async function loadProfileData() {
+  try {
+    const user = await apiFetch('/api/users/me');
+    
+    // Benutzerdaten anzeigen
+    document.getElementById('userLogin').textContent = user.login;
+    document.getElementById('userEmail').textContent = user.email || '-';
+  } catch (error) {
+    alert('Fehler beim Laden der Profildaten: ' + error.message);
+  }
+}
+
+// Passkey Liste laden
+async function loadPasskeys() {
+    try {
+        const response = await apiFetch('/api/profile/passkeys');
+        const passkeys = response.devices;
+        
+        const container = document.getElementById('passkeys-list');
+        if (!passkeys?.length) {
+            container.innerHTML = '<p>Keine Passkeys registriert</p>';
+            return;
+        }
+        
+        container.innerHTML = passkeys.map(device => `
+            <div class="passkey-item">
+                <div class="passkey-info">
+                    <h4>
+                        <i class="mdi mdi-fingerprint"></i>
+                        ${device.name}
+                    </h4>
+                    <small>
+                        Hinzugefügt <u2-time datetime="${device.created_at}" second></u2-time>
+                        ${device.last_used ? ` | Zuletzt verwendet <u2-time datetime="${device.last_used}" second></u2-time>` : ''}
+                    </small>
+                </div>
+                <button class="delete-passkey u2-unstyle" data-id="${device.id}" title="Passkey löschen">
+                    <i class="mdi mdi-delete"></i>
+                </button>
+            </div>
+        `).join('');
+
+        // Event-Listener für Lösch-Buttons
+        container.querySelectorAll('.delete-passkey').forEach(button => {
+            button.onclick = () => deletePasskey(button.dataset.id);
+        });
+    } catch (error) {
+        console.error('Fehler beim Laden der Passkeys:', error);
+    }
+}
+
+// Passkey löschen
+async function deletePasskey(id) {
+    if (!confirm('Möchten Sie diesen Passkey wirklich löschen?')) return;
+    try {
+        await apiFetch('/api/profile/passkeys/' + id, {del:{}});
+        loadPasskeys(); // Liste neu laden
+    } catch (error) {
+        alert('Fehler beim Löschen des Passkeys: ' + error.message);
+    }
+}
+
+
+// Initial load
+loadProfileData();
+loadPasskeys();
+</script>

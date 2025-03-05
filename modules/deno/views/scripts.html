@@ -1,0 +1,222 @@
+<script type="module">
+import { apiFetch } from '/public/js/utils.js';
+
+// Domains und Versionen laden beim Seitenstart
+document.addEventListener('DOMContentLoaded', () => {
+    loadDomains();
+    loadVersions();
+});
+
+// Laden der Deno-Domains
+async function loadDomains() {
+    try {
+        const response = await apiFetch('/api/deno/domains');
+        if (!response.success) {
+            throw new Error(response.error || 'Fehler beim Laden der Domains');
+        }
+        
+        const domainList = document.getElementById('domainList');
+        
+        if (response.domains && response.domains.length > 0) {
+            let html = '';
+            
+            for (const domain of response.domains) {
+                html += `
+                <tr>
+                    <td><a href="/domains/${domain.id}">${domain.name}</a>
+                    <td id="domain-status-${domain.id}">Prüfe...
+                    <td>${domain.runtime_version || 'Standard'}
+                    <td>
+                        <button class="btn-action" onclick="startDomain(${domain.id}, '${domain.name}')">Start</button>
+                        <button class="btn-action" onclick="stopDomain(${domain.id}, '${domain.name}')">Stop</button>
+                </tr>`;
+                
+                // Status nach dem Rendern prüfen
+                setTimeout(() => checkDomainStatus(domain.id), 100);
+            }
+            
+            domainList.innerHTML = html;
+        } else {
+            domainList.innerHTML = '<tr><td colspan="4">Keine Deno-Domains vorhanden</tr>';
+        }
+    } catch (error) {
+        console.error('Fehler beim Laden der Domains:', error);
+        document.getElementById('domainList').innerHTML = 
+            `<tr><td colspan="4">Fehler beim Laden der Domains: ${error.message}</tr>`;
+    }
+}
+
+// Deno-Domain-Status prüfen
+async function checkDomainStatus(domainId) {
+    try {
+        const response = await apiFetch(`/api/prozess/status?domain_id=${domainId}&type=deno`);
+        const statusCell = document.getElementById(`domain-status-${domainId}`);
+        
+        if (statusCell) {
+            if (response.running) {
+                statusCell.textContent = 'Läuft';
+                statusCell.className = 'status-running';
+            } else {
+                statusCell.textContent = 'Gestoppt';
+                statusCell.className = 'status-stopped';
+            }
+        }
+    } catch (error) {
+        console.error(`Fehler beim Prüfen des Domain-Status für ID ${domainId}:`, error);
+    }
+}
+
+// Laden der installierten Deno-Versionen
+async function loadVersions() {
+    try {
+        const response = await apiFetch('/api/deno/versions');
+        if (!response.success) {
+            throw new Error(response.error || 'Fehler beim Laden der Versionen');
+        }
+        
+        const versionsList = document.getElementById('versionsList');
+        
+        if (response.versions && response.versions.length > 0) {
+            let html = '';
+            
+            for (const version of response.versions) {
+                const count = await countDomainsWithVersion(version);
+                
+                html += `
+                <tr>
+                    <td>${version}
+                    <td>
+                    <td>${count}
+                    <td><button onclick="uninstallVersion('${version}')">Deinstallieren</button>
+                </tr>`;
+            }
+            
+            // Formular zum Installieren einer neuen Version
+            html += `
+            <tr>
+                <td colspan="3">
+                    <input type="text" id="new-deno-version" placeholder="Version (z.B. 1.38.3)">
+                <td>
+                    <button class="btn-action" onclick="installNewVersion()">Installieren</button>
+            </tr>`;
+            
+            versionsList.innerHTML = html;
+        } else {
+            versionsList.innerHTML = `
+            <tr><td colspan="4">Keine Deno-Versionen installiert</tr>
+            <tr>
+                <td colspan="3">
+                    <input type="text" id="new-deno-version" placeholder="Version (z.B. 1.38.3)">
+                <td>
+                    <button class="btn-action" onclick="installNewVersion()">Installieren</button>
+            </tr>`;
+        }
+    } catch (error) {
+        console.error('Fehler beim Laden der Versionen:', error);
+        document.getElementById('versionsList').innerHTML = 
+            `<tr><td colspan="4">Fehler beim Laden der Versionen: ${error.message}</tr>`;
+    }
+}
+
+// Anzahl der Domains zählen, die eine bestimmte Version verwenden
+async function countDomainsWithVersion(version) {
+    try {
+        const response = await apiFetch('/api/deno/domains');
+        if (!response.success || !response.domains) return 0;
+        
+        return response.domains.filter(domain => domain.runtime_version === version).length;
+    } catch (error) {
+        console.error(`Fehler beim Zählen der Domains für Version ${version}:`, error);
+        return 0;
+    }
+}
+
+// Die folgenden Funktionen müssen im globalen Scope sein, damit sie von onclick aufgerufen werden können
+window.startDomain = async function(domainId, domainName) {
+    try {
+        if (!confirm(`Deno-Anwendung für ${domainName} starten?`)) return;
+        
+        const response = await apiFetch(`/api/deno/${domainId}/start`, {post:{}});
+        
+        if (response.success) {
+            alert(`Deno-Anwendung für ${domainName} erfolgreich gestartet.`);
+            setTimeout(() => checkDomainStatus(domainId), 1000);
+        } else {
+            throw new Error(response.error || 'Unbekannter Fehler');
+        }
+    } catch (error) {
+        console.error(`Fehler beim Starten der Deno-Anwendung für ${domainName}:`, error);
+        alert(`Fehler: ${error.message}`);
+    }
+};
+
+window.stopDomain = async function(domainId, domainName) {
+    try {
+        if (!confirm(`Deno-Anwendung für ${domainName} stoppen?`)) return;
+        
+        const response = await apiFetch(`/api/deno/${domainId}/stop`, {post:{}});
+        
+        if (response.success) {
+            alert(`Deno-Anwendung für ${domainName} erfolgreich gestoppt.`);
+            setTimeout(() => checkDomainStatus(domainId), 1000);
+        } else {
+            throw new Error(response.error || 'Unbekannter Fehler');
+        }
+    } catch (error) {
+        console.error(`Fehler beim Stoppen der Deno-Anwendung für ${domainName}:`, error);
+        alert(`Fehler: ${error.message}`);
+    }
+};
+
+window.installNewVersion = async function() {
+    const versionInput = document.getElementById('new-deno-version');
+    const version = versionInput.value.trim();
+    
+    if (!version) {
+        alert('Bitte geben Sie eine Version ein.');
+        return;
+    }
+    
+    try {
+        if (!confirm(`Deno-Version ${version} installieren?`)) return;
+        
+        const response = await apiFetch('/api/deno/install', {post:{ version }});
+        
+        if (response.success) {
+            alert(`Deno-Version ${version} wurde erfolgreich installiert.`);
+            versionInput.value = '';
+            loadVersions(); // Liste aktualisieren
+        } else {
+            throw new Error(response.error || 'Unbekannter Fehler');
+        }
+    } catch (error) {
+        console.error(`Fehler beim Installieren der Deno-Version ${version}:`, error);
+        alert(`Fehler: ${error.message}`);
+    }
+};
+
+window.uninstallVersion = async function(version) {
+    try {
+        const domainsCount = await countDomainsWithVersion(version);
+        
+        if (domainsCount > 0) {
+            alert(`Diese Version wird von ${domainsCount} Domain(s) verwendet und kann nicht deinstalliert werden.`);
+            return;
+        }
+        
+        if (!confirm(`Deno-Version ${version} deinstallieren?`)) return;
+        
+        const response = await apiFetch('/api/deno/uninstall', {post:{ version }});
+        
+        if (response.success) {
+            alert(`Deno-Version ${version} wurde erfolgreich deinstalliert.`);
+            loadVersions(); // Liste aktualisieren
+        } else {
+            throw new Error(response.error || 'Unbekannter Fehler');
+        }
+    } catch (error) {
+        console.error(`Fehler beim Deinstallieren der Deno-Version ${version}:`, error);
+        alert(`Fehler: ${error.message}`);
+    }
+};
+</script>

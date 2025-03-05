@@ -1,0 +1,127 @@
+<script type="module">
+import { apiFetch } from '/public/js/utils.js';
+
+let serverId;
+
+async function loadServerDetails() {
+  serverId = window.location.pathname.split('/')[2];
+
+  try {
+    const server = await apiFetch(`/api/database_servers/${serverId}`);
+    
+    // Server Informationen setzen
+    document.getElementById('pageTitle').textContent = `Datenbankserver ${server.host}:${server.port}`;
+    document.getElementById('serverHost').textContent = server.host;
+    document.getElementById('serverPort').textContent = server.port;
+    document.getElementById('serverType').textContent = server.type;
+    document.getElementById('serverVersion').textContent = server.version || 'Nicht verfügbar';
+    
+    // Datenbanken anzeigen
+    renderDatabases(server.databases);
+    
+    // Prozesse anzeigen
+    renderProcesses(server.processes);
+
+    // Automatische Aktualisierung der Prozesse alle 5 Sekunden
+    setInterval(async () => {
+      const updatedServer = await apiFetch(`/api/database_servers/${serverId}`);
+      renderProcesses(updatedServer.processes);
+    }, 5000);
+
+  } catch (error) {
+    alert('Fehler beim Laden der Server-Details: ' + error.message);
+  }
+}
+
+function renderDatabases(databases) {
+  const tbody = document.getElementById('databaseList');
+  tbody.innerHTML = databases.map(db => `
+    <tr class="${db.managed ? '' : 'unmanaged'}">
+      <td>${db.name}
+      <td>${db.managed ? '<span class="u2-badge status-active">Verwaltet</span>' : '<span class="u2-badge status-inactive">Nicht verwaltet</span>'}
+      <td>
+        ${db.managed ? '' : `
+          <button class="btn" onclick="importDatabase('${db.name}')">
+            <i class="mdi mdi-database-import"></i>
+            Importieren
+          </button>
+        `}
+    </tr>
+  `).join('');
+}
+
+function renderProcesses(processes) {
+  const tbody = document.getElementById('processList');
+  // todo: security! escape html
+  tbody.innerHTML = processes.map(proc => `
+    <tr>
+      <td>${proc.id}
+      <td>${proc.db || '-'}
+      <td>${proc.user}
+      <td>${proc.host}
+      <td>${proc.state}
+      <td>
+        <div style="max-width:66rem; overflow:hidden; text-overflow:ellipsis; xwhite-space:nowrap;">
+        ${proc.info || '-'}
+        </div>
+      <td>${proc.time_ms}
+      <td>${formatBytes(proc.memory_used)}
+      <td>
+        <button class="u2-unstyle -delete" onclick="killProcess(${proc.id})">
+          <i class="mdi mdi-delete"></i>
+        </button>
+    </tr>
+  `).join('');
+}
+
+function formatBytes(bytes) {
+  if (!bytes) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+}
+
+async function importDatabase(name) {
+  if (!confirm(`Datenbank "${name}" in die Verwaltung importieren?`)) return;
+
+  try {
+    const response = await apiFetch(`/api/database_servers/${serverId}/import`, {
+      method: 'POST',
+      body: { databases: [name] }
+    });
+
+    if (response.success) {
+      loadServerDetails(); // Neu laden
+    }
+  } catch (error) {
+    alert('Fehler beim Importieren der Datenbank: ' + error.message);
+  }
+}
+
+async function killProcess(processId) {
+  if (!confirm('Prozess wirklich beenden?')) return;
+
+  try {
+    await apiFetch(`/api/database_servers/${serverId}/processes`, {
+      method: 'DELETE',
+      body: { processId }
+    });
+  } catch (error) {
+    alert('Fehler beim Beenden des Prozesses: ' + error.message);
+  }
+}
+
+// Initial laden
+loadServerDetails();
+
+// Globale Funktionen exportieren
+window.importDatabase = importDatabase;
+window.killProcess = killProcess;
+</script>
+
+<style>
+.unmanaged {
+  color: var(--text-color-secondary);
+}
+</style>

@@ -1,0 +1,90 @@
+<script type="module">
+import { apiFetch } from '/public/js/utils.js';
+
+async function loadSystemInfo() {
+    try {
+        const data = await apiFetch('/api/nebula/info');
+        
+        // Update Overview
+        const overview = {
+            'Deno Version': `${data.denoVersion.deno} <small>(V8 ${data.denoVersion.v8}, TypeScript ${data.denoVersion.typescript})</small>`,
+            'Hostname': data.hostname || 'unknown',
+            'Server Zeit': data.serverTime,
+            'Zeitzone': data.timezone,
+            'OS Platform': data.os?.platform || 'unknown',
+            'OS Release': data.os?.release || 'unknown',
+            'Architecture': data.os?.arch || 'unknown',
+            'Process ID': data.pid || 'unknown',
+            'Parent PID': data.ppid || 'unknown',
+            'Main Module': data.mainModule || 'unknown'
+        };
+        
+        const overviewHtml = Object.entries(overview)
+            .map(([key, value]) => `<dt>${key}<dd>${value}`)
+            .join('');
+        document.getElementById('sysOverview').innerHTML = overviewHtml;
+
+        // Update Resources
+        const resources = {
+            'Load Average': data.loadavg ? 
+                `1min: ${data.loadavg[0].toFixed(2)}<br> 5min: ${data.loadavg[1].toFixed(2)}<br> 15min: ${data.loadavg[2].toFixed(2)}` : 'not available on windows',
+            'Memory Usage': data.memory ? 
+                `${(data.memory.heapUsed / 1024 / 1024).toFixed(2)} MB / ${(data.memory.heapTotal / 1024 / 1024).toFixed(2)} MB` : 'N/A',
+            'External Memory': data.memory ? 
+                `${(data.memory.external / 1024 / 1024).toFixed(2)} MB` : 'N/A',
+            'RSS Memory': data.memory ? 
+                `${(data.memory.rss / 1024 / 1024).toFixed(2)} MB` : 'N/A'
+        };
+        
+        const resourcesHtml = Object.entries(resources)
+            .map(([key, value]) => `<dt>${key}<dd>${value}`)
+            .join('');
+        document.getElementById('resources').innerHTML = resourcesHtml;
+
+        // Update Runtime Arguments
+        document.getElementById('runtimeArgs').innerHTML = data.args.length ? 
+            `<ul>${data.args.map(arg => `<li>${arg}</li>`).join('')}</ul>` :
+            '<em>No runtime arguments</em>';
+
+        // Update Permissions
+        document.getElementById('permissions').innerHTML = Object.entries(data.permissions)
+            .map(([key, value]) => `<dt>${key}: <dd>${value ? '✅ granted' : '❌ denied'}`).join('');
+
+        // Update Environment Variables (sorted by name)
+        const envHtml = Object.entries(data.env)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([key, value]) => `<tr><th>${key}: <td>${value}`)
+            .join('');
+        document.getElementById('envVars').innerHTML = envHtml;
+
+    } catch (error) {
+        console.error('Failed to load system info:', error);
+    }
+}
+
+
+window.restartNebula = async function() {
+    if (!confirm('Are you sure you want to restart Nebula?')) return;
+    try {
+        const response = await apiFetch('/api/nebula/restart', {post:{}});
+        if (!response.success) throw new Error('Restart failed');
+        alert('Nebula is restarting...');
+    } catch (error) {
+        alert('Failed to restart Nebula: ' + error.message);
+    }
+}
+
+window.killNebula = async function() {
+    if (!confirm('Are you sure you want to shutdown Nebula? You will need console access to restart it.')) return;
+    try {
+        const response = await apiFetch('/api/nebula/kill', {post:{}});
+        if (!response.success) throw new Error('Shutdown failed');
+        alert('Nebula is shutting down...');
+    } catch (error) {
+        alert('Failed to shutdown Nebula: ' + error.message);
+    }
+}
+
+loadSystemInfo();
+setInterval(loadSystemInfo, 30000);
+</script>

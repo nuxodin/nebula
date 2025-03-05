@@ -1,0 +1,110 @@
+<div class="header">
+  <h1 id="pageTitle">File Explorer</h1>
+</div>
+
+<u2-buttongroup>
+  <button id="uploadBtn">
+    <i class="mdi mdi-upload"></i> Upload
+    <input type="file" id="fileUpload" name="file" multiple style="display: none">
+  </button>
+</u2-buttongroup>
+
+<u2-buttongroup>
+  <button id="newFile">
+    <i class="mdi mdi-file-plus"></i> New File
+  </button>
+  <button id="newFolder">
+    <i class="mdi mdi-folder-plus"></i> New Folder
+  </button>
+</u2-buttongroup>
+
+<div class="file-explorer" style="margin-top:1rem">
+  <div class="file-tree card">
+    <div class="breadcrumb" id="pathBreadcrumb"></div>
+    
+    <u2-table sortable>
+      <table style="white-space: nowrap">
+        <thead>
+          <tr>
+            <th style="width: 1.6rem"><input type="checkbox" id="selectAll">
+            <th style="width: 1.6rem">
+            <th width="100%">Name
+            <th>Modified
+            <th>Size
+            <th>Permissions
+            <th>Owner
+            <th>Group
+            <th style="width:100px">Actions
+        <tbody id="fileList">
+          <tr><td colspan="8">Loading...
+      </table>
+    </u2-table>
+  </div>
+  
+  <dialog class="file-preview" id="filePreview">
+    <div class="preview-header">
+      <h3 id="previewTitle">Select a file to preview</h3>
+    </div>
+    <div class="preview-content">
+        <textarea id="fileContent" spellcheck="false"></textarea>
+    </div>
+  </dialog>
+</div>
+
+<style>
+.file-explorer {
+  height: calc(100vh - 200px);
+}
+
+.file-tree {
+  padding: 1rem;
+  overflow: auto;
+}
+
+.file-preview {
+  border-radius: .6rem 0 0 .6rem;
+  border:0;
+  padding: 1rem;
+  flex-direction: column;
+  height:auto;
+  max-height:none;
+  width: clamp(60%, 60rem, 100vw);
+  max-width:100lvw;
+  top:0;
+  bottom:0;
+  margin:0;
+  right:0;
+  left:auto;
+  &:modal { display: flex; }
+}
+
+.preview-content {
+  flex: 1;
+  overflow: auto;
+}
+
+#fileContent {
+  width: 100%;
+  height: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: .5rem;
+  padding: .5rem;
+  font-family: monospace;
+  resize: none;
+}
+
+.breadcrumb {
+  display: flex;
+  gap: 0.5rem;
+  padding: .5rem;
+}
+
+.breadcrumb a:not(:hover) {
+  text-decoration: none;
+}
+
+.file-tree.drag-over {
+  background: #e2e8f0;
+  outline: 2px dashed #64748b;
+}
+</style>

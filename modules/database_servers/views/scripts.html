@@ -1,0 +1,74 @@
+<script type="module">
+import { apiFetch } from '/public/js/utils.js';
+
+loadServers();
+async function loadServers() {
+    
+    try {
+        const servers = await apiFetch('/api/database_servers');
+        renderServers(servers);
+    } catch (error) {
+        alert('Fehler beim Laden der Datenbankserver: ' + error.message);
+    }
+}
+
+function renderServers(servers) {
+    const tbody = document.getElementById('serverList');
+    tbody.innerHTML = servers.map(server => `
+        <tr>
+            <td><a href="/database_servers/${server.id}">${server.host}</a>
+            <td>${server.port}
+            <td>${server.type}
+            <td>${server.version || ''}
+            <td>${server.admin_login}
+            <td>${server.count_databases || 'Nicht verbunden?'}
+            <td>
+                <button class="u2-unstyle" onclick="importDatabases(${server.id}, '${server.host}')" title="Datenbanken importieren">
+                    <i class="mdi mdi-database-import"></i>
+                </button>
+                <button class="u2-unstyle" onclick="deleteServer(${server.id}, '${server.host}')" title="Server löschen">
+                    <i class="mdi mdi-delete"></i>
+                </button>
+    `).join('');
+}
+
+// Add server form handler
+document.getElementById('addServerForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData);
+
+    try {
+        await apiFetch('/api/database_servers', {data});
+        e.target.reset();
+        document.getElementById('addServerModal').close();
+        loadServers();
+    } catch (error) {
+        alert('Fehler beim Hinzufügen des Servers: ' + error.message);
+    }
+};
+
+// Make functions available globally
+window.importDatabases = async (id, host) => {
+    if (!confirm(`Alle nicht verwalteten Datenbanken von ${host} importieren?`)) return;
+    try {
+        const result = await apiFetch(`/api/database_servers/${id}/import`, {post:{}});
+        alert(`${result.imported} Datenbank(en) wurden erfolgreich importiert`);
+        loadServers();
+    } catch (error) {
+        alert('Fehler beim Importieren der Datenbanken: ' + error.message);
+    }
+};
+
+window.deleteServer = async (id, host) => {
+    if (!confirm(`Server ${host} wirklich löschen?`)) return;
+    try {
+        await apiFetch(`/api/database_servers/${id}`, {
+            method: 'DELETE'
+        });
+        loadServers();
+    } catch (error) {
+        alert('Fehler beim Löschen des Servers: ' + error.message);
+    }
+};
+</script>

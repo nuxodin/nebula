@@ -1,7 +1,5 @@
 import { DB } from "https://deno.land/x/sqlite/mod.ts";
-import { dirname, fromFileUrl, join } from "https://deno.land/std/path/mod.ts";
-
-console.log('create database');
+import { fromFileUrl } from "https://deno.land/std/path/mod.ts";
 
 const dbPath = fromFileUrl(import.meta.resolve('../../nebula-data/data/nebula.db'));
 

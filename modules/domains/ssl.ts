@@ -1,4 +1,4 @@
-import { runCommand } from "../../utils/command.ts";
+import { run } from "../../utils/command.ts";
 import { config } from "../../utils/config.ts";
 import { logError, logInfo } from "../../utils/logger.ts";
 import { ensureDir } from "https://deno.land/std/fs/mod.ts";
@@ -14,7 +14,7 @@ export async function installSSL(domainId: number, certType: 'lets_encrypt' | 'c
 
     if (certType === 'lets_encrypt' && config.lets_encrypt_enabled) {
       // Certbot für Let's Encrypt verwenden
-      await runCommand(`certbot certonly --webroot -w ${config.vhosts_root}/${domain.name}/${domain.document_root} -d ${domain.name} -d www.${domain.name} --cert-path ${sslPath}`);
+      await run(`certbot certonly --webroot -w ${config.vhosts_root}/${domain.name}/httpdocs -d ${domain.name} -d www.${domain.name} --cert-path ${sslPath}`);
       
       // SSL in der Datenbank aktivieren
       db.query('UPDATE domains SET ssl_enabled = 1, ssl_type = ?, ssl_expires_at = ? WHERE id = ?',
@@ -31,7 +31,7 @@ export async function installSSL(domainId: number, certType: 'lets_encrypt' | 'c
     }
 
     // Apache neu laden
-    await runCommand('systemctl reload apache2');
+    await run('systemctl reload apache2');
     
     logInfo(`SSL certificate installed for ${domain.name}`, 'SSL');
     return { success: true };
@@ -49,7 +49,7 @@ export async function removeSSL(domainId: number) {
     const sslPath = `${config.ssl_cert_dir}/${domain.name}`;
 
     if (domain.ssl_type === 'lets_encrypt') {
-      await runCommand(`certbot delete --cert-name ${domain.name}`);
+      await run(`certbot delete --cert-name ${domain.name}`);
     }
 
     try {
@@ -57,7 +57,7 @@ export async function removeSSL(domainId: number) {
     } catch {}
 
     db.query('UPDATE domains SET ssl_enabled = 0, ssl_type = NULL, ssl_expires_at = NULL WHERE id = ?', [domainId]);
-    await runCommand('systemctl reload apache2');
+    await run('systemctl reload apache2');
 
     logInfo(`SSL certificate removed for ${domain.name}`, 'SSL');
     return { success: true };
@@ -74,7 +74,7 @@ export async function renewSSL(domainId: number) {
       throw new Error('Domain not found or not using Let\'s Encrypt');
     }
 
-    await runCommand(`certbot renew --cert-name ${domain.name}`);
+    await run(`certbot renew --cert-name ${domain.name}`);
     db.query('UPDATE domains SET ssl_expires_at = ? WHERE id = ?',
       [new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), domainId]);
 

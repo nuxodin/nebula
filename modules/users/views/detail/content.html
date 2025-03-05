@@ -1,0 +1,63 @@
+<div class="header">
+  <h1 id="pageTitle">Benutzer</h1>
+  <div>
+    <button onclick="deleteUser()">
+      <i class="mdi mdi-delete"></i> Löschen
+    </button>
+  </div>
+</div>
+
+<div class="u2-grid">
+  <div class="card">
+    <h2>Basis Informationen</h2>
+    <table>
+      <tr>
+        <td>Benutzername
+        <td id="userLogin">
+      <tr>
+        <td>E-Mail
+        <td id="userEmail">
+      <tr>
+        <td>Status
+        <td>Aktiv
+      <tr>
+        <td>Passwort
+        <td>
+          <button onclick="showChangePasswordDialog()">Ändern</button>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Domains</h2>
+    <table>
+      <tbody id="userDomains">
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<dialog id="changePasswordDialog">
+  <h2>Passwort ändern</h2>
+  <form id="passwordForm" onsubmit="return changePassword(event)">
+    <div class="u2-table">
+      <div>
+        <label>
+          <div>Neues Passwort</div>
+          <div>
+            <input type="password" id="newPassword" required>
+          </div>
+        </label>
+        <label>
+          <div>Passwort bestätigen</div>
+          <div>
+            <input type="password" id="confirmPassword" required>
+          </div>
+        </label>
+      </div>
+    </div>
+    <div class="u2-flex" style="justify-content: space-between; margin-top:1em">
+      <button type="submit">Speichern</button>
+      <button type="button" onclick="closeChangePasswordDialog()">Abbrechen</button>
+    </div>
+  </form>
+</dialog>

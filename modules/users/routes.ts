@@ -1,21 +1,15 @@
 import { Hono } from "hono";
-
-//import { getAllUsers, registerUser, deleteUser, getUserById, getUserView } from "./controller.ts";
-import { getUserView } from "./controller.ts";
+import { renderTemplate } from "../../utils/template.ts";
+import { objToRoutes } from "../../utils/routes.ts";
+import { api, getUserView, getUserDetailView } from "./controller.ts";
 
 // API Routes
-/*
 const apiRoutes = new Hono();
-apiRoutes.get("/", getAllUsers);
-apiRoutes.post("/", registerUser);
-apiRoutes.delete("/:id", deleteUser);
-apiRoutes.get("/:id", getUserById);
-*/
+objToRoutes(apiRoutes, api);
 
 // View Routes
 const viewRoutes = new Hono();
 viewRoutes.get("/", getUserView);
-//viewRoutes.get("/:id", getUserById);
+viewRoutes.get("/:id", getUserDetailView);
 
-export { viewRoutes };
-//export { apiRoutes, viewRoutes };
+export { apiRoutes, viewRoutes };

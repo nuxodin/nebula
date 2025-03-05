@@ -2,20 +2,17 @@ import { logInfo, logError } from "../../utils/logger.ts";
 import db from "../../utils/database.ts";
 import { renderTemplate } from "../../utils/template.ts";
 import { Context } from "hono";
+import { compare } from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 
 // GET /login - Render login page
 export const getLogin = async (c: Context) => {
   try {
     const returnPath = String(c.get('returnPath') || '/');
     
-    let content = await Deno.readTextFile("./modules/login/views/login.html");
-    //const scripts = await Deno.readTextFile("./modules/login/views/scripts.html");
-
-    // Ersetze den Platzhalter im Template
+    let content = await Deno.readTextFile("./modules/login/views/content.html");
     content = content.replace('value="RETURN_URL_PLACEHOLDER"', `value="${returnPath}"`);
 
     return c.html(await renderTemplate("Login", content, "", ""));
-    //return c.html(await renderTemplate("Login", content, "", scripts));
   } catch (err) {
     logError("Fehler beim Laden der Login-Seite", "Auth", c, err);
     return c.text("Internal Server Error", 500);
@@ -34,7 +31,6 @@ export async function postLogin(c: Context) {
       let content = await Deno.readTextFile("./modules/login/views/login.html");
       const scripts = await Deno.readTextFile("./modules/login/views/scripts.html");
       
-      // Ersetze den Platzhalter und füge die Fehlermeldung hinzu
       content = content.replace('value="RETURN_URL_PLACEHOLDER"', `value="${returnUrl}"`);
       const scriptWithError = scripts + `
         <script>
@@ -45,18 +41,18 @@ export async function postLogin(c: Context) {
       return c.html(await renderTemplate("Login", content, "", scriptWithError));
     }
 
-    const user = db.queryEntries(
-      "SELECT id, login FROM clients WHERE login = ? AND password = ?",
-      [login, password]
+    // Get user by login only first
+    const user = db.queryEntries<{id: number; login: string; password: string}>(
+      "SELECT id, login, password FROM clients WHERE login = ?",
+      [login]
     )[0];
 
-    if (!user) {
-      let content = await Deno.readTextFile("./modules/login/views/login.html");
-      const scripts = await Deno.readTextFile("./modules/login/views/scripts.html");
-      
-      // Ersetze den Platzhalter und füge die Fehlermeldung hinzu
-      content = content.replace('value="RETURN_URL_PLACEHOLDER"', `value="${returnUrl}"`);
-      const scriptWithError = scripts + `
+    // Verify password using bcrypt
+    const isValidPassword = user ? await compare(password, user.password) : false;
+
+    if (!user || !isValidPassword) {
+      const content = await Deno.readTextFile("./modules/login/views/content.html");
+      const scriptWithError = `
         <script>
           window.loginError = "Ungültige Anmeldedaten";
         </script>
@@ -77,7 +73,7 @@ export async function postLogin(c: Context) {
 }
 
 // GET /logout - Handle logout
-export const getLogout = async (c) => {
+export const getLogout = async (c: Context) => {
   try {
     const session = c.get('session');
     const userLogin = await session.get('userLogin');
@@ -89,71 +85,6 @@ export const getLogout = async (c) => {
     return c.redirect('/login');
   } catch (err) {
     logError("Fehler beim Logout-Vorgang", "Auth", c, err);
-    return c.text("Internal Server Error", 500);
-  }
-};
-
-// GET /password - Render password change page
-export const getPasswordChange = async (c) => {
-  try {
-    const content = await Deno.readTextFile("./modules/login/views/content.html");
-    return c.html(await renderTemplate("Passwort ändern", content));
-  } catch (err) {
-    logError("Fehler beim Laden der Passwort-Ändern-Seite", "Auth", c, err);
-    return c.text("Internal Server Error", 500);
-  }
-};
-
-// GET /profile - Render profile page
-export const getProfile = async (c) => {
-  try {
-    const content = await Deno.readTextFile("./modules/login/views/profile.html");
-    const scripts = await Deno.readTextFile("./modules/login/views/scripts.html");
-    return c.html(await renderTemplate("Mein Profil", content, "", scripts));
-  } catch (err) {
-    logError("Fehler beim Laden der Profil-Seite", "Auth", c, err);
-    return c.text("Internal Server Error", 500);
-  }
-};
-
-// POST /profile/password - Process password change
-export const postPasswordChange = async (c) => {
-  try {
-    const formData = await c.req.formData();
-    const currentPassword = formData.get("currentPassword");
-    const newPassword = formData.get("newPassword");
-    const confirmPassword = formData.get("confirmPassword");
-
-    const session = c.get('session');
-    const userId = await session.get('userId');
-
-    const content = await Deno.readTextFile("./modules/login/views/profile.html");
-    
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      return c.html(await renderTemplate("Mein Profil", content + 
-        '<div class="error-message" style="color: #dc2626; text-align: center; margin-top: 1rem;">Alle Felder sind erforderlich</div>'));
-    }
-
-    if (newPassword !== confirmPassword) {
-      return c.html(await renderTemplate("Mein Profil", content + 
-        '<div class="error-message" style="color: #dc2626; text-align: center; margin-top: 1rem;">Die neuen Passwörter stimmen nicht überein</div>'));
-    }
-
-    // Überprüfe aktuelles Passwort
-    const users = db.queryEntries("SELECT * FROM clients WHERE id = ? AND password = ?", [userId, currentPassword]);
-    
-    if (users.length === 0) {
-      return c.html(await renderTemplate("Mein Profil", content + 
-        '<div class="error-message" style="color: #dc2626; text-align: center; margin-top: 1rem;">Aktuelles Passwort ist nicht korrekt</div>'));
-    }
-
-    // Passwort aktualisieren
-    db.query("UPDATE clients SET password = ? WHERE id = ?", [newPassword, userId]);
-    logInfo(`Benutzer hat sein Passwort geändert`, "Auth", c);
-
-    return c.redirect('/profile?passwordChanged=true');
-  } catch (err) {
-    logError("Fehler bei der Passwortänderung", "Auth", c, err);
     return c.text("Internal Server Error", 500);
   }
 };

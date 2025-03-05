@@ -1,0 +1,49 @@
+<div class="header">
+  <h1>Datenbanken</h1>
+</div>
+
+<u2-table sortable>
+  <a href="#addDatabaseModal">
+    <button>
+      <i class="mdi mdi-plus"></i> hinzufügen
+    </button>
+  </a>
+  <table>
+    <thead>
+      <tr>
+        <th>Name
+        <th>Typ
+        <th>Domain
+        <th>Server
+        <th>Benutzer
+        <th>Größe
+        <th>Tabellen
+        <th width="33">Aktionen
+    <tbody id="databaseGrid">
+  </table>
+</u2-table>
+
+<dialog id="addDatabaseModal" u2-navigable class="u2x-modal">
+  <h2>Neue Datenbank hinzufügen</h2>
+  <form id="addDatabaseForm">
+    <label>
+      Name
+      <input name="name" required>
+    </label>
+    <label>
+      Domain
+      <select name="dom_id" required id="domainSelect">
+        <option value="">Bitte wählen...</option>
+      </select>
+    </label>
+    <label>
+      Server
+      <select name="server_id" required id="serverSelect">
+        <option value="">Bitte wählen...</option>
+      </select>
+    </label>
+    <div class="-buttons">
+      <button>Datenbank erstellen</button>
+    </div>
+  </form>
+</dialog>

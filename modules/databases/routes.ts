@@ -1,31 +1,15 @@
 import { Hono } from "hono";
-import { createDatabase, deleteDatabase, getDatabaseStats, changePassword } from "./databases.ts";
+import { objToRoutes } from "../../utils/routes.ts";
+import { getDatabaseView, getDatabaseDetailView } from "./controller.ts";
+import { api } from "./api.ts";
 
-const databaseRoutes = new Hono();
+// API Routes
+const apiRoutes = new Hono();
+objToRoutes(apiRoutes, api);
 
-databaseRoutes.post("/", async (c) => {  
-  const body = await c.req.json();
-  const result = await createDatabase(body);
-  return c.json(result);
-});
+// View Routes
+const viewRoutes = new Hono();
+viewRoutes.get("/", getDatabaseView);
+viewRoutes.get("/:id", getDatabaseDetailView);
 
-databaseRoutes.get("/:id/stats", async (c) => {
-  const id = Number(c.req.param("id"));
-  const stats = await getDatabaseStats(id);
-  return c.json(stats);
-});
-
-databaseRoutes.delete("/:id", async (c) => {
-  const id = Number(c.req.param("id"));
-  const result = await deleteDatabase(id);
-  return c.json(result);
-});
-
-databaseRoutes.post("/:id/password", async (c) => {
-  const id = Number(c.req.param("id"));
-  const { password } = await c.req.json();
-  const result = await changePassword(id, password);
-  return c.json(result);
-});
-
-export default databaseRoutes;
+export { apiRoutes, viewRoutes };

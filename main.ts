@@ -1,27 +1,31 @@
 import { install } from "./install/install.ts"; // first
 import './install/install-stacks.ts';
-import { Hono } from "hono";
+import { Hono, Context } from "hono";
 import { serveStatic } from "https://deno.land/x/hono@v3.11.7/middleware.ts";
 import { sessionMiddleware } from "./middleware/session.ts";
 import { authMiddleware } from "./middleware/auth.ts";
-import { /*apiRoutes as userApiRoutes, */ viewRoutes as userViewRoutes } from "./modules/users/routes.ts";
-import { apiRoutes as logsApiRoutes, viewRoutes as logsViewRoutes } from "./modules/logs/routes.ts";
-import { apiRoutes as dashboardApiRoutes, viewRoutes as dashboardViewRoutes } from "./modules/dashboard/routes.ts";
-import { apiRoutes as domainsApiRoutes, viewRoutes as domainsViewRoutes } from "./modules/domains/routes.ts";
-import { apiRoutes as mailApiRoutes, viewRoutes as mailViewRoutes } from "./modules/mail/routes.ts";
-import { apiRoutes as prozessApiRoutes, viewRoutes as prozessViewRoutes } from "./modules/prozess/routes.ts";
-import { apiRoutes as terminalApiRoutes, viewRoutes as terminalViewRoutes } from "./modules/terminal/routes.ts";
-import { apiRoutes as packagesApiRoutes, viewRoutes as packagesViewRoutes } from "./modules/packages/routes.ts";
-import { apiRoutes as servicesApiRoutes, viewRoutes as servicesViewRoutes } from "./modules/services/routes.ts";
-import clientRoutes from "./modules/clients/routes.ts";
-import databaseRoutes from "./modules/databases/routes.ts";
-import filesRoutes, { createFileRoutes } from "./modules/files/routes.ts";
-import { getLogin, postLogin, getLogout, getProfile, postPasswordChange } from "./modules/login/controller.ts";
+import { getLogin, postLogin, getLogout } from "./modules/login/controller.ts";
 import { logError } from "./utils/logger.ts";
+import { exists } from "jsr:@std/fs/exists";
+
+const modules = new Map();
+Deno.readDirSync('./modules').filter((module) => module.isDirectory).forEach((module) => {
+  modules.set(module.name, {
+    path: `./modules/${module.name}`,    
+  });
+});
 
 await install();
 
-const port = Number(Deno.env.get('PORT')) || 3000;
+
+for (const [, module] of modules) {
+  if (! await exists(module.path+'/install.ts')) continue;
+  await import(module.path+'/install.ts').then((moduleInstall) => {
+    moduleInstall.install();
+  }).catch(console.error);
+}
+
+const port = Number(Deno.env.get('PORT')) || 4242;
 const app = new Hono();
 
 // Middleware
@@ -33,44 +37,44 @@ app.get("/login", getLogin);
 app.post("/login", postLogin);
 app.get("/logout", getLogout);
 
+
+
 // Auth Middleware für geschützte Routen
-app.use('*', authMiddleware);
+//app.use('*', authMiddleware);
 
-// API Routes zuerst definieren für höhere Priorität
-app.route("/api/dashboard", dashboardApiRoutes);
-//app.route("/api/users", userApiRoutes);
-app.route("/api/logs", logsApiRoutes);
-app.route("/api/domains", domainsApiRoutes);
-app.route("/api/clients", clientRoutes);
-app.route("/api/databases", databaseRoutes);
-app.route("/api/mail", mailApiRoutes);
-app.route("/api/prozess", prozessApiRoutes);
-app.route("/api/terminal", terminalApiRoutes);
-app.route("/api/files", createFileRoutes({ rootPath: "/" }));
-app.route("/api/packages", packagesApiRoutes);
-app.route("/api/services", servicesApiRoutes);
+// redirect to dashboard
+app.get(`/`, (c: Context) => c.redirect('/dashboard'));
 
-// Dann erst die View Routes
-app.route("/", dashboardViewRoutes);
-app.route("/users", userViewRoutes);
-app.route("/logs", logsViewRoutes);
-app.route("/domains", domainsViewRoutes);
-app.route("/mail", mailViewRoutes);
-app.route("/prozess", prozessViewRoutes);
-app.route("/terminal", terminalViewRoutes);
-app.route("/files", filesRoutes); // Add global file explorer route
-app.route("/packages", packagesViewRoutes);
-app.route("/services", servicesViewRoutes);
+for (const [name, module] of modules) {
+  if (! await exists(module.path+'/routes.ts')) continue;
+  await import(module.path+'/routes.ts').then(({ apiRoutes, viewRoutes }) => {
+    apiRoutes && app.route(`/api/${name}`, apiRoutes);
+    viewRoutes && app.route(`/${name}`, viewRoutes);
+  }).catch(console.log);
+}
 
-// Profile Routes
-app.get("/profile", getProfile);
-app.post("/profile/password", postPasswordChange);
 
 // Error Handling
 app.notFound((c) => c.text("Not Found", 404));
 app.onError((err, c) => {
   logError("Server error: " + err.message, "Server", c, err);
   return c.text("Internal Server Error", 500);
+});
+
+
+
+// apis
+app.get('/api', (c) => {
+  const routes: string[] = [];
+  if (Array.isArray(app.routes)) {
+    app.routes.forEach((route) => {
+      if (route.method === 'ALL') return;
+      routes.push(`${route.path}  [${route.method.toUpperCase()}]`);
+    });
+  }
+  // only routes that starts width /api
+  const apiRoutes = routes.filter((route) => route.startsWith('/api')).sort();
+  return c.json(apiRoutes);
 });
 
 // Server starten

@@ -1,0 +1,42 @@
+{
+  "apache": {
+    "category": "webserver",
+    "package": "apache2"
+  },
+  "nginx": {
+    "category": "webserver",
+    "package": "nginx"
+  },
+  "mariadb": {
+    "category": "database",
+    "package": "mariadb-server"
+  },
+  "postgresql": {
+    "category": "database",
+    "package": "postgresql"
+  },
+  "phpmyadmin": {
+    "category": "tools",
+    "package": "phpmyadmin",
+    "depends": ["php", "mariadb"]
+  },
+  "roundcube": {
+    "category": "tools",
+    "package": "roundcube",
+    "depends": ["php"]
+  },
+  "deno manager": {
+    "category": "language",
+    "install_cmd": "curl -fsSL https://dvm.deno.dev | sh",
+    "check_path": "/root/.dvm/bin/dvm"
+  },
+  "node manager": {
+    "category": "language",
+    "install_cmd": "curl -fsSL https://fnm.vercel.app/install | bash",
+    "check_path": "/root/.local/share/fnm/fnm"
+  },
+  "php": {
+    "category": "language",
+    "package": "php-fpm"
+  }
+}

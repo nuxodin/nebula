@@ -1,0 +1,57 @@
+<header class="header">
+    <h1>Nebula System Information</h1>
+</header>
+
+<div class="u2-grid">
+    <div class="card">
+        <h3><i class="mdi mdi-information"></i> System Overview</h3>
+        <dl class="cd-left-right" id="sysOverview">
+            <dt>Deno Version</dt><dd>Loading...</dd>
+            <dt>Hostname</dt><dd>Loading...</dd>
+            <dt>Server Zeit</dt><dd id="serverTime">Loading...</dd>
+            <dt>Zeitzone</dt><dd>Loading...</dd>
+            <dt>OS Platform</dt><dd>Loading...</dd>
+            <dt>OS Release</dt><dd>Loading...</dd>
+            <dt>Architecture</dt><dd>Loading...</dd>
+            <dt>Process ID</dt><dd>Loading...</dd>
+            <dt>Parent PID</dt><dd>Loading...</dd>
+            <dt>Main Module</dt><dd>Loading...</dd>
+        </dl>
+    </div>
+
+    <div class="card">
+        <h3><i class="mdi mdi-memory"></i> Resources</h3>
+        <dl class="cd-left-right" id="resources">
+            <dt>Load Average</dt><dd>Loading...</dd>
+            <dt>Memory Usage</dt><dd>Loading...</dd>
+            <dt>External Memory</dt><dd>Loading...</dd>
+            <dt>RSS Memory</dt><dd>Loading...</dd>
+        </dl>
+    </div>
+
+    <div class="card">
+        <h3><i class="mdi mdi-console"></i> Runtime Arguments</h3>
+        <div id="runtimeArgs">Loading...</div>
+    </div>
+
+    <div class="card">
+        <h3><i class="mdi mdi-shield-key"></i> Permissions</h3>
+        <dl id="permissions" class="cd-left-right">Loading...</dl>
+    </div>
+
+    <div class="card">
+        <h3><i class="mdi mdi-restart"></i> System Control</h3>
+        <button onclick="restartNebula()">Restart Nebula</button>
+        <br>
+        <br>
+        <button onclick="killNebula()">Nebula beenden</button>
+    </div>
+</div>
+
+<div class="card" style="margin-top: 1rem;">
+    <h3><i class="mdi mdi-cog"></i> Environment</h3>
+    <table style="font-size:.9em">
+        <tbody id="envVars">
+            <tr><td>Loading...
+    </table>
+</div>

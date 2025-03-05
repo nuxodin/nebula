@@ -1,0 +1,218 @@
+<script type="module">
+import { apiFetch } from '/public/js/utils.js';
+
+const id = window.location.pathname.split('/')[2];
+loadDatabaseDetails();
+
+async function loadDatabaseDetails() {
+    try {
+        await Promise.all([
+            loadBasicInfo(),
+            loadTables()
+        ]);
+    } catch (error) {
+        alert('Fehler beim Laden der Datenbankdetails: ' + error.message);
+    }
+}
+
+async function loadBasicInfo() {
+    const database = await apiFetch(`/api/databases/${id}`);
+        
+    // Update page title
+    document.getElementById('pageTitle').textContent = `Datenbank ${database.name}`;
+    
+    // Basic information
+    document.getElementById('dbName').textContent = database.name;
+    document.getElementById('dbType').textContent = `${database.type}${database.version ? ` ${database.version}` : ''}`;
+    document.getElementById('dbDomain').textContent = database.domain_name || 'Keine Domain';
+    if (database.domain_name) {
+        document.getElementById('dbDomain').innerHTML = `<a href="/domains/${database.dom_id}">${database.domain_name}</a>`;
+    }
+    
+    // Server information with link to server details
+    document.getElementById('dbServer').innerHTML = `<a href="/database_servers/${database.server_id}">${database.host}:${database.port}</a>`;
+    
+    // Access information
+    document.getElementById('dbUser').textContent = database.db_user || '';
+    
+    // Statistics
+    document.getElementById('dbSize').textContent = `${(database.size || 0).toFixed(2)} MB`;
+    document.getElementById('dbTables').textContent = database.tables || 0;
+}
+
+async function loadTables() {
+    const tables = await apiFetch(`/api/databases/${id}/tables`);
+    const tbody = document.getElementById('tablesGrid');
+    tbody.innerHTML = tables.map(table => `
+        <tr>
+            <td>${table.name}
+            <td>${table.rows}
+            <td>${table.size} MB
+            <td>${table.engine}
+            <td>${table.encoding}
+            <td>
+                <button class="u2-unstyle" onclick="showTableDetails('${table.name}')" title="Details anzeigen">
+                    <i class="mdi mdi-information"></i>
+                </button>
+        </tr>
+    `).join('');
+}
+
+// New database actions
+window.showCopyDialog = function() {
+    document.getElementById('copyDialog').showModal();
+};
+
+window.copyDatabase = async function(event) {
+    event.preventDefault();
+    const newName = document.getElementById('copyName').value;
+    
+    try {
+        await apiFetch(`/api/databases/${id}/copy`, {
+            method: 'POST',
+            body: JSON.stringify({ name: newName })
+        });
+        document.getElementById('copyDialog').close();
+        window.location.href = '/databases';
+    } catch (error) {
+        alert('Fehler beim Kopieren der Datenbank: ' + error.message);
+    }
+    return false;
+};
+
+window.exportDatabase = async function() {
+    try {
+        const response = await fetch(`/api/databases/${id}/export`);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `database_${id}_export.sql`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        alert('Fehler beim Exportieren der Datenbank: ' + error.message);
+    }
+};
+
+window.showImportDialog = function() {
+    document.getElementById('importDialog').showModal();
+};
+
+window.importDatabase = async function(event) {
+    event.preventDefault();
+    const file = document.getElementById('importFile').files[0];
+    if (!file) return false;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+        await fetch(`/api/databases/${id}/import`, {
+            method: 'POST',
+            body: formData
+        });
+        document.getElementById('importDialog').close();
+        loadDatabaseDetails();
+    } catch (error) {
+        alert('Fehler beim Importieren der SQL-Datei: ' + error.message);
+    }
+    return false;
+};
+
+window.checkDatabase = async function() {
+    try {
+        const result = await apiFetch(`/api/databases/${id}/check`, {
+            method: 'POST'
+        });
+        alert(result.message || 'Datenbank-Check abgeschlossen');
+    } catch (error) {
+        alert('Fehler beim Prüfen der Datenbank: ' + error.message);
+    }
+};
+
+window.optimizeDatabase = async function() {
+    if (!confirm('Datenbank optimieren? Dies kann bei großen Datenbanken einige Zeit dauern.')) return;
+    
+    try {
+        const result = await apiFetch(`/api/databases/${id}/optimize`, {
+            method: 'POST'
+        });
+        alert(result.message || 'Datenbank wurde optimiert');
+    } catch (error) {
+        alert('Fehler bei der Datenbank-Optimierung: ' + error.message);
+    }
+};
+
+// Existing functions...
+window.deleteDatabase = async function() {
+    if (!confirm('Diese Datenbank wirklich löschen?')) return;
+    
+    try {
+        await apiFetch(`/api/databases/${id}`, {
+            method: 'DELETE'
+        });
+        window.location.href = '/databases';
+    } catch (error) {
+        alert('Fehler beim Löschen der Datenbank: ' + error.message);
+    }
+};
+
+window.showChangePasswordDialog = function() {
+    document.getElementById('changePasswordDialog').showModal();
+};
+
+window.closeChangePasswordDialog = function() {
+    document.getElementById('changePasswordDialog').close();
+};
+
+window.changePassword = async function(event) {
+    event.preventDefault();
+    const password = document.getElementById('newPassword').value;
+    
+    try {
+        await apiFetch(`/api/databases/${id}/password`, {
+            method: 'POST',
+            body: JSON.stringify({ password })
+        });
+        closeChangePasswordDialog();
+        alert('Passwort wurde erfolgreich geändert');
+    } catch (error) {
+        alert('Fehler beim Ändern des Passworts: ' + error.message);
+    }
+    return false;
+};
+
+window.showTableDetails = async function(tableName) {
+    try {
+        const details = await apiFetch(`/api/databases/${id}/tables/${tableName}`);
+        document.getElementById('tableDetailsName').textContent = tableName;
+        
+        // Render columns
+        document.getElementById('columnsList').innerHTML = details.columns.map(col => `
+            <tr>
+                <td>${col.name}
+                <td>${col.type}
+                <td>${col.nullable}
+                <td>${col.default_value || ''}
+                <td>${col.extra || ''}
+            </tr>
+        `).join('');
+        
+        // Render indexes
+        document.getElementById('indexesList').innerHTML = details.indexes.map(idx => `
+            <tr>
+                <td>${idx.name}
+                <td>${idx.columns}
+                <td>${idx.type}
+            </tr>
+        `).join('');
+        
+        document.getElementById('tableDetailsDialog').showModal();
+    } catch (error) {
+        alert('Fehler beim Laden der Tabellendetails: ' + error.message);
+    }
+};
+</script>

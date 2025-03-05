@@ -21,8 +21,7 @@
         .map(domain => `
           <tr>
             <td><a href="/domains/${domain.id}">${domain.name}</a>
-            <td>${domain.status}</td>
-          </tr>
+            <td>${domain.status}
         `).join('');
 
       // Update user section
@@ -30,8 +29,8 @@
       document.getElementById('userList').innerHTML = data.users.list
         .map(user => `
           <tr>
-            <td>${user.name}</td>
-            <td>${user.role}</td>
+            <td><a href="/users/${user.id}">${user.name}</a>
+            <td><a href="mailto:${user.email}" target="_blank">${user.email}</a>
           </tr>
         `).join('');
 
@@ -39,8 +38,8 @@
       document.getElementById('activityList').innerHTML = data.activities
         .map(activity => `
           <tr>
-            <td>${activity.time}</td>
-            <td>${activity.event}</td>
+            <td>${activity.time}
+            <td>${activity.event}
           </tr>
         `).join('');
       
@@ -48,6 +47,7 @@
       document.getElementById('systemInfo').textContent = data.system.system;
       document.getElementById('ipAddress').textContent = data.system.ipAddress;
       document.getElementById('uptime').textContent = data.system.uptime;
+      document.getElementById('uptime').setAttribute('datetime', data.system.uptime);
       
       document.getElementById('cpuUsage').value = data.system.cpuUsage;
       document.getElementById('cpuPercentage').textContent = data.system.cpuUsage + '%';

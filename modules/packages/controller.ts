@@ -30,13 +30,13 @@ export const api = {
       try {
         if (os === "windows") {
           const res = await run("wmic", ["product", "get", "name,version", "/format:csv"], { silent: true });
-          if (res.code !== 0) throw new Error(res.output);
-          return parseWindows(res.output);
+          if (res.code !== 0) throw new Error(res.stderr);
+          return parseWindows(res.stdout);
         }
         if (os === "darwin") {
           const res = await run("brew", ["list", "--versions"], { silent: true });
-          if (res.code !== 0) throw new Error(res.output);
-          return parseMac(res.output);
+          if (res.code !== 0) throw new Error(res.stderr);
+          return parseMac(res.stdout);
         }
         // Linux: System-Paketmanager
         const managers = [
@@ -51,7 +51,7 @@ export const api = {
         for (const pm of managers) {
           try {
             const res = await run(pm.cmd, pm.args, { silent: true });
-            if (res.code === 0) return pm.parser(res.output);
+            if (res.code === 0) return pm.parser(res.stdout);
           } catch {
             continue;
           }

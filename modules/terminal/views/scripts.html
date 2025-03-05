@@ -9,13 +9,15 @@ async function executeCommand(command) {
     // Zeige den eingegebenen Befehl im Output an
     appendToOutput(`$ ${command}`, 'command-line');
     
-    const response = await apiFetch('/api/terminal', {
-      data: { command }
-    });
+    const response = await apiFetch('/api/terminal', { post: { command } });
+
+    // response = { code: 0, stdout: '...', stderr: '...' }
 
     // Verarbeite die Ausgabe
-    if (response.output) {
-      appendToOutput(response.output, response.code === 0 ? '' : 'error-output');
+    if (response.code === 0) {
+      appendToOutput(response.stdout, 'output');
+    } else {
+      appendToOutput(response.stderr, 'error-output');
     }
   } catch (error) {
     appendToOutput(error.message || 'Fehler bei der Befehlsausführung', 'error-output');
@@ -74,7 +76,7 @@ terminalInput.addEventListener('keypress', (e) => {
 terminalInput.focus();
 
 // Behalte den Fokus auf dem Input-Feld
-document.addEventListener('click', () => {
-  terminalInput.focus();
-});
+// document.addEventListener('click', () => {
+//   terminalInput.focus();
+// });
 </script>

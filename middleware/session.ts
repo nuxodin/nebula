@@ -1,51 +1,50 @@
 import { Context, Next } from "hono";
 import { createMiddleware } from "hono/helper.ts";
+import db from "../utils/database.ts";
 
-const store = new Map<string, Record<string, unknown>>();
-
-function generateSessionId(): string {
-  return crypto.randomUUID();
-}
+// Create sessions table if not exists
+db.query(`
+  CREATE TABLE IF NOT EXISTS sessions (
+    id TEXT PRIMARY KEY,
+    data TEXT
+  )
+`);
 
 export const sessionMiddleware = createMiddleware(async (c: Context, next: Next) => {
   // Get session ID from cookie or create new one
-  let sessionId = c.req.cookie()?.sessionId; // todo: c.req.cookie() is deprecated:  Use Cookie Middleware instead of c.req.cookie(). The c.req.cookie() will be removed in v4.
+  let sessionId = c.req.cookie()?.sessionId;
   if (!sessionId) {
-    sessionId = generateSessionId();
+    sessionId = crypto.randomUUID();
     c.cookie('sessionId', sessionId, {
       httpOnly: true,
+      secure: true,
       path: '/',
       sameSite: 'Lax',
-      maxAge: 900 // 15 minutes
+      maxAge: 30 * 24 * 60 * 60 // 30 days
     });
   }
 
-  // Get or create session data
-  if (!store.has(sessionId)) {
-    store.set(sessionId, {});
-  }
-  const session = store.get(sessionId)!;
-
   // Add session methods to context
   const sessionInterface = {
-    get: async (key: string) => session[key],
-    set: async (key: string, value: unknown) => {
-      session[key] = value;
-      store.set(sessionId, session);
+    get: async (key: string) => {
+      const session = db.queryEntries(`SELECT data FROM sessions WHERE id = ?`, [sessionId])[0];
+      return session ? JSON.parse(session.data)[key] : undefined;
     },
-    delete: async (key: string) => {
-      delete session[key];
-      store.set(sessionId, session);
+    set: async (key: string, value: unknown) => {
+      const session = db.queryEntries(`SELECT data FROM sessions WHERE id = ?`, [sessionId])[0];
+      const data = session ? JSON.parse(session.data) : {};
+      data[key] = value;
+      db.query(`INSERT OR REPLACE INTO sessions (id, data) VALUES (?, ?)`, 
+        [sessionId, JSON.stringify(data)]
+      );
     },
     deleteAll: async () => {
-      store.delete(sessionId);
+      db.query(`DELETE FROM sessions WHERE id = ?`, [sessionId]);
       c.cookie('sessionId', '', { maxAge: 0 });
     }
   };
 
   c.set('session', sessionInterface);
-
-  // Kopiere die Session in die Request-Umgebung für Sub-Requests
   c.env.session = sessionInterface;
 
   await next();
