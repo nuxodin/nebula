@@ -1,8 +1,10 @@
 <script src="https://unpkg.com/@simplewebauthn/browser@13.1.0/dist/bundle/index.umd.min.js"></script>
 <script type="module">
 import { apiFetch } from '/public/js/utils.js';
+import * as dialog from "https://cdn.jsdelivr.net/gh/u2ui/u2@x.x.x/js/dialog/dialog.min.js"
 
 const { startRegistration, startAuthentication } = SimpleWebAuthnBrowser;
+
 
 // Event-Handler für Passkey-Button
 document.getElementById('passkeyButton').addEventListener('click', async () => {
@@ -27,9 +29,11 @@ document.getElementById('passkeyButton').addEventListener('click', async () => {
             window.location.href = '/';
         } else {
             error.textContent = verifyResult.error || 'Authentifizierung fehlgeschlagen';
+            error.setAttribute('open', '');
         }
     } catch (err) {
         error.textContent = err.message || 'Ein Fehler ist aufgetreten';
+        error.setAttribute('open', '');
         console.error('Passkey-Fehler:', err);
     }
 });
@@ -51,28 +55,20 @@ document.getElementById('loginForm').onsubmit = async (e) => {
 
         if (result.success) {
             // Normaler Passwort-Login erfolgreich
-            const shouldRegister = confirm('Möchten Sie dieses Gerät für zukünftige Anmeldungen registrieren?');
+            const shouldRegister = await dialog.confirm('Möchten Sie dieses Gerät für zukünftige Anmeldungen registrieren?');
 
             if (shouldRegister) {
                 try {
-                    // Registrierungsoptionen vom Server holen
                     const options = await apiFetch('/api/login2/register-device', {post:{}});
-
-                    // WebAuthn Registrierung starten
                     const regResponse = await startRegistration(options);
-                    const deviceName = prompt('Gerätename:', 'Mein Gerät') || 'Unbenanntes Gerät';
-                    
-                    // Registrierung verifizieren
+                    const deviceName = await dialog.prompt('Gerätename:', 'Mein Gerät') || 'Unbenanntes Gerät';
                     const verifyResult = await apiFetch('/api/login2/verify-registration', {
                         post: {
                             ...regResponse,
                             deviceName
                         }
                     });
-
-                    if (verifyResult.success) {
-                        alert('Gerät erfolgreich registriert!');
-                    }
+                    if (verifyResult.success) dialog.alert('Gerät erfolgreich registriert!');
                 } catch (err) {
                     console.error('Fehler bei der Geräteregistrierung:', err);
                 }

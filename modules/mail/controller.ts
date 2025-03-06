@@ -16,26 +16,19 @@ export const getMailView = async (c) => {
 };
 
 export const getMailDetailView = async (c) => {
-  try {
-    const { id } = c.req.param();
-    const account = db.queryEntries(`
-      SELECT m.*, d.name as domain_name
-      FROM mail m
-      JOIN domains d ON m.dom_id = d.id
-      WHERE m.id = ?
-    `, [id])[0];
+  const { id } = c.req.param();
+  const account = db.queryEntries(`
+    SELECT m.*, d.name as domain_name
+    FROM mail m
+    JOIN domains d ON m.dom_id = d.id
+    WHERE m.id = ?
+  `, [id])[0];
 
-    if (!account) {
-      return c.text("Mail account not found", 404);
-    }
+  if (!account) return c.text("Mail account not found", 404);
 
-    const content = await Deno.readTextFile("./modules/mail/views/detail.html");
-    const scripts = await Deno.readTextFile("./modules/mail/views/detail-scripts.html");
-    return c.html(await renderTemplate(`E-Mail Konto ${account.mail_name}`, content, "", scripts));
-  } catch (err) {
-    logError("Fehler beim Laden der Mail-Details", "Mail", c, err);
-    return c.text("Internal Server Error", 500);
-  }
+  const content = await Deno.readTextFile("./modules/mail/views/detail.html");
+  const scripts = await Deno.readTextFile("./modules/mail/views/detail-scripts.html");
+  return c.html(await renderTemplate(`E-Mail Konto ${account.mail_name}`, content, "", scripts));
 };
 
 // API Controllers
@@ -52,9 +45,7 @@ export const api = {
     const data = await c.req.json();
     const domain = db.queryEntries('SELECT name FROM domains WHERE id = ?', [data.domain_id])[0];
     
-    if (!domain) {
-      return c.json({ error: "Domain not found" }, 404);
-    }
+    if (!domain) return { error: "Domain not found" };
 
     const mail_name = `${data.local_part}@${domain.name}`;
     return await createMailbox(data.domain_id, {
@@ -73,9 +64,7 @@ export const api = {
         WHERE m.id = ?
       `, [id])[0];
 
-      if (!account) {
-        return c.json({ error: "Mail account not found" }, 404);
-      }
+      if (!account) return { error: "Mail account not found" };
 
       // Parse aliases list
       account.aliases = account.aliases_list ? account.aliases_list.split(',') : [];
@@ -101,9 +90,7 @@ export const api = {
           WHERE m.id = ?
         `, [id])[0];
 
-        if (!account) {
-          return c.json({ error: "Mail account not found" }, 404);
-        }
+        if (!account) return { error: "Mail account not found" };
 
         // Add alias
         db.query(`

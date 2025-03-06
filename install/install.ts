@@ -3,7 +3,6 @@ import { existsSync, ensureDirSync } from "https://deno.land/std/fs/mod.ts";
 import { DB } from "https://deno.land/x/sqlite/mod.ts";
 import { dirname, fromFileUrl, join } from "https://deno.land/std/path/mod.ts";
 import { config } from "../utils/config.ts";
-import { hash } from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 
 // Berechne absolute Pfade
 const currentDir = dirname(fromFileUrl(import.meta.url));
@@ -28,7 +27,9 @@ function initializeDatabase() {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         login TEXT UNIQUE,
         password TEXT,
-        email TEXT UNIQUE
+        email TEXT UNIQUE,
+        is_admin BOOLEAN DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
@@ -129,7 +130,7 @@ function initializeDatabase() {
         message TEXT NOT NULL,
         source TEXT NULL,
         user_id INTEGER NULL,
-        FOREIGN KEY (user_id) REFERENCES clients(id)
+        FOREIGN KEY (user_id) REFERENCES clients(id) ON DELETE SET NULL
       );
     `);
 
@@ -142,7 +143,7 @@ function initializeDatabase() {
         public_key TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         last_used TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES clients(id),
+        FOREIGN KEY (user_id) REFERENCES clients(id) ON DELETE CASCADE,
         UNIQUE(device_id)
       );
     `);
@@ -163,8 +164,8 @@ function initializeDatabase() {
 
 const exampleData = {
   clients: [
-    { login: "admin", password: "admin", email: "admin@example.com" },
-    { login: "user1", password: "user1pass", email: "user1@example.com" }
+    { login: "user1", email: "user1@example.com" },
+    { login: "user2", email: "user2@example.com" }
   ],
   domains: [
     { name: "example.com", owner_id: 1, status: "aktiv" },
@@ -194,7 +195,7 @@ const exampleData = {
   mail: [
     { dom_id: 1, mail_name: "info@example.com", password: "infopass" },
     { dom_id: 1, mail_name: "support@example.com", password: "supportpass" },
-    { dom_id: 1, mail_name: "admin@example.com", password: "adminpass" },
+    { dom_id: 1, mail_name: "test@example.com", password: "adminpass" },
     { dom_id: 2, mail_name: "contact@test.com", password: "contactpass" },
     { dom_id: 2, mail_name: "sales@test.com", password: "salespass" }
   ]
@@ -205,21 +206,12 @@ async function initializeExampleData() {
   try {
     const clientCount = db.queryEntries<{ count: number }>("SELECT COUNT(*) as count FROM clients")[0];
     if (clientCount.count === 0) {
-      // Hash passwords for example data
-      const hashedPasswords = {
-        admin: await hash("admin"),
-        user1: await hash("user1pass")
-      };
 
       // Beispieldaten einfügen
-      const clients = [
-        { login: "admin", password: hashedPasswords.admin, email: "admin@example.com" },
-        { login: "user1", password: hashedPasswords.user1, email: "user1@example.com" }
-      ];
 
-      for (const client of clients) {
-        db.query("INSERT INTO clients (login, password, email) VALUES (?, ?, ?)", 
-          [client.login, client.password, client.email]);
+      for (const client of exampleData.clients) {
+        db.query("INSERT INTO clients (login, email) VALUES (?, ?)", 
+          [client.login, client.email]);
       }
 
       for (const domain of exampleData.domains) {

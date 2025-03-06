@@ -33,6 +33,13 @@ app.use('*', sessionMiddleware);
 app.use('/public/*', serveStatic({ root: './' }));
 
 // Ungeschützte Routen
+
+await import('./modules/login2/routes.ts').then(({ pubApis, pubViews }) => {
+  app.route(`/api/login2`, pubApis);
+  app.route(`/login2`, pubViews);
+}).catch(console.log);
+
+
 app.get("/login", getLogin);
 app.post("/login", postLogin);
 app.get("/logout", getLogout);
@@ -40,7 +47,7 @@ app.get("/logout", getLogout);
 
 
 // Auth Middleware für geschützte Routen
-//app.use('*', authMiddleware);
+app.use('*', authMiddleware);
 
 // redirect to dashboard
 app.get(`/`, (c: Context) => c.redirect('/dashboard'));

@@ -1,0 +1,44 @@
+<div class="header">
+  <h1 id="pageTitle">Log Browser</h1>
+</div>
+
+<div class="toolbar">
+  <input type="text" id="filter-input" placeholder="Filtern...">
+  <button id="apply-filter-btn">Filter</button>
+  <select id="lines-select">
+    <option value="50">50</option>
+    <option value="100" selected>100</option>
+    <option value="500">500</option>
+    <option value="1000">1000</option>
+  </select>
+  <button id="refresh-btn" u2-icon="refresh">Aktualisieren</button>
+</div>
+
+<div class="layout-row">
+  <div class="left-panel">
+    <div class="box">
+      <h3>Log-Typen</h3>
+      <ul id="log-types-list">
+        <li>Lädt...</li>
+      </ul>
+    </div>
+    
+    <div class="box">
+      <h3>Services</h3>
+      <ul id="services-list">
+        <li>Lädt...</li>
+      </ul>
+    </div>
+  </div>
+  
+  <div class="main-panel">
+    <div id="log-files-container" class="box">
+      <div class="message">Log-Typ auswählen</div>
+    </div>
+    
+    <div class="log-viewer">
+      <div id="current-log-path" class="path">Datei auswählen</div>
+      <pre id="log-content">Wähle eine Log-Datei aus</pre>
+    </div>
+  </div>
+</div>

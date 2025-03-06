@@ -87,9 +87,7 @@ window.deleteDatabase = async function(id, name) {
     if (!confirm(`Datenbank "${name}" wirklich löschen?`)) return;
     
     try {
-        await apiFetch(`/api/databases/${id}`, {
-            method: 'DELETE'
-        });
+        await apiFetch(`/api/databases/${id}`, {del:{}});
         loadDatabases();
     } catch (error) {
         alert('Fehler beim Löschen der Datenbank: ' + error.message);

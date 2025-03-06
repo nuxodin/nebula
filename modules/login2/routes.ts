@@ -3,11 +3,14 @@ import { objToRoutes } from "../../utils/routes.ts";
 import { api, getLoginView } from "./controller.ts";
 
 // API Routes
-const apiRoutes = new Hono();
-objToRoutes(apiRoutes, api);
+const pubApis = new Hono();
+objToRoutes(pubApis, api);
 
 // View Routes
-const viewRoutes = new Hono();
-viewRoutes.get("/", getLoginView);
+const pubViews = new Hono();
+pubViews.get("/", getLoginView);
 
-export { apiRoutes, viewRoutes };
+export { 
+    pubApis,
+    pubViews
+};

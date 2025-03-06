@@ -39,7 +39,7 @@ document.getElementById('addServerForm').onsubmit = async (e) => {
     const data = Object.fromEntries(formData);
 
     try {
-        await apiFetch('/api/database_servers', {data});
+        await apiFetch('/api/database_servers', {post:data});
         e.target.reset();
         document.getElementById('addServerModal').close();
         loadServers();

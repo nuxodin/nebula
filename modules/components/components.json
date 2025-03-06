@@ -20,11 +20,6 @@
     "package": "phpmyadmin",
     "depends": ["php", "mariadb"]
   },
-  "roundcube": {
-    "category": "tools",
-    "package": "roundcube",
-    "depends": ["php"]
-  },
   "deno manager": {
     "category": "language",
     "install_cmd": "curl -fsSL https://dvm.deno.dev | sh",
@@ -38,5 +33,19 @@
   "php": {
     "category": "language",
     "package": "php-fpm"
+  },
+  "postfix": {
+    "category": "mail",
+    "package": "postfix",
+    "depends": ["dovecot"]
+  },
+  "dovecot": {
+    "category": "mail",
+    "package": "dovecot-imapd"
+  },
+  "roundcube": {
+    "category": "mail",
+    "package": "roundcube",
+    "depends": ["php"]
   }
 }

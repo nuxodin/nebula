@@ -99,10 +99,7 @@ document.getElementById('aliasForm').addEventListener('submit', async (e) => {
   }
 
   try {
-    await apiFetch(`/api/mail/${currentAccount.id}/alias`, {
-      method: 'POST',
-      body: JSON.stringify({ alias })
-    });
+    await apiFetch(`/api/mail/${currentAccount.id}/alias`, {post:{ alias }});
 
     document.getElementById('aliasInput').value = '';
     loadMailDetails();
@@ -114,10 +111,7 @@ document.getElementById('aliasForm').addEventListener('submit', async (e) => {
 // Alias löschen
 window.deleteAlias = async (alias) => {
   try {
-    await apiFetch(`/api/mail/${currentAccount.id}/alias`, {
-      method: 'DELETE',
-      body: JSON.stringify({ alias })
-    });
+    await apiFetch(`/api/mail/${currentAccount.id}/alias`, {del: { alias }});
 
     loadMailDetails();
   } catch (error) {
@@ -145,10 +139,7 @@ document.getElementById('autoresponderForm').addEventListener('submit', async (e
   };
 
   try {
-    await apiFetch(`/api/mail/${currentAccount.id}/autoresponder`, {
-      method: 'PUT',
-      body: JSON.stringify(data)
-    });
+    await apiFetch(`/api/mail/${currentAccount.id}/autoresponder`, {post:data});
 
     alert('Automatische Antwort wurde gespeichert');
     loadMailDetails();
@@ -167,10 +158,7 @@ document.getElementById('forwardersForm').addEventListener('submit', async (e) =
     .filter(line => line);
 
   try {
-    await apiFetch(`/api/mail/${currentAccount.id}/forwarders`, {
-      method: 'PUT',
-      body: JSON.stringify({ forwarders })
-    });
+    await apiFetch(`/api/mail/${currentAccount.id}/forwarders`, {put:{ forwarders }});
 
     alert('Weiterleitungen wurden gespeichert');
     loadMailDetails();
@@ -182,9 +170,7 @@ document.getElementById('forwardersForm').addEventListener('submit', async (e) =
 // Event-Listener für Löschen-Button
 document.querySelector('.-delete').addEventListener('click', async () => {
   try {
-    await apiFetch(`/api/mail/${currentAccount.id}`, {
-      method: 'DELETE'
-    });
+    await apiFetch(`/api/mail/${currentAccount.id}`, {del:{}});
     window.location.href = '/mail';
   } catch (error) {
     alert('Fehler beim Löschen des E-Mail Kontos: ' + error.message);
@@ -192,4 +178,5 @@ document.querySelector('.-delete').addEventListener('click', async () => {
 });
 
 // Initial laden
-loadMailDetails();</script>
+loadMailDetails();
+</script>

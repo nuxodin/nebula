@@ -26,8 +26,7 @@ export async function installSSL(domainId: number, certType: 'lets_encrypt' | 'c
       await Deno.writeTextFile(`${sslPath}/privkey.pem`, certData.key);
       await Deno.writeTextFile(`${sslPath}/chain.pem`, certData.chain);
       
-      db.query('UPDATE domains SET ssl_enabled = 1, ssl_type = ? WHERE id = ?',
-        ['custom', domainId]);
+      db.query('UPDATE domains SET ssl_enabled = 1, ssl_type = ? WHERE id = ?', ['custom', domainId]);
     }
 
     // Apache neu laden
@@ -70,13 +69,11 @@ export async function removeSSL(domainId: number) {
 export async function renewSSL(domainId: number) {
   try {
     const domain = db.queryEntries('SELECT * FROM domains WHERE id = ?', [domainId])[0];
-    if (!domain || domain.ssl_type !== 'lets_encrypt') {
-      throw new Error('Domain not found or not using Let\'s Encrypt');
-    }
+    if (!domain) throw new Error('Domain not found');
+    if (domain.ssl_type !== 'lets_encrypt') throw new Error('Domain not found or not using Let\'s Encrypt');
 
-    await run(`certbot renew --cert-name ${domain.name}`);
-    db.query('UPDATE domains SET ssl_expires_at = ? WHERE id = ?',
-      [new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), domainId]);
+    await run('certbot', ['renew', '--cert-name', domain.name]);
+    db.query('UPDATE domains SET ssl_expires_at = ? WHERE id = ?', [new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), domainId]);
 
     logInfo(`SSL certificate renewed for ${domain.name}`, 'SSL');
     return { success: true };

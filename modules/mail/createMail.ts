@@ -1,6 +1,6 @@
 import db from "../../utils/database.ts";
 import { logInfo, logError } from "../../utils/logger.ts";
-import { run } from "../../utils/command.ts";
+import { run, reloadService } from "../../utils/command.ts";
 import { config } from "../../utils/config.ts";
 import { ensureDir } from "https://deno.land/std/fs/mod.ts";
 
@@ -44,13 +44,19 @@ export async function createMailbox(domainId: number, options: MailboxOptions) {
     await ensureDir(`${mailDir}/Maildir/tmp`);
 
     // Create system user for mail
-    const username = `${localPart}_${domain.name}`.replace(/[^a-z0-9]/g, '_');
-    await run(`useradd -r -m -d ${mailDir} ${username}`);
-    await run(`echo "${username}:${options.password}" | chpasswd`);
+    //const username = `${localPart}_${domain.name}`.replace(/[^a-z0-9]/g, '_');
+    const linuxUser = `ne-ma-${domainId}-${localPart}`;
+    //await run('adduser', ['-r', '-M', '-d', mailDir, username]);
+    //await run(`echo "${username}:${options.password}" | chpasswd`);
+
+    await run('adduser', ['--system', '--group', '--home', mailDir, linuxUser]);
+    await run('sh', ['-c', `echo "${linuxUser}:${options.password}" | chpasswd`]);
+    await run('chown', ['-R', `${linuxUser}:${linuxUser}`, mailDir]);
 
     // Set quota if specified
     if (options.quota) {
-      await run(`setquota -u ${username} ${options.quota * 1024} ${options.quota * 1024} 0 0 /var/mail`);
+      //await run(`setquota -u ${username} ${options.quota * 1024} ${options.quota * 1024} 0 0 /var/mail`);
+      await run('setquota', ['-u', linuxUser, `${options.quota * 1024}`, `${options.quota * 1024}`, '0', '0', '/var/mail']);
     }
 
     // Configure autoresponder if enabled
@@ -102,7 +108,7 @@ export async function deleteMailbox(mailId: number) {
     const username = `${localPart}_${mailbox.domain_name}`.replace(/[^a-z0-9]/g, '_');
 
     // Remove system user and mail directory
-    await run(`userdel -r ${username}`);
+    await run('userdel', ['-r', username]);
     await Deno.remove(`/var/mail/${mailbox.domain_name}/${localPart}`, { recursive: true });
 
     // Remove from database
@@ -130,13 +136,13 @@ export async function updateMailbox(mailId: number, options: Partial<MailboxOpti
 
     // Update password if provided
     if (options.password) {
-      await run(`echo "${username}:${options.password}" | chpasswd`);
+      await run('sh', ['-c', `echo "${username}:${options.password}" | chpasswd`]);
       db.query('UPDATE mail SET password = ? WHERE id = ?', [options.password, mailId]);
     }
 
     // Update quota if provided
     if (options.quota) {
-      await run(`setquota -u ${username} ${options.quota * 1024} ${options.quota * 1024} 0 0 /var/mail`);
+      await run('setquota', ['-u', username, `${options.quota * 1024}`, `${options.quota * 1024}`, '0', '0', '/var/mail']);
       db.query('UPDATE mail SET quota = ? WHERE id = ?', [options.quota, mailId]);
     }
 
@@ -182,12 +188,17 @@ export async function getDiskUsage(mailId: number) {
     const mailDir = `/var/mail/${mailbox.domain_name}/${localPart}`;
 
     // Get disk usage with du command
-    const { stdout } = await run(`du -sm ${mailDir}`);
+    //const { stdout } = await run(`du -sm ${mailDir}`);
+    const { stdout } = await run('du', ['-sm', mailDir]);
     const used = parseInt(stdout.split('\t')[0]);
     
     // Get quota info with quota command
-    const { stdout: quotaOutput } = await run(`quota -u ${localPart}_${mailbox.domain_name} -l`);
-    const total = mailbox.quota || config.default_mail_quota;
+    //const { stdout: quotaOutput } = await run(`quota -u ${localPart}_${mailbox.domain_name} -l`);
+    //const { stdout: quotaOutput } = await run('quota', ['-u', `${localPart}_${mailbox.domain_name}`, '-l']);
+
+
+    //const total = mailbox.quota || config.default_mail_quota;
+    const total = 0;
 
     return {
       used,
@@ -211,8 +222,9 @@ async function updatePostfixMaps(domainName: string) {
     }
 
     await Deno.writeTextFile('/etc/postfix/virtual', virtualContent);
-    await run('postmap /etc/postfix/virtual');
-    await run('systemctl reload postfix');
+    await run('postmap', ['/etc/postfix/virtual']);
+
+    await reloadService('postfix');
   } catch (error) {
     logError(`Error updating Postfix maps: ${error.message}`, 'Mail');
     throw error;

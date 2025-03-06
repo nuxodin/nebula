@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { renderTemplate } from "../../utils/template.ts";
 import { objToRoutes } from "../../utils/routes.ts";
 import { getFilesView, api } from "./controller.ts";
 

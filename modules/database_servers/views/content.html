@@ -27,14 +27,6 @@
   <h2>Datenbankserver hinzufügen</h2>
   <form id="addServerForm">
     <label>
-      Host
-      <input name="host" required>
-    </label>
-    <label>
-      Port
-      <input name="port" type="number" required>
-    </label>
-    <label>
       Typ
       <select name="type" required>
         <option value="mysql">MySQL</option>
@@ -42,12 +34,20 @@
       </select>
     </label>
     <label>
+      Host
+      <input name="host" required value="localhost">
+    </label>
+    <label>
+      Port
+      <input name="port" type="number" required value="3306">
+    </label>
+    <label>
       Admin Login
       <input name="admin_login" required>
     </label>
     <label>
       Admin Passwort
-      <input name="admin_password" type="password" required>
+      <input name="admin_password" type="password">
     </label>
     <div class="-buttons">
       <button>Speichern</button>

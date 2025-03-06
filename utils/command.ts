@@ -62,8 +62,16 @@ export const isCommandAvailable = async (cmd: string) => {
   return (await run(
     isWindows ? "cmd" : "sh",
     isWindows ? ["/c", "where", cmd] : ["-c", `command -v ${cmd}`],
-    true
   )).code === 0;
+
+  // todo: discuss this with the team
+  // const { code } = await run(
+  //   isWindows ? "where" : "which", 
+  //   [cmd], 
+  //   { silent: true }
+  // );
+  // return code === 0;
+
 };
 
 /**

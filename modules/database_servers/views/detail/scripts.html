@@ -38,12 +38,11 @@ function renderDatabases(databases) {
   tbody.innerHTML = databases.map(db => `
     <tr class="${db.managed ? '' : 'unmanaged'}">
       <td>${db.name}
-      <td>${db.managed ? '<span class="u2-badge status-active">Verwaltet</span>' : '<span class="u2-badge status-inactive">Nicht verwaltet</span>'}
+      <td>${db.managed ? '<span class="u2-badge status-active">Verwaltet</span>' : '<small class="u2-badge status-inactive">Nicht verwaltet</small>'}
       <td>
         ${db.managed ? '' : `
-          <button class="btn" onclick="importDatabase('${db.name}')">
+          <button class="u2-unstyle" onclick="importDatabase('${db.name}')">
             <i class="mdi mdi-database-import"></i>
-            Importieren
           </button>
         `}
     </tr>

@@ -58,6 +58,10 @@ export async function createDomain(options: DomainOptions) {
     // Webserver-Konfiguration generieren (ersetzt createApacheConf und createNginxConf)
     await generateWebserverConfig(domain_id);
 
+    // todo: email konfiguration
+
+
+
     logInfo(`Domain ${options.name} wurde erstellt`, "Domains");
     return { success: true, id: domain_id };
   } catch (error) {
@@ -65,11 +69,6 @@ export async function createDomain(options: DomainOptions) {
     throw error;
   }
 }
-
-// Entfernen oder auskommentieren der alten createNginxConf und createApacheConf Funktionen,
-// da diese jetzt durch generateWebserverConfig ersetzt werden
-// async function createNginxConf(domain_id: number) { ... }
-// async function createApacheConf(domain_id: number) { ... }
 
 async function createDirectory(domain_id: number) {
   const domain = db.queryEntries(`SELECT * FROM domains WHERE id = ?`,[domain_id])[0];

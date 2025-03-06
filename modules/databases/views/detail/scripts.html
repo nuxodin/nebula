@@ -68,12 +68,9 @@ window.copyDatabase = async function(event) {
     const newName = document.getElementById('copyName').value;
     
     try {
-        await apiFetch(`/api/databases/${id}/copy`, {
-            method: 'POST',
-            body: JSON.stringify({ name: newName })
-        });
+        await apiFetch(`/api/databases/${id}/copy`, {post: { name: newName }});
         document.getElementById('copyDialog').close();
-        window.location.href = '/databases';
+//window.location.href = '/databases';
     } catch (error) {
         alert('Fehler beim Kopieren der Datenbank: ' + error.message);
     }
@@ -110,10 +107,7 @@ window.importDatabase = async function(event) {
     formData.append('file', file);
     
     try {
-        await fetch(`/api/databases/${id}/import`, {
-            method: 'POST',
-            body: formData
-        });
+        await fetch(`/api/databases/${id}/import`, {post:formData});
         document.getElementById('importDialog').close();
         loadDatabaseDetails();
     } catch (error) {
@@ -124,9 +118,7 @@ window.importDatabase = async function(event) {
 
 window.checkDatabase = async function() {
     try {
-        const result = await apiFetch(`/api/databases/${id}/check`, {
-            method: 'POST'
-        });
+        const result = await apiFetch(`/api/databases/${id}/check`, {post:{}});
         alert(result.message || 'Datenbank-Check abgeschlossen');
     } catch (error) {
         alert('Fehler beim Prüfen der Datenbank: ' + error.message);
@@ -137,9 +129,7 @@ window.optimizeDatabase = async function() {
     if (!confirm('Datenbank optimieren? Dies kann bei großen Datenbanken einige Zeit dauern.')) return;
     
     try {
-        const result = await apiFetch(`/api/databases/${id}/optimize`, {
-            method: 'POST'
-        });
+        const result = await apiFetch(`/api/databases/${id}/optimize`, {post:{}});
         alert(result.message || 'Datenbank wurde optimiert');
     } catch (error) {
         alert('Fehler bei der Datenbank-Optimierung: ' + error.message);
@@ -151,9 +141,7 @@ window.deleteDatabase = async function() {
     if (!confirm('Diese Datenbank wirklich löschen?')) return;
     
     try {
-        await apiFetch(`/api/databases/${id}`, {
-            method: 'DELETE'
-        });
+        await apiFetch(`/api/databases/${id}`, {del:{}});
         window.location.href = '/databases';
     } catch (error) {
         alert('Fehler beim Löschen der Datenbank: ' + error.message);
@@ -173,10 +161,7 @@ window.changePassword = async function(event) {
     const password = document.getElementById('newPassword').value;
     
     try {
-        await apiFetch(`/api/databases/${id}/password`, {
-            method: 'POST',
-            body: JSON.stringify({ password })
-        });
+        await apiFetch(`/api/databases/${id}/password`, {post: { password }});
         closeChangePasswordDialog();
         alert('Passwort wurde erfolgreich geändert');
     } catch (error) {

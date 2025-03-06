@@ -251,25 +251,31 @@ export const api = {
         
         try {
           const database = db.queryEntries('SELECT * FROM databases WHERE id = ?', [id])[0];
-          if (!database) {
-            return { error: 'Datenbank nicht gefunden' };
-          }
+          if (!database) return { error: 'Datenbank nicht gefunden' };
 
           const client = await dbClient(database.server_id);
-          const newName = `${name}`;
-          const newUser = `${newName}_user`;
+          const newName = name;
+          const newUser = newName;
           const newPass = crypto.randomUUID();
 
           if (database.type === 'mysql') {
+
             await client.execute(`CREATE DATABASE \`${newName}\``);
             await client.execute('CREATE USER ?@\'%\' IDENTIFIED BY ?', [newUser, newPass]);
             await client.execute('GRANT ALL PRIVILEGES ON ??.* TO ?@\'%\'', [newName, newUser]);
             await client.execute('FLUSH PRIVILEGES');
-            
+
             // Copy data
-            await run(`mysqldump -h ${database.host} -P ${database.port} -u ${database.admin_login} -p${database.admin_password} ${database.name} | mysql -h ${database.host} -P ${database.port} -u ${database.admin_login} -p${database.admin_password} ${newName}`);
-          } 
-          else if (database.type === 'postgresql') {
+            if (Deno.build.os !== 'windows') {
+              //await run(`mysqldump -h ${database.host} -P ${database.port} -u ${database.admin_login} -p${database.admin_password} ${database.name} | mysql -h ${database.host} -P ${database.port} -u ${database.admin_login} -p${database.admin_password} ${newName}`);
+              //await run('sh', ['-c', `mysqldump -h ${database.host} -P ${database.port} -u ${database.admin_login} -p${database.admin_password} ${database.name} | mysql -h ${database.host} -P ${database.port} -u ${database.admin_login} -p${database.admin_password} ${newName}`]);
+              const out = await run('sh', ['-c', `mysqldump -h ${database.host} -P ${database.port} -u ${database.admin_login} ${database.name} | mysql -h ${database.host} -P ${database.port} -u ${database.admin_login} ${newName}`]);
+              console.log(out);
+            } else {
+              const out = await run('cmd', ['/c', `mysqldump -h ${database.host} -P ${database.port} -u ${database.admin_login} ${database.name} | mysql -h ${database.host} -P ${database.port} -u ${database.admin_login} ${newName}`]);
+              console.log(out);
+            }
+          } else if (database.type === 'postgresql') {
             // Create new database and user
             await client.queryObject(`CREATE DATABASE ${newName}`);
             await client.queryObject(`CREATE USER ${newUser} WITH PASSWORD '${newPass}'`);
@@ -412,9 +418,16 @@ export const api = {
           const client = await dbClient(database.server_id);
 
           if (database.type === 'mysql') {
-            const tables = await client.execute('SHOW TABLES FROM ??', [database.name]);
-            for (const row of tables) {
-              const tableName = row[`Tables_in_${database.name}`];
+            await client.execute('USE ??', [database.name]);
+
+            // kleinere zuerst
+            const tables = await client.execute(`
+              SELECT TABLE_NAME FROM information_schema.tables WHERE TABLE_SCHEMA = ? ORDER BY DATA_LENGTH + INDEX_LENGTH
+            `, [database.name]);
+
+            for (const row of tables.rows) {
+              const tableName = row['TABLE_NAME'];
+              console.log(`Optimizing table ${tableName}`);
               await client.execute('OPTIMIZE TABLE ??', [tableName]);
             }
           } 

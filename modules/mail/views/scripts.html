@@ -56,7 +56,7 @@ document.getElementById('mailGrid').addEventListener('click', async (e) => {
 
 async function confirmDeleteMail(id) {
   try {
-    await apiFetch(`/api/mail/${id}`, {method: 'DELETE'});
+    await apiFetch(`/api/mail/${id}`, {del:{}});
     loadMailAccounts();
   } catch (error) {
     alert(error.message || 'Fehler beim Löschen des E-Mail Kontos');
@@ -111,12 +111,11 @@ window.createMailAccount = async function() {
 
   try {
     await apiFetch('/api/mail', {
-      method: 'POST',
-      body: JSON.stringify({
+      post:{
         domain_id: domainId,
         local_part: localPart,
         password: password
-      })
+      }
     });
 
     closeCreateMailModal();

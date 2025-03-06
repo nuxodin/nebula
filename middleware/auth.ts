@@ -1,6 +1,7 @@
 import { Context, Next } from "hono";
 import { createMiddleware } from "hono/helper.ts";
-import { getLogin } from "../modules/login/controller.ts";
+//import { getLogin } from "../modules/login/controller.ts";
+import { getLoginView } from "../modules/login2/controller.ts";
 
 // use createMiddleware
 export const authMiddleware = createMiddleware(async (c: Context, next: Next) => {
@@ -11,7 +12,8 @@ export const authMiddleware = createMiddleware(async (c: Context, next: Next) =>
   if (!isLoggedIn) {
     // Speichere nur den Pfad im Context
     c.set('returnPath', c.req.path);
-    return getLogin(c);
+    return getLoginView(c);
+    //return getLogin(c);
   }
 
   return next();

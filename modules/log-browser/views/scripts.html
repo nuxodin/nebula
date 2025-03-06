@@ -1,0 +1,203 @@
+<script type="module">
+import { apiFetch } from '/public/js/utils.js';
+
+let currentLogType = null;
+let currentLogPath = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadLogTypes();
+  loadServiceStatus();
+  
+  document.getElementById('apply-filter-btn').addEventListener('click', applyFilter);
+  document.getElementById('refresh-btn').addEventListener('click', refreshLogContent);
+  
+  document.getElementById('filter-input').addEventListener('keyup', (event) => {
+    if (event.key === 'Enter') applyFilter();
+  });
+  
+  document.getElementById('lines-select').addEventListener('change', () => {
+    if (currentLogPath) loadLogContent(currentLogPath);
+  });
+});
+
+async function loadLogTypes() {
+  try {
+    const data = await apiFetch('/api/log-browser/types');
+    const logTypesList = document.getElementById('log-types-list');
+    logTypesList.innerHTML = '';
+    
+    if (data.types?.length > 0) {
+      data.types.forEach(type => {
+        const li = document.createElement('li');
+        li.textContent = type;
+        li.addEventListener('click', () => {
+          document.querySelectorAll('#log-types-list li').forEach(item => {
+            item.classList.remove('active');
+          });
+          
+          li.classList.add('active');
+          loadLogFiles(type);
+          currentLogType = type;
+        });
+        logTypesList.appendChild(li);
+      });
+    } else {
+      logTypesList.innerHTML = '<li>Keine Log-Typen verfügbar</li>';
+    }
+  } catch (error) {
+    console.error('Fehler beim Laden der Log-Typen:', error);
+    document.getElementById('log-types-list').innerHTML = 
+      '<li class="error">Fehler beim Laden der Log-Typen</li>';
+  }
+}
+
+async function loadLogFiles(type) {
+  try {
+    const data = await apiFetch(`/api/log-browser/files/${type}`);
+    const logFilesContainer = document.getElementById('log-files-container');
+    logFilesContainer.innerHTML = '';
+    
+    if (data.error) {
+      logFilesContainer.innerHTML = `<div class="error-message">${data.error}</div>`;
+      return;
+    }
+    
+    if (data.files?.length > 0) {
+      const table = document.createElement('table');
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>Dateiname</th>
+            <th>Größe</th>
+            <th>Letzte Änderung</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      `;
+      
+      const tbody = table.querySelector('tbody');
+      
+      data.files.forEach(file => {
+        const tr = document.createElement('tr');
+        const size = formatFileSize(file.size);
+        const modified = file.modified ? new Date(file.modified).toLocaleString() : 'Unbekannt';
+        
+        tr.innerHTML = `
+          <td>${file.name}</td>
+          <td>${size}</td>
+          <td>${modified}</td>
+        `;
+        
+        tr.addEventListener('click', () => {
+          document.querySelectorAll('tbody tr').forEach(row => {
+            row.classList.remove('active');
+          });
+          
+          tr.classList.add('active');
+          loadLogContent(file.path);
+          currentLogPath = file.path;
+        });
+        
+        tbody.appendChild(tr);
+      });
+      
+      logFilesContainer.appendChild(table);
+    } else {
+      logFilesContainer.innerHTML = '<div class="info-message">Keine Log-Dateien für diesen Typ verfügbar</div>';
+    }
+  } catch (error) {
+    console.error('Fehler beim Laden der Log-Dateien:', error);
+    logFilesContainer.innerHTML = 
+      `<div class="error-message">Fehler beim Laden der Log-Dateien: ${error.message}</div>`;
+  }
+}
+
+async function loadLogContent(path, filter = null) {
+  const logContent = document.getElementById('log-content');
+  logContent.textContent = 'Log-Inhalt wird geladen...';
+  document.getElementById('current-log-path').textContent = path;
+  
+  const lines = document.getElementById('lines-select').value;
+  filter = filter || document.getElementById('filter-input').value.trim();
+  
+  try {
+    const data = await apiFetch('/api/log-browser/content', {
+      post: {
+        path,
+        filter: filter || undefined,
+        lines: parseInt(lines)
+      }
+    });
+    
+    if (data.error) {
+      logContent.textContent = `Fehler: ${data.error}`;
+      logContent.classList.add('error');
+    } else {
+      logContent.textContent = data.content || 'Kein Inhalt zum Anzeigen';
+      logContent.classList.remove('error');
+      logContent.scrollTop = logContent.scrollHeight;
+    }
+  } catch (error) {
+    console.error('Fehler beim Laden des Log-Inhalts:', error);
+    logContent.textContent = `Fehler beim Laden des Log-Inhalts: ${error.message}`;
+    logContent.classList.add('error');
+  }
+}
+
+async function loadServiceStatus() {
+  try {
+    const data = await apiFetch('/api/log-browser/services');
+    const servicesList = document.getElementById('services-list');
+    servicesList.innerHTML = '';
+    
+    if (data.services?.length > 0) {
+      data.services.forEach(service => {
+        const li = document.createElement('li');
+        li.className = service.running ? 'running' : 'stopped';
+        
+        li.innerHTML = `
+          <span>${service.name}</span>
+          <span class="status-badge">${service.status}</span>
+        `;
+        
+        servicesList.appendChild(li);
+      });
+    } else {
+      servicesList.innerHTML = '<li>Keine Services gefunden</li>';
+    }
+  } catch (error) {
+    console.error('Fehler beim Laden des Service-Status:', error);
+    document.getElementById('services-list').innerHTML = 
+      '<li class="error">Fehler beim Laden der Services</li>';
+  }
+}
+
+function applyFilter() {
+  if (!currentLogPath) {
+    alert('Bitte wähle zuerst eine Log-Datei aus');
+    return;
+  }
+  
+  const filter = document.getElementById('filter-input').value.trim();
+  loadLogContent(currentLogPath, filter);
+}
+
+function refreshLogContent() {
+  if (!currentLogPath) {
+    alert('Bitte wähle zuerst eine Log-Datei aus');
+    return;
+  }
+  
+  loadLogContent(currentLogPath);
+}
+
+function formatFileSize(bytes) {
+  if (bytes === 0) return '0 Bytes';
+  
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+</script>

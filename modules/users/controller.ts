@@ -18,29 +18,22 @@ export const getUserView = async (c: Context) => {
 };
 
 export const getUserDetailView = async (c: Context) => {
-  try {
-    const { id } = c.req.param();
-    const user = db.queryEntries(`
-      SELECT c.*,
-             COUNT(d.id) as domain_count,
-             GROUP_CONCAT(d.name) as domains
-      FROM clients c
-      LEFT JOIN domains d ON c.id = d.owner_id
-      WHERE c.id = ?
-      GROUP BY c.id
-    `, [id])[0];
+  const { id } = c.req.param();
+  const user = db.queryEntries(`
+    SELECT c.*,
+            COUNT(d.id) as domain_count,
+            GROUP_CONCAT(d.name) as domains
+    FROM clients c
+    LEFT JOIN domains d ON c.id = d.owner_id
+    WHERE c.id = ?
+    GROUP BY c.id
+  `, [id])[0];
 
-    if (!user) {
-      return c.text("Benutzer nicht gefunden", 404);
-    }
+  if (!user) return c.text("detail view: enutzer nicht gefunden", 404);
 
-    const content = await Deno.readTextFile("./modules/users/views/detail/content.html");
-    const scripts = await Deno.readTextFile("./modules/users/views/detail/scripts.html");
-    return c.html(await renderTemplate(`Benutzer ${user.login}`, content, "", scripts));
-  } catch (err) {
-    logError("Fehler beim Laden der Benutzer-Details", "Users", c, err);
-    return c.text("Internal Server Error", 500);
-  }
+  const content = await Deno.readTextFile("./modules/users/views/detail/content.html");
+  const scripts = await Deno.readTextFile("./modules/users/views/detail/scripts.html");
+  return c.html(await renderTemplate(`Benutzer ${user.login}`, content, "", scripts));
 };
 
 // API Controllers
@@ -73,6 +66,21 @@ export const api = {
     logInfo(`Benutzer ${data.login} wurde erstellt`, "Users", c);
     return { id: result[0].id, login: data.login, email: data.email };
   },
+  'me': {
+    get: async function(c: Context) {
+      const session = c.get('session');
+      const userId = await session.get('userId');
+      const user = db.queryEntries(`
+        SELECT id, login, email
+        FROM clients 
+        WHERE id = ?
+      `, [userId])[0];
+
+      if (!user) throw new Error("me: Benutzer nicht gefunden");
+
+      return user;
+    }
+  },
   ':id': {
     get: function(c: Context) {
       const { id } = c.req.param();
@@ -86,9 +94,7 @@ export const api = {
         GROUP BY c.id
       `, [id])[0];
 
-      if (!user) {
-        return { error: "Benutzer nicht gefunden" };
-      }
+      if (!user) return { error: "byid: Benutzer nicht gefunden" };
 
       return user;
     },
@@ -96,14 +102,10 @@ export const api = {
       const { id } = c.req.param();
       
       const user = db.queryEntries("SELECT * FROM clients WHERE id = ?", [id])[0];
-      if (!user) {
-        return { error: "Benutzer nicht gefunden" };
-      }
+      if (!user) return { error: "delete: Benutzer nicht gefunden" };
       
       const domains = db.queryEntries<{count: number}>("SELECT COUNT(*) as count FROM domains WHERE owner_id = ?", [id])[0];
-      if (domains.count > 0) {
-        return { error: "Benutzer hat noch Domains und kann nicht gelöscht werden" };
-      }
+      if (domains.count > 0) return { error: "Benutzer hat noch Domains und kann nicht gelöscht werden" };
       
       db.query("DELETE FROM clients WHERE id = ?", [id]);
       logInfo(`Benutzer ${user.login} wurde gelöscht`, "Users", c);
@@ -115,9 +117,7 @@ export const api = {
         const { password } = await c.req.json();
         
         const user = db.queryEntries("SELECT login FROM clients WHERE id = ?", [id])[0];
-        if (!user) {
-          return { error: "Benutzer nicht gefunden" };
-        }
+        if (!user) return { error: "set password: Benutzer nicht gefunden" };
         
         const hashedPassword = await hash(password);
         db.query("UPDATE clients SET password = ? WHERE id = ?", [hashedPassword, id]);
@@ -126,22 +126,4 @@ export const api = {
       }
     }
   },
-  'me': {
-    get: function(c: Context) {
-      const session = c.get('session');
-      const userId = session.get('userId');
-
-      const user = db.queryEntries(`
-        SELECT id, login, email
-        FROM clients 
-        WHERE id = ?
-      `, [userId])[0];
-
-      if (!user) {
-        throw new Error("Benutzer nicht gefunden");
-      }
-
-      return user;
-    }
-  }
 };

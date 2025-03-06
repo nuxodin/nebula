@@ -2,7 +2,9 @@ import { Context } from "hono";
 import { logInfo } from "../../utils/logger.ts";
 import { renderTemplate } from "../../utils/template.ts";
 import db from "../../utils/database.ts";
-import { compare } from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
+import { compare, hash } from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
+
+import { logError } from "../../utils/logger.ts";
 import { 
   verifyAuthenticationResponse,
   verifyRegistrationResponse,
@@ -10,6 +12,8 @@ import {
   generateRegistrationOptions 
 } from "npm:@simplewebauthn/server";
 import { config } from "../../utils/config.ts";
+import { authDb, authOsRoot } from './src/auth.ts';
+
 
 const rpName = config.hostname || 'Nebula WebAuthn';
 const rpID = config.hostname || 'localhost';
@@ -103,26 +107,33 @@ export const api = {
     post: async (c: Context) => {
       const data = await c.req.json();
       const { login, password } = data;
+      if (!login) return { error: "Benutzername erforderlich" };
 
-      const user = db.queryEntries<{id: number; login: string; password: string}>(
+      let ok = await authDb(login, password);
+      if (!ok) {
+        const hasAdmin = db.queryEntries("SELECT id, login, password FROM clients WHERE is_admin = 1").length > 0;
+        if (!hasAdmin) {
+          if (login !== 'admin') return { error: "login: Benutzer nicht gefunden" };
+          if (await authOsRoot(password)) {
+            ok = true;
+            logInfo("Root-Authentifizierung erfolgreich", "Auth", c);
+            const passwordHash = await hash(password);
+            db.query("INSERT INTO clients (login, password, is_admin) VALUES (?, ?, 1)", ["admin", passwordHash]);
+          }
+        }
+      }
+      if (!ok) return { error: "Ungültige Anmeldedaten" };
+
+      const user = db.queryEntries(
         "SELECT id, login, password FROM clients WHERE login = ?",
         [login]
       )[0];
 
-      if (!user) return { error: "Benutzer nicht gefunden" };
-
-      if (password) {
-        const isValidPassword = await compare(password, user.password);
-        if (!isValidPassword) return { error: "Ungültiges Passwort" };
-
-        const session = c.get('session');
-        await session.set('userId', user.id);
-        await session.set('userLogin', user.login);
-        
-        return { success: true };
-      }
-
-      return { error: "Passwort erforderlich" };
+      const session = c.get('session');
+      await session.set('userId', user.id);
+      await session.set('userLogin', user.login);
+      logInfo(`Benutzer ${login} hat sich angemeldet`, "Auth", c);
+      return { success: true };
     }
   },
   'register-device': {
