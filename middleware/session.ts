@@ -15,9 +15,13 @@ export const sessionMiddleware = createMiddleware(async (c: Context, next: Next)
   let sessionId = c.req.cookie()?.sessionId;
   if (!sessionId) {
     sessionId = crypto.randomUUID();
+    
+    // Check if connection is HTTPS to conditionally set secure flag
+    const isHttps = c.req.url.startsWith('https://');
+    
     c.cookie('sessionId', sessionId, {
       httpOnly: true,
-      secure: true,
+      secure: isHttps, // Only set secure flag on HTTPS connections
       path: '/',
       sameSite: 'Lax',
       maxAge: 30 * 24 * 60 * 60 // 30 days
