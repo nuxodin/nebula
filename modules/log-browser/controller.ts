@@ -2,73 +2,26 @@ import { Context } from "hono";
 import { logError } from "../../utils/logger.ts";
 import { renderTemplate } from "../../utils/template.ts";
 import { run, isCommandAvailable } from "../../utils/command.ts";
-import { join } from "https://deno.land/std@0.208.0/path/mod.ts";
+import { join, basename, dirname } from "https://deno.land/std@0.208.0/path/mod.ts";
 
-// Liste aller möglichen Log-Speicherorte unabhängig vom Betriebssystem
-const possibleLogPaths = {
-  nginx: [
-    "/var/log/nginx",
-    "/usr/local/nginx/logs",
-    "/usr/local/var/log/nginx",
-    "C:\\nginx\\logs"
-  ],
-  apache: [
-    "/var/log/apache2",
-    "/var/log/httpd",
-    "/usr/local/apache/logs",
-    "/usr/local/apache2/logs",
-    "/usr/local/www/apache24/logs",
-    "/var/www/logs",
-    "C:\\Apache24\\logs"
-  ],
-  iis: [
-    "C:\\inetpub\\logs\\LogFiles"
-  ],
-  mail: [
-    "/var/log/mail",
-    "/var/log/mail.log",
-    "/var/log/maillog",
-    "/var/log/exim",
-    "/var/log/postfix"
-  ],
-  system: [
-    "/var/log/syslog",
-    "/var/log/messages",
-    "C:\\Windows\\System32\\winevt\\Logs\\System.evtx"
-  ],
-  security: [
-    "/var/log/auth.log",
-    "/var/log/secure",
-    "C:\\Windows\\System32\\winevt\\Logs\\Security.evtx"
-  ],
-  application: [
-    "/var/log/messages",
-    "/var/log/application.log",
-    "/var/log/app",
-    // todo: apt?, 
-    "C:\\Windows\\System32\\winevt\\Logs\\Application.evtx"
-  ],
-  kernel: [
-    "/var/log/kern.log",
-    "/var/log/dmesg"
-  ],
-  boot: [
-    "/var/log/boot.log"
-  ],
-  cron: [
-    "/var/log/cron",
-    "/var/log/cron.log"
-  ],
-  ssh: [
-    "/var/log/auth.log",
-    "/var/log/secure"
-  ],
-  database: [
-    "/var/log/mysql",
-    "/var/log/postgresql",
-    "/var/log/mongodb",
-    "C:\\ProgramData\\MySQL\\MySQL Server*\\Data\\*.err"
-  ],
+// Vereinfachte Liste von Log-Speicherorten nach Kategorien
+const LOG_PATHS = {
+  webserver: {
+    name: "Webserver",
+    paths: ["/var/log/nginx", "/var/log/apache2", "/var/log/httpd", "C:\\nginx\\logs", "C:\\Apache24\\logs"]
+  },
+  mail: {
+    name: "E-Mail",
+    paths: ["/var/log/mail", "/var/log/mail.log", "/var/log/maillog", "/var/log/postfix"]
+  },
+  system: {
+    name: "System",
+    paths: ["/var/log", "/var/log/syslog", "/var/log/messages", "C:\\Windows\\System32\\winevt\\Logs"]
+  },
+  database: {
+    name: "Datenbanken",
+    paths: ["/var/log/mysql", "/var/log/postgresql", "/var/log/mongodb"]
+  }
 };
 
 // View Controller
@@ -78,90 +31,130 @@ export const getLogBrowserView = async (c: Context) => {
     return c.html(await renderTemplate("Log Browser", content, "", scripts));
 };
 
-
-// Überprüft ein bestimmtes Verzeichnis und gibt es zurück, wenn es existiert
-async function checkPath(path) {
+// Prüft, ob ein Pfad existiert und gibt Informationen darüber zurück
+async function checkPath(path: string): Promise<{ exists: boolean; isDirectory: boolean; path: string } | null> {
   try {
     const stat = await Deno.stat(path);
-    if (stat.isDirectory) {
-      return path;
-    }
-    return null;
+    return {
+      exists: true,
+      isDirectory: stat.isDirectory,
+      path: path
+    };
   } catch {
     return null;
   }
 }
 
+// Findet gültige Log-Pfade (sowohl Dateien als auch Verzeichnisse)
+async function findValidLogPaths(paths: string[]): Promise<{ directories: string[]; files: { path: string; name: string }[] }> {
+  const result = {
+    directories: [],
+    files: []
+  };
+
+  for (const path of paths) {
+    const pathInfo = await checkPath(path);
+    
+    if (pathInfo) {
+      if (pathInfo.isDirectory) {
+        result.directories.push(path);
+      } else {
+        result.files.push({
+          path: path,
+          name: basename(path)
+        });
+      }
+    }
+  }
+
+  return result;
+}
+
 // API Controllers
 export const api = {
+  // Gibt verfügbare Log-Typen zurück
   types: async function() {
-    // Finde alle existierenden Log-Typen
-    const validTypes = [];
-    const validLogPaths = {};
+    const availableTypes = [];
     
-    for (const [type, paths] of Object.entries(possibleLogPaths)) {
-      for (const path of paths) {
-        try {
-          const exists = await Deno.stat(path);
-          if (exists) {
-            validTypes.push(type);
-            validLogPaths[type] = path;
-            break; // Wir haben für diesen Typ einen gültigen Pfad gefunden
-          }
-        } catch {
-          // Der Pfad existiert nicht, fahre mit dem nächsten fort
-        }
+    for (const [type, config] of Object.entries(LOG_PATHS)) {
+      const validPaths = await findValidLogPaths(config.paths);
+      
+      if (validPaths.directories.length > 0 || validPaths.files.length > 0) {
+        availableTypes.push({ 
+          id: type, 
+          name: config.name
+        });
       }
     }
     
-    return { types: validTypes };
+    return { types: availableTypes };
   },
   
+  // Gibt Dateien für einen bestimmten Log-Typ zurück
   files: {
     ':type': async function(c: Context) {
       try {
         const { type } = c.req.param();
-        const possiblePaths = possibleLogPaths[type] || [];
         
-        // Versuche jeden möglichen Pfad für diesen Log-Typ
-        let logDir = null;
-        for (const path of possiblePaths) {
-          logDir = await checkPath(path);
-          if (logDir) break;
+        if (!LOG_PATHS[type]) {
+          return { error: "Ungültiger Log-Typ", files: [] };
         }
         
-        if (!logDir) {
+        const validPaths = await findValidLogPaths(LOG_PATHS[type].paths);
+        const files = [];
+
+        // Direkte Log-Dateien hinzufügen
+        for (const file of validPaths.files) {
+          try {
+            const fileInfo = await Deno.stat(file.path);
+            files.push({
+              name: file.name,
+              path: file.path,
+              size: fileInfo.size,
+              modified: fileInfo.mtime
+            });
+          } catch {
+            // Überspringe Dateien ohne Zugriffsberechtigung
+          }
+        }
+        
+        // Verzeichnisse durchsuchen und Dateien hinzufügen
+        for (const dir of validPaths.directories) {
+          try {
+            for await (const entry of Deno.readDir(dir)) {
+              if (entry.isFile) {
+                const filePath = join(dir, entry.name);
+                try {
+                  const fileInfo = await Deno.stat(filePath);
+                  files.push({
+                    name: entry.name,
+                    path: filePath,
+                    size: fileInfo.size,
+                    modified: fileInfo.mtime
+                  });
+                } catch {
+                  // Überspringe Dateien ohne Zugriffsberechtigung
+                }
+              }
+            }
+          } catch (error) {
+            logError(`Zugriff auf Verzeichnis nicht möglich: ${dir} - ${error.message}`, "Log Browser");
+            // Trotz Fehler bei diesem Verzeichnis weitermachen
+          }
+        }
+        
+        // Wenn keine Dateien gefunden wurden
+        if (files.length === 0) {
           return { error: "Keine zugänglichen Logs für diesen Typ gefunden", files: [] };
         }
 
-        try {
-          const files = [];
-          for await (const entry of Deno.readDir(logDir)) {
-            if (entry.isFile) {
-              const filePath = join(logDir, entry.name);
-              const fileInfo = await Deno.stat(filePath);
-              files.push({
-                name: entry.name,
-                path: filePath,
-                size: fileInfo.size,
-                modified: fileInfo.mtime
-              });
-            }
-          }
-          
-          // Sortiere nach letzter Änderung (neueste zuerst)
-          files.sort((a, b) => {
-            if (!a.modified || !b.modified) return 0;
-            return new Date(b.modified).getTime() - new Date(a.modified).getTime();
-          });
-          
-          return { files };
-        } catch (error) {
-          return { 
-            error: `Zugriff auf Log-Verzeichnis nicht möglich: ${error.message}`,
-            files: []
-          };
-        }
+        // Sortiere nach letzter Änderung (neueste zuerst)
+        files.sort((a, b) => {
+          if (!a.modified || !b.modified) return 0;
+          return new Date(b.modified).getTime() - new Date(a.modified).getTime();
+        });
+        
+        return { files };
       } catch (err) {
         logError(`Fehler beim Auflisten der Log-Dateien: ${err.message}`, "Log Browser");
         return { error: "Fehler beim Auflisten der Log-Dateien", files: [] };
@@ -169,22 +162,26 @@ export const api = {
     }
   },
 
+  // Gibt Inhalt einer Log-Datei zurück
   content: {
     post: async function(c: Context) {
       try {
-        const requestData = await c.req.json();
-        const { path, filter, lines = 100 } = requestData;
+        const { path, filter, lines = 100 } = await c.req.json();
 
         if (!path) {
           return { error: "Kein Log-Dateipfad angegeben" };
         }
 
+        // Sicherheitscheck: Verhindere Directory Traversal
         if (path.includes('..')) {
           return { error: "Ungültiger Pfad" };
         }
 
         try {
-          await Deno.stat(path);
+          const stat = await Deno.stat(path);
+          if (stat.isDirectory) {
+            return { error: "Der angegebene Pfad ist ein Verzeichnis, keine Datei" };
+          }
         } catch {
           return { error: "Log-Datei nicht gefunden oder nicht zugänglich" };
         }
@@ -193,30 +190,23 @@ export const api = {
         let result;
 
         if (isWindows) {
+          // Windows-spezifische Behandlung für .evtx-Dateien
           if (path.endsWith('.evtx')) {
             const powershellCmd = `Get-WinEvent -Path "${path}" -MaxEvents ${lines} | Format-List`;
             result = await run("powershell", ["-Command", powershellCmd]);
-            return { 
-              content: result.stdout, 
-              error: result.code !== 0 ? result.stderr : null 
-            };
-          }
-          
-          const powershellCmd = filter 
-            ? `Get-Content -Tail ${lines} "${path}" | Select-String -Pattern "${filter}"` 
-            : `Get-Content -Tail ${lines} "${path}"`;
-            
-          result = await run("powershell", ["-Command", powershellCmd]);
-        } else {
-          // Unix systems
-          let command = "tail";
-          let args = [`-n${lines}`, path];
-
-          if (filter) {
-            result = await run(command, [...args, "|", "grep", "-i", filter], { silent: true });
           } else {
-            result = await run(command, args, { silent: true });
+            // Normale Textdateien unter Windows
+            const powershellCmd = filter 
+              ? `Get-Content -Tail ${lines} "${path}" | Select-String -Pattern "${filter}"` 
+              : `Get-Content -Tail ${lines} "${path}"`;
+            result = await run("powershell", ["-Command", powershellCmd]);
           }
+        } else {
+          // Unix-Systeme mit vereinfachtem Befehl
+          const command = filter 
+            ? `tail -n${lines} "${path}" | grep -i "${filter}"` 
+            : `tail -n${lines} "${path}"`;
+          result = await run("sh", ["-c", command], { silent: true });
         }
 
         return { 
@@ -230,78 +220,68 @@ export const api = {
     }
   },
 
+  // Gibt Status von log-relevanten Diensten zurück
   services: async function() {
     try {
       const isWindows = Deno.build.os === "windows";
+      
+      // Relevante Dienste nach Kategorien
+      const serviceGroups = {
+        webserver: ["nginx", "apache2", "httpd"],
+        mail: ["postfix", "dovecot"],
+        database: ["mysql", "mariadb", "postgresql"],
+        system: ["rsyslog", "syslog-ng"]
+      };
+      
       const services = [];
       
-      // Gemeinsame Dienste, die mit Protokollierung zu tun haben
-      const commonServices = [
-        // Webserver
-        "nginx", "apache2", "httpd", "apache", "apache24", "W3SVC", "IISAdmin",
-        // Mail
-        "postfix", "sendmail", "exim", "dovecot", "smtpd",
-        // System/Logging
-        "rsyslog", "syslogd", "syslog-ng", "journald", "EventLog",
-        // Datenbanken
-        "mysql", "mariadb", "postgresql", "mongodb", "MSSQLSERVER"
-      ];
-      
-      for (const service of commonServices) {
-        let status = "unbekannt";
-        let running = false;
-        
+      // Einfacher Service-Check basierend auf OS
+      const checkService = async (name) => {
         if (isWindows) {
-          const result = await run("sc", ["query", service], { silent: true });
-          if (result.code === 0) {
-            running = result.stdout.includes("RUNNING");
-            status = running ? "aktiv" : "inaktiv";
-          } else {
-            continue; // Service nicht installiert, überspringen
-          }
+          const result = await run("sc", ["query", name], { silent: true });
+          return {
+            exists: result.code === 0,
+            running: result.stdout.includes("RUNNING")
+          };
         } else {
-          let serviceExists = false;
-          
           if (await isCommandAvailable("systemctl")) {
-            const checkResult = await run("systemctl", ["list-unit-files", `${service}.service`], { silent: true });
-            if (checkResult.stdout.includes(service)) {
-              serviceExists = true;
-              const result = await run("systemctl", ["is-active", service], { silent: true });
-              running = result.code === 0;
-              status = running ? "aktiv" : "inaktiv";
-            }
-          } 
-          
-          if (!serviceExists && await isCommandAvailable("service")) {
-            const checkResult = await run("service", ["--status-all"], { silent: true });
-            if (checkResult.stdout.includes(service)) {
-              serviceExists = true;
-              const result = await run("service", [service, "status"], { silent: true });
-              running = result.code === 0;
-              status = running ? "aktiv" : "inaktiv";
+            const exists = await run("systemctl", ["list-unit-files", `${name}.service`], { silent: true });
+            if (exists.stdout.includes(name)) {
+              const status = await run("systemctl", ["is-active", name], { silent: true });
+              return {
+                exists: true,
+                running: status.code === 0
+              };
             }
           }
           
-          if (!serviceExists && await isCommandAvailable("rcctl")) {
-            const checkResult = await run("rcctl", ["ls", "all"], { silent: true });
-            if (checkResult.stdout.includes(service)) {
-              serviceExists = true;
-              const result = await run("rcctl", ["check", service], { silent: true });
-              running = result.stdout.includes("(ok)");
-              status = running ? "aktiv" : "inaktiv";
-            }
-          }
-          
-          if (!serviceExists) {
-            continue; // Service nicht gefunden, überspringen
+          // Fallback auf service-Befehl
+          const checkCmd = await run("which", ["service"], { silent: true });
+          if (checkCmd.code === 0) {
+            const status = await run("service", [name, "status"], { silent: true });
+            return {
+              exists: status.code !== 127, // 127 bedeutet "command not found"
+              running: status.code === 0
+            };
           }
         }
         
-        services.push({
-          name: service,
-          running,
-          status
-        });
+        return { exists: false, running: false };
+      };
+      
+      // Prüfe alle Services in allen Gruppen
+      for (const [group, serviceList] of Object.entries(serviceGroups)) {
+        for (const name of serviceList) {
+          const { exists, running } = await checkService(name);
+          if (exists) {
+            services.push({
+              name,
+              group,
+              status: running ? "aktiv" : "inaktiv",
+              running
+            });
+          }
+        }
       }
       
       return { services };
