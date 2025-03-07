@@ -1,0 +1,35 @@
+<div class="header">
+    <h1>PHP-Verwaltung</h1>
+    <button id="enable-repo-btn" class="btn btn-primary">PHP-Repository aktivieren</button>
+</div>
+
+<div class="php-versions">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Version</th>
+                <th>Status</th>
+                <th>Verfügbar im Repository</th>
+                <th>Aktionen</th>
+            </tr>
+        </thead>
+        <tbody class="js-versions">
+            <tr>
+                <td colspan="4">Lade...</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div id="installation-status" class="box hidden">
+    <h3>Installationsstatus</h3>
+    <div class="status-content">
+        <div id="install-progress">
+            <div class="progress-bar">
+                <div class="progress-bar-fill" style="width: 0%"></div>
+            </div>
+            <p id="status-message">Installation wird vorbereitet...</p>
+        </div>
+        <pre id="install-log"></pre>
+    </div>
+</div>

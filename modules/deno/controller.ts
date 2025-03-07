@@ -1,6 +1,5 @@
 import { Context } from "hono";
 import { logError, logInfo } from "../../utils/logger.ts";
-import { renderTemplate } from "../../utils/template.ts";
 import { denoRuntime } from "./runtime.ts";
 import { registerRuntime } from "../../utils/runtime.ts";
 import { run } from "../../utils/command.ts";
@@ -8,13 +7,6 @@ import db from "../../utils/database.ts";
 
 // Register Deno runtime
 registerRuntime('deno', denoRuntime);
-
-// View Controller
-export const getDenoView = async (c: Context) => {
-    const content = await Deno.readTextFile("./modules/deno/views/content.html");
-    const scripts = await Deno.readTextFile("./modules/deno/views/scripts.html");
-    return c.html(await renderTemplate("Deno Konfiguration", content, "", scripts));
-};
 
 // API Controller
 export const api = {
@@ -31,6 +23,10 @@ export const api = {
   
   versions: async function(c: Context) {
     const versions = await denoRuntime.getInstalledVersions();
+    return { success: true, versions };
+  },
+  remoteVersions: async function(c: Context) {
+    const versions = await denoRuntime.remoteVersions();
     return { success: true, versions };
   },
   

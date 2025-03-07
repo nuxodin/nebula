@@ -1,8 +1,8 @@
 import { Runtime, DomainConfig } from "../../utils/runtime.ts";
 import db from "../../utils/database.ts";
 import { join } from "https://deno.land/std/path/mod.ts";
-import { config } from "../../utils/config.ts";
 import { ensureDir } from 'https://deno.land/std/fs/mod.ts';
+import { config } from "../../utils/config.ts";
 import { run } from "../../utils/command.ts";
 import { logError, logInfo } from "../../utils/logger.ts";
 
@@ -84,6 +84,16 @@ class DenoRuntime implements Runtime {
             }
             
             return versions;
+        } catch (error) {
+            logError(`Fehler beim Abrufen der installierten Deno-Versionen: ${error.message}`, "Deno");
+            return [];
+        }
+    }
+    async remoteVersions(): Promise<string[]> {
+        try {
+            const result = await run('/root/.dvm/bin/dvm', ['list-remote'], { sudo: true }); // todo: cronjob: remove cache from time to time
+            if (result.code !== 0) throw new Error(`Fehler beim Abrufen der installierten Deno-Versionen: ${result.stderr}`);
+            return result.stdout.split('\n').filter(v => !v.trim()[0].match(/[0-0]/)).map(v => v.trim());
         } catch (error) {
             logError(`Fehler beim Abrufen der installierten Deno-Versionen: ${error.message}`, "Deno");
             return [];

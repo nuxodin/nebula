@@ -7,7 +7,7 @@
 export async function run(
   command: string, 
   args: string[] = [], 
-  options: {silent?: boolean, sudo?: boolean, user?: string} = {}
+  options: {silent?: boolean, sudo?: boolean, user?: string, throw?: boolean} = {}
 ) {
   const { silent = true, sudo = false, user } = options;
 
@@ -43,6 +43,9 @@ export async function run(
   if (!silent) {
     console.log(stdout);
     console.error(stderr);
+  }
+  if (options.throw && result.code !== 0) {
+    throw new Error(`Command '${command} ${args.join(" ")}' failed with code ${result.code}: ${stderr}`);
   }
 
   return { 
@@ -84,7 +87,6 @@ export const getSudo = async () => (await isCommandAvailable("sudo")) ? "sudo" :
  * Installs packages using the appropriate package manager (apt, yum, dnf, apk)
  */
 export const installPackages = async (packages: string[]) => {
-  const sudo = await getSudo();
   const isWindows = Deno.build.os === "windows";
   console.log(`🔍 Verfügbare Paketmanager werden überprüft...`);
 
@@ -110,9 +112,7 @@ export const installPackages = async (packages: string[]) => {
       return true;
     }
   }
-
   console.error(`❌ Kein unterstützter Paketmanager gefunden (${isWindows ? "winget" : "apt, yum, dnf, apk"}).`);
-  Deno.exit(1);
 };
 
 /**
@@ -150,6 +150,7 @@ export const startService = async (service: string) => {
   if (isWindows) {
     result = await run("sc", ["start", service], {sudo:true});
   } else if (await isCommandAvailable("systemctl")) {
+    console.log("systemctl available");
     result = await run("systemctl", ["start", service], {sudo:true});
   } else if (await isCommandAvailable("service")) {
     result = await run("service", [service, "start"], {sudo:true});
@@ -211,4 +212,19 @@ export const reloadService = async (service: string) => {
   } else {
     throw new Error(`❌ Fehler beim Neuladen von ${service}: ${result.stderr || result.stdout}`);
   }
+}
+
+
+export const status = async (service: string) => {
+  let result;
+  if (Deno.build.os === "windows") {
+    result = await run("sc", ["query", service], {sudo:true});
+  } else if (await isCommandAvailable("systemctl")) {
+    result = await run("systemctl", ["status", service], {sudo:true});
+  } else if (await isCommandAvailable("service")) {
+    result = await run("service", [service, "status"], {sudo:true});
+  } else {
+    result = await run(`/etc/init.d/${service}`, ["status"], {sudo:true});
+  }
+  return result.code === 0;
 }

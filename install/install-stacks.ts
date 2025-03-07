@@ -31,12 +31,6 @@ const setupMailServer = async () => {
   await startService("dovecot");
 };
 
-// Überprüft und installiert Bind9 (Nameserver)
-// zzz const setupNameServer = async () => {
-//   console.log("\n🌐 Überprüfung und Installation von Bind9...");
-//   await installPackages(["bind9", "bind9utils"]);
-//   await startService("bind9");
-// };
 const setupNameServer = async () => {
   console.log("\n🌐 Überprüfung und Installation von Bind9...");
   await installPackages(["bind9", "bind9utils"]);

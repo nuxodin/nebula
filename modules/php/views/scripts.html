@@ -1,0 +1,84 @@
+<script type="module">
+import { apiFetch } from '/public/js/utils.js';
+import * as dialog from "https://cdn.jsdelivr.net/gh/u2ui/u2@x.x.x/js/dialog/dialog.min.js";
+
+let allVersions = new Set();
+
+// PHP-Versionen laden
+async function loadData() {
+    try {
+        const [installed, available] = await Promise.all([
+            apiFetch('/api/php/installed'),
+            apiFetch('/api/php/available')
+        ]);
+
+        allVersions = new Set([...installed.map(v => v.version), ...available]);
+        renderVersions(installed, available);
+    } catch (error) {
+        dialog.alert('Fehler beim Laden der PHP-Versionen: ' + error.message);
+    }
+}
+
+// Versionen anzeigen
+function renderVersions(installed, available) {
+    const tbody = document.querySelector('.js-versions');
+    tbody.innerHTML = Array.from(allVersions)
+        .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))
+        .map(version => {
+            const installedVersion = installed.find(v => v.version === version);
+            const isInstalled = !!installedVersion;
+            const isRunning = installedVersion?.fpmStatus === 'Aktiv';
+            
+            return `
+                <tr>
+                    <td>${version}</td>
+                    <td>${isInstalled ? (isRunning ? '✅ Läuft' : '⚠️ Gestoppt') : '❌ Nicht installiert'}</td>
+                    <td>${available.includes(version) ? '✅' : '❌'}</td>
+                    <td>
+                        ${!isInstalled ? 
+                            `<button class="btn btn-sm btn-primary js-install" data-version="${version}">Installieren</button>` :
+                            `<button class="btn btn-sm ${isRunning ? 'btn-warning js-stop' : 'btn-success js-start'}" data-version="${version}">
+                                ${isRunning ? 'Stop' : 'Start'}
+                            </button>`
+                        }
+                    </td>
+                </tr>
+            `;
+        })
+        .join('');
+}
+
+// Event-Handler für Buttons
+document.querySelector('.js-versions').addEventListener('click', async (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    
+    const version = btn.dataset.version;
+    try {
+        if (btn.classList.contains('js-install')) {
+            await apiFetch('/api/php/install', {post:{ version }});
+        } else if (btn.classList.contains('js-start')) {
+            await apiFetch(`/api/php/service/${version}/start`, {post:{}});
+        } else if (btn.classList.contains('js-stop')) {
+            await apiFetch(`/api/php/service/${version}/stop`, {post:{}});
+        }
+        await loadData();
+    } catch (error) {
+        dialog.alert('Fehler: ' + error.message);
+    }
+});
+
+// Repository aktivieren
+document.querySelector('#enable-repo-btn')?.addEventListener('click', async () => {
+    try {
+        await apiFetch('/api/php/enable-repo', {post:{}});
+        await loadData();
+        dialog.alert('PHP-Repository wurde aktiviert');
+    } catch (error) {
+        dialog.alert('Fehler: ' + error.message);
+    }
+});
+
+// Initial laden
+loadData();
+</script>

@@ -69,37 +69,39 @@ async function checkDomainStatus(domainId) {
 // Laden der installierten Deno-Versionen
 async function loadVersions() {
     try {
-        const response = await apiFetch('/api/deno/versions');
-        if (!response.success) {
-            throw new Error(response.error || 'Fehler beim Laden der Versionen');
+        const installed = await apiFetch('/api/deno/versions');
+
+        const remote = await apiFetch('/api/deno/remoteVersions');
+
+        const versions = {};
+        for (const v of installed.versions) {
+            versions[v] ??= {};
+            versions[v].installed = true;
+        }
+        for (const v of remote.versions) {
+            versions[v] ??= {};
+            versions[v].remote = true;
         }
         
         const versionsList = document.getElementById('versionsList');
         
-        if (response.versions && response.versions.length > 0) {
+        if (versions) {
             let html = '';
             
-            for (const version of response.versions) {
-                const count = await countDomainsWithVersion(version);
+            for (const [version, data] of Object.entries(versions)) {
+                const count = 'todo';
                 
                 html += `
                 <tr>
                     <td>${version}
-                    <td>
                     <td>${count}
-                    <td><button onclick="uninstallVersion('${version}')">Deinstallieren</button>
+                    <td>${
+                        data.installed ? 
+                        `<button onclick="uninstallVersion('${version}')">Deinstallieren</button>` :
+                        `<button onclick="installVersion('${version}')">Installieren</button>`
+                    }
                 </tr>`;
-            }
-            
-            // Formular zum Installieren einer neuen Version
-            html += `
-            <tr>
-                <td colspan="3">
-                    <input type="text" id="new-deno-version" placeholder="Version (z.B. 1.38.3)">
-                <td>
-                    <button class="btn-action" onclick="installNewVersion()">Installieren</button>
-            </tr>`;
-            
+            }            
             versionsList.innerHTML = html;
         } else {
             versionsList.innerHTML = `
@@ -168,15 +170,7 @@ window.stopDomain = async function(domainId, domainName) {
     }
 };
 
-window.installNewVersion = async function() {
-    const versionInput = document.getElementById('new-deno-version');
-    const version = versionInput.value.trim();
-    
-    if (!version) {
-        alert('Bitte geben Sie eine Version ein.');
-        return;
-    }
-    
+window.installVersion = async function(version) {
     try {
         if (!confirm(`Deno-Version ${version} installieren?`)) return;
         
@@ -184,7 +178,6 @@ window.installNewVersion = async function() {
         
         if (response.success) {
             alert(`Deno-Version ${version} wurde erfolgreich installiert.`);
-            versionInput.value = '';
             loadVersions(); // Liste aktualisieren
         } else {
             throw new Error(response.error || 'Unbekannter Fehler');
