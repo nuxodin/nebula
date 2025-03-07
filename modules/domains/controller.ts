@@ -58,8 +58,7 @@ export async function createDomain(options: DomainOptions) {
     // Webserver-Konfiguration generieren (ersetzt createApacheConf und createNginxConf)
     await generateWebserverConfig(domain_id);
 
-    // todo: email konfiguration
-
+    // mail-server konfiguration
 
 
     logInfo(`Domain ${options.name} wurde erstellt`, "Domains");

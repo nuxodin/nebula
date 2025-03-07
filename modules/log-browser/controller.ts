@@ -136,9 +136,7 @@ async function findFiles(paths: string[]): Promise<Array<{name: string, path: st
               modified: stat.mtime
             });
             processedPaths.add(path);
-          } catch {
-            // Datei nicht zugänglich
-          }
+          } catch {} // Datei nicht zugänglich
         }
         continue;
       }
