@@ -34,6 +34,10 @@
     "category": "language",
     "package": "php-fpm"
   },
+  "bind": {
+    "category": "dns",
+    "package": "bind9"
+  },
   "postfix": {
     "category": "mail",
     "package": "postfix",
