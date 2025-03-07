@@ -3,7 +3,7 @@ import { logError } from "../../utils/logger.ts";
 import { run } from "../../utils/command.ts";
 import { join, basename } from "https://deno.land/std@0.208.0/path/mod.ts";
 
-// Erweiterte und verbesserte Liste von Log-Speicherorten
+// Verbesserte Log-Speicherorte mit mehr Windows-Unterstützung
 const LOG_PATHS = {
   webserver: {
     name: "Webserver",
@@ -18,47 +18,45 @@ const LOG_PATHS = {
       "/var/log/apache2/error.log",
       "/var/log/httpd/access_log",
       "/var/log/httpd/error_log",
-      // Windows Pfade
+      // Windows Pfade - mehr Kombinationen
       "C:\\nginx\\logs",
+      "C:\\Program Files\\nginx\\logs",
       "C:\\Apache24\\logs",
+      "C:\\Program Files\\Apache24\\logs",
+      "C:\\Program Files\\Apache Software Foundation\\Apache2.4\\logs",
+      "C:\\xampp\\apache\\logs",
+      "C:\\xampp\\logs",
       "C:\\inetpub\\logs\\LogFiles"
     ]
   },
-  mail: {
-    name: "E-Mail",
+  windows_system: {
+    name: "Windows System",
     paths: [
-      // Linux/Unix Pfade
-      "/var/log/mail",
-      "/var/log/mail.log",
-      "/var/log/mail.err",
-      "/var/log/mail.warn",
-      "/var/log/maillog",
-      "/var/log/exim/mainlog",
-      "/var/log/exim4/mainlog",
-      "/var/log/postfix/mail.log",
-      // Einzelne Dateien
-      "/var/log/postfix.log",
-      "/var/log/dovecot.log"
+      "C:\\Windows\\System32\\winevt\\Logs\\System.evtx",
+      "C:\\Windows\\System32\\winevt\\Logs\\Application.evtx", 
+      "C:\\Windows\\System32\\winevt\\Logs\\Security.evtx",
+      "C:\\Windows\\debug",
+      "C:\\Windows\\debug\\netsetup.log",
+      "C:\\Windows\\Logs",
+      "C:\\Windows\\Logs\\CBS",
+      "C:\\Windows\\Panther",
+      "C:\\Users\\Default\\AppData\\Local\\Microsoft\\Windows\\WER"
     ]
   },
-  system: {
-    name: "System",
+  windows_iis: {
+    name: "Windows IIS",
     paths: [
-      // Linux/Unix Pfade
-      "/var/log",
-      "/var/log/syslog",
-      "/var/log/messages",
-      "/var/log/kern.log",
-      "/var/log/dmesg",
-      "/var/log/auth.log",
-      "/var/log/secure",
-      "/var/log/boot.log",
-      "/var/log/daemon.log",
-      // Windows Pfade
-      "C:\\Windows\\System32\\winevt\\Logs",
-      "C:\\Windows\\System32\\winevt\\Logs\\System.evtx",
-      "C:\\Windows\\System32\\winevt\\Logs\\Application.evtx",
-      "C:\\Windows\\System32\\winevt\\Logs\\Security.evtx"
+      "C:\\inetpub\\logs\\LogFiles",
+      "C:\\inetpub\\logs\\FailedReqLogFiles"
+    ]
+  },
+  windows_apps: {
+    name: "Windows Programme",
+    paths: [
+      "C:\\Program Files\\Common Files\\Microsoft Shared\\Web Server Extensions\\16\\LOGS",
+      "C:\\Program Files (x86)\\Common Files\\Microsoft Shared\\Web Server Extensions\\16\\LOGS",
+      "%USERPROFILE%\\AppData\\Local\\Temp",
+      "%PROGRAMDATA%\\Microsoft\\Windows\\WER"
     ]
   },
   database: {
@@ -72,46 +70,95 @@ const LOG_PATHS = {
       "/var/log/postgresql/postgresql.log",
       // Windows Pfade
       "C:\\ProgramData\\MySQL\\MySQL Server\\data\\*.err",
-      "C:\\Program Files\\PostgreSQL\\*\\data\\log\\*.log",
+      "C:\\ProgramData\\MySQL\\MySQL Server*\\data\\*.err",
+      "C:\\Program Files\\MySQL\\MySQL Server*\\*.err",
+      "C:\\Program Files\\PostgreSQL\\*\\data\\log",
+      "C:\\Program Files\\Microsoft SQL Server\\MSSQL*\\MSSQL\\Log",
+      // XAMPP
+      "C:\\xampp\\mysql\\data\\*.err",
       // Spezifische Dateien
       "/var/log/mysql.log",
       "/var/log/mysql.err"
     ]
   },
-  application: {
-    name: "Anwendungen",
+  local_app: {
+    name: "Anwendungs-Logs",
     paths: [
-      // Anwendungsverzeichnisse
-      "/var/log/app",
-      "/var/log/apps",
-      "/var/log/application",
-      "/var/log/applications",
-      // Nebula Logs
+      // Nebula-spezifische Logs
       "./logs",
       "../logs",
       "./nebula-data/logs",
-      "../nebula-data/logs"
+      "../nebula-data/logs",
+      // Anwendungslogs unter Windows
+      "%LOCALAPPDATA%\\Temp",
+      "%APPDATA%\\Local\\Temp",
+      "%TEMP%"
+    ]
+  },
+  powershell: {
+    name: "PowerShell",
+    paths: [
+      "%USERPROFILE%\\AppData\\Roaming\\Microsoft\\Windows\\PowerShell\\PSReadLine\\ConsoleHost_history.txt"
     ]
   }
 };
 
-// Verbesserte Funktion zum Finden von Log-Dateien
+// Verbesserte Funktion zum Finden von Log-Dateien mit Windows-Unterstützung
 async function findFiles(paths: string[]): Promise<Array<{name: string, path: string, size: number, modified: Date | null}>> {
   const files = [];
   const processedPaths = new Set(); // Um doppelte Dateien zu vermeiden
+  const isWindows = Deno.build.os === "windows";
 
-  for (const path of paths) {
+  // Umgebungsvariablen ersetzen - besonders für Windows wichtig
+  function expandEnvVars(path: string): string {
+    if (isWindows) {
+      // Ersetze Windows-Umgebungsvariablen wie %USERPROFILE%, %TEMP%, usw.
+      return path.replace(/%([^%]+)%/g, (_, name) => {
+        const envVar = Deno.env.get(name);
+        return envVar || `%${name}%`;
+      });
+    }
+    return path;
+  }
+
+  for (const rawPath of paths) {
+    const path = expandEnvVars(rawPath);
     try {
+      // Spezielle Behandlung für Windows Event Logs
+      if (isWindows && path.endsWith('.evtx')) {
+        if (!processedPaths.has(path)) {
+          try {
+            const stat = await Deno.stat(path);
+            files.push({
+              name: basename(path),
+              path: path,
+              size: stat.size,
+              modified: stat.mtime
+            });
+            processedPaths.add(path);
+          } catch {
+            // Datei nicht zugänglich
+          }
+        }
+        continue;
+      }
+      
       // Prüfen, ob der Pfad ein Glob-Pattern enthält
       if (path.includes('*')) {
-        const isWindows = Deno.build.os === "windows";
         const basePath = path.substring(0, path.indexOf('*')).replace(/\\$/, '');
         
         try {
           // Basisverzeichnis prüfen
-          const baseDir = await Deno.stat(basePath);
-          if (baseDir.isDirectory) {
-            // Einfache Glob-Suche mit Kommandozeile
+          let baseExists = false;
+          try {
+            const baseDir = await Deno.stat(basePath);
+            baseExists = baseDir.isDirectory;
+          } catch {
+            baseExists = false;
+          }
+          
+          // Glob-Suche mit Kommandozeile
+          if (baseExists) {
             const cmd = isWindows 
               ? await run("powershell", ["-Command", `Get-ChildItem -Path "${path}" -File | Select-Object -ExpandProperty FullName`], { silent: true })
               : await run("sh", ["-c", `ls -1 ${path} 2>/dev/null`], { silent: true });
@@ -135,49 +182,80 @@ async function findFiles(paths: string[]): Promise<Array<{name: string, path: st
               }
             }
           }
-        } catch {} // Basisverzeichnis nicht gefunden
+        } catch {} // Fehler bei der Glob-Verarbeitung
         continue;
       }
       
-      const stat = await Deno.stat(path);
-      
-      if (stat.isDirectory) {
-        // Wenn es ein Verzeichnis ist, füge alle Dateien darin hinzu
-        try {
-          for await (const entry of Deno.readDir(path)) {
-            if (entry.isFile) {
-              const filePath = join(path, entry.name);
-              if (!processedPaths.has(filePath)) {
-                processedPaths.add(filePath);
-                try {
-                  const fileInfo = await Deno.stat(filePath);
-                  files.push({
-                    name: entry.name,
-                    path: filePath,
-                    size: fileInfo.size,
-                    modified: fileInfo.mtime
-                  });
-                } catch {} // Überspringe Dateien ohne Zugriffsberechtigung
+      // Normaler Pfad-Check
+      try {
+        const stat = await Deno.stat(path);
+        
+        if (stat.isDirectory) {
+          // Wenn es ein Verzeichnis ist, füge alle Dateien darin hinzu
+          try {
+            for await (const entry of Deno.readDir(path)) {
+              if (entry.isFile) {
+                const filePath = join(path, entry.name);
+                if (!processedPaths.has(filePath)) {
+                  processedPaths.add(filePath);
+                  try {
+                    const fileInfo = await Deno.stat(filePath);
+                    files.push({
+                      name: entry.name,
+                      path: filePath,
+                      size: fileInfo.size,
+                      modified: fileInfo.mtime
+                    });
+                  } catch {} // Überspringe Dateien ohne Zugriffsberechtigung
+                }
               }
             }
+          } catch (error) {
+            // Weitermachen mit anderen Pfaden
+            logError(`Zugriff auf Verzeichnis nicht möglich: ${path} - ${error.message}`, "Log Browser");
           }
-        } catch (error) {
-          // Weitermachen mit anderen Pfaden
-          logError(`Zugriff auf Verzeichnis nicht möglich: ${path} - ${error.message}`, "Log Browser");
+        } else {
+          // Eine direkte Datei hinzufügen, wenn sie nicht bereits verarbeitet wurde
+          if (!processedPaths.has(path)) {
+            processedPaths.add(path);
+            files.push({
+              name: basename(path),
+              path: path,
+              size: stat.size,
+              modified: stat.mtime
+            });
+          }
         }
-      } else {
-        // Eine direkte Datei hinzufügen, wenn sie nicht bereits verarbeitet wurde
-        if (!processedPaths.has(path)) {
-          processedPaths.add(path);
+      } catch {} // Pfad existiert nicht oder ist nicht zugänglich, überspringe
+    } catch {} // Allgemeiner Fehler, überspringe
+  }
+
+  // Windows Event Log durch PowerShell auslesen, wenn keine Dateien gefunden wurden und Windows
+  if (isWindows && files.length === 0) {
+    try {
+      // Liste der Windows-Ereignisprotokolle erhalten
+      const eventLogsResult = await run("powershell", ["-Command", "Get-WinEvent -ListLog * | Where-Object {$_.RecordCount -gt 0} | Select-Object -First 5 | Select-Object LogName, RecordCount"], { silent: true });
+      
+      if (eventLogsResult.code === 0) {
+        const eventLogNames = eventLogsResult.stdout
+          .split('\n')
+          .filter(line => line.includes('LogName'))
+          .map(line => {
+            const match = line.match(/LogName\s*:\s*(.+)/);
+            return match ? match[1].trim() : null;
+          })
+          .filter(name => name);
+        
+        for (const logName of eventLogNames) {
           files.push({
-            name: basename(path),
-            path: path,
-            size: stat.size,
-            modified: stat.mtime
+            name: `${logName} (Windows Event Log)`,
+            path: `winlog:${logName}`,
+            size: 0,
+            modified: new Date()
           });
         }
       }
-    } catch {} // Pfad existiert nicht oder ist nicht zugänglich, überspringe
+    } catch {} // Fehler beim Zugriff auf Windows Event Logs
   }
 
   return files;
@@ -188,8 +266,19 @@ export const api = {
   // Gibt verfügbare Log-Typen zurück
   types: async function() {
     const availableTypes = [];
+    const isWindows = Deno.build.os === "windows";
     
-    for (const [type, config] of Object.entries(LOG_PATHS)) {
+    // Spezielle Windows-Kategorien zuerst anzeigen, wenn auf Windows
+    const categories = isWindows 
+      ? { ...LOG_PATHS } 
+      : Object.entries(LOG_PATHS)
+          .filter(([key]) => !key.startsWith('windows_'))
+          .reduce((obj, [key, value]) => {
+            obj[key] = value;
+            return obj;
+          }, {});
+    
+    for (const [type, config] of Object.entries(categories)) {
       const files = await findFiles(config.paths);
       if (files.length > 0) {
         availableTypes.push({ 
@@ -236,9 +325,26 @@ export const api = {
 
         if (!path) return { error: "Kein Log-Dateipfad angegeben" };
 
+        const isWindows = Deno.build.os === "windows";
+        
+        // Windows Event Log spezielle Behandlung
+        if (path.startsWith('winlog:')) {
+          const logName = path.substring(7); // 'winlog:' entfernen
+          const powershellCmd = filter
+            ? `Get-WinEvent -LogName "${logName}" -MaxEvents ${lines} | Where-Object { $_.Message -match "${filter}" } | Format-List`
+            : `Get-WinEvent -LogName "${logName}" -MaxEvents ${lines} | Format-List`;
+          
+          const result = await run("powershell", ["-Command", powershellCmd], { silent: true });
+          return {
+            content: result.stdout || "Keine Ereignisse gefunden",
+            error: result.code !== 0 ? result.stderr : null
+          };
+        }
+
         // Sicherheitscheck: Verhindere Directory Traversal
         if (path.includes('..')) return { error: "Ungültiger Pfad" };
 
+        // Für normale Dateien
         try {
           const stat = await Deno.stat(path);
           if (stat.isDirectory) return { error: "Der angegebene Pfad ist ein Verzeichnis, keine Datei" };
@@ -246,36 +352,36 @@ export const api = {
           return { error: "Log-Datei nicht gefunden oder nicht zugänglich" };
         }
 
-        const isWindows = Deno.build.os === "windows";
         let result;
 
         if (isWindows) {
-          // Windows-spezifische Behandlung für .evtx-Dateien
+          // Windows-spezifische Behandlung
           if (path.endsWith('.evtx')) {
+            // Windows Event Log Dateien
             const powershellCmd = `Get-WinEvent -Path "${path}" -MaxEvents ${lines} | Format-List`;
-            result = await run("powershell", ["-Command", powershellCmd]);
+            result = await run("powershell", ["-Command", powershellCmd], { silent: true });
           } else {
             // Normale Textdateien unter Windows
             const powershellCmd = filter 
-              ? `Get-Content -Tail ${lines} "${path}" | Select-String -Pattern "${filter}"` 
+              ? `Get-Content -Tail ${lines} "${path}" | Select-String -Pattern "${filter}"`
               : `Get-Content -Tail ${lines} "${path}"`;
-            result = await run("powershell", ["-Command", powershellCmd]);
+            result = await run("powershell", ["-Command", powershellCmd], { silent: true });
           }
         } else {
           // Unix-Systeme mit vereinfachtem Befehl
           const command = filter 
-            ? `tail -n${lines} "${path}" | grep -i "${filter}"` 
+            ? `tail -n${lines} "${path}" | grep -i "${filter}"`
             : `tail -n${lines} "${path}"`;
           result = await run("sh", ["-c", command], { silent: true });
         }
 
         return { 
-          content: result.stdout, 
-          error: result.code !== 0 ? result.stderr : null 
+          content: result.stdout || "Keine Inhalte gefunden", 
+          error: result.code !== 0 ? result.stderr : null
         };
       } catch (err) {
         logError(`Fehler beim Lesen der Log-Datei: ${err.message}`, "Log Browser");
-        return { error: "Fehler beim Lesen der Log-Datei" };
+        return { error: `Fehler beim Lesen der Log-Datei: ${err.message}` };
       }
     }
   }
