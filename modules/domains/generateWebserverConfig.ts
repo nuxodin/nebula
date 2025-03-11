@@ -36,20 +36,14 @@ export async function generateWebserverConfig(domain): Promise<WebServerConfig |
       ensureDir(logsPath)
     ]);
 
-    // Konfigurationen generieren
     const configs = getConfigForRuntime(domain.name, domain.runtime, domain.id, httpdocsPath);
 
-    // Konfigurationsdateien speichern
     await Promise.all([
       Deno.writeTextFile(join(confPath, "nginx.conf"), configs.nginx),
-      //Deno.writeTextFile(join(confPath, "apache.conf"), configs.apache),
       Deno.writeTextFile(join('/etc/apache2/nebula-vhosts/', domain.name + '.conf'), configs.apache)
     ]);
 
-    // Symlinks für Nginx erstellen (nur unter Linux/Mac)
-    if (Deno.build.os !== "windows") {
-      await createNginxSymlinks(domain.name, confPath);
-    }
+    if (Deno.build.os !== "windows") await createNginxSymlinks(domain.name, confPath);
 
     logInfo(`Webserver-Konfigurationen für ${domain.name} generiert`, "WebserverConfig");
     return configs;
@@ -265,16 +259,8 @@ function getConfigForRuntime(
  * Ändert die Runtime einer Domain und aktualisiert die Webserver-Konfiguration
  */
 export async function setRuntime(domainId: number, runtime: string): Promise<boolean> {
-  try {
-    
-    // todo: check if runtime exists        
-    
-    db.query(`UPDATE domains SET runtime = ? WHERE id = ?`, [runtime, domainId]);
-    const result = await generateWebserverConfig(domainId);
-    
-    return result !== null;
-  } catch (error) {
-    logError(`Fehler beim Setzen der Runtime: ${error.message}`, "WebserverConfig");
-    return false;
-  }
+  // todo: check if runtime exists        
+  db.query(`UPDATE domains SET runtime = ? WHERE id = ?`, [runtime, domainId]);
+  const result = await generateWebserverConfig(domainId);
+  return result !== null;
 }

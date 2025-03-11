@@ -1,6 +1,6 @@
 import { Context } from "hono";
 import { logError, logInfo } from "../../utils/logger.ts";
-import { startService, stopService, reloadService, run, isCommandAvailable, useSystem } from "../../utils/command.ts";
+import { startService, stopService, restartService, run, isCommandAvailable, useSystem } from "../../utils/command.ts";
 
 
 // Service helper functions
@@ -263,8 +263,9 @@ export const api = {
                         serviceName = service.originalName;
                     }
 
-                    await stopService(serviceName);
-                    await startService(serviceName);
+                    await restartService(serviceName);
+                    //await stopService(serviceName);
+                    //await startService(serviceName);
 
 
                     logInfo(`Service ${name} restarted`, "Services", c);
