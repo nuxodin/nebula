@@ -91,4 +91,18 @@
   };
 
   loadDomains();
+
+  // runtime select
+  apiFetch('/api/nebula/runtimes').then(runtimes => {
+    const select = document.getElementById('addDomainRuntime');
+    runtimes.forEach(runtime => {
+      const option = document.createElement('option');
+      option.value = runtime;
+      option.textContent = runtime;
+      select.appendChild(option);
+    });
+  });
+
+
+
 </script>

@@ -1,0 +1,79 @@
+<script type="module">
+import { apiFetch } from '/public/js/utils.js';
+import * as dialog from "https://cdn.jsdelivr.net/gh/u2ui/u2@x.x.x/js/dialog/dialog.min.js";
+
+// Status-Management
+async function updateStatus() {
+    try {
+        const isRunning = await apiFetch('/api/apache/status');
+        const badge = document.getElementById('status-badge');
+        const button = document.getElementById('toggleService');
+        
+        badge.textContent = isRunning ? 'Aktiv' : 'Inaktiv';
+        badge.className = `u2-badge ${isRunning ? 'status-active' : 'status-inactive'}`;
+        
+        button.textContent = isRunning ? 'Stop' : 'Start';
+        button.className = `btn ${isRunning ? 'btn-danger' : 'btn-success'}`;
+    } catch (error) {
+        console.error('Fehler beim Abrufen des Status:', error);
+    }
+}
+
+// Service starten/stoppen
+document.getElementById('toggleService').addEventListener('click', async () => {
+    try {
+        const isRunning = await apiFetch('/api/apache/status');
+        if (isRunning) {
+            await apiFetch('/api/apache/stop', {post:{}});
+        } else {
+            await apiFetch('/api/apache/start', {post:{}});
+        }
+        await updateStatus();
+        await loadModules();
+    } catch (error) {
+        dialog.alert('Fehler: ' + error.message);
+    }
+});
+
+// Module laden und anzeigen
+async function loadModules() {
+    const tbody = document.getElementById('moduleList');
+    try {
+        const modules = await apiFetch('/api/apache/modules');
+        tbody.innerHTML = modules.map(module => `
+            <label class="u2-flex" u2-skin="invert" style="border-radius:.5rem; padding:.3em .8em; justify-content:space-between; align-items:center; margin:0">
+                ${module.name}
+                <button class="u2-unstyle" u2-confirm="${module.enabled ? 'Deaktivieren' : 'Aktivieren'}?" onclick="window.toggleModule('${module.name}', ${module.enabled})" title="${module.enabled ? 'Deaktivieren' : 'Aktivieren'}" style="font-size:1.5rem">
+                    ${module.enabled ? 
+                        '<i class="mdi mdi-checkbox-marked-circle"></i>' :
+                        '<i class="mdi mdi-checkbox-blank-circle-outline"></i>'
+                    }
+                </button>
+            </label>
+        `).join('');
+    } catch (error) {
+        tbody.innerHTML = `<tr><td colspan="3" class="error">Fehler beim Laden der Module: ${error.message}</td></tr>`;
+    }
+}
+
+// Module aktivieren/deaktivieren
+window.toggleModule = async (name, isEnabled) => {
+    try {
+        if (isEnabled) {
+            await apiFetch(`/api/apache/module/${name}/disable`, {post:{}});
+        } else {
+            await apiFetch(`/api/apache/module/${name}/enable`, {post:{}});
+        }
+        await loadModules();
+    } catch (error) {
+        dialog.alert('Fehler: ' + error.message);
+    }
+};
+
+// Initial laden
+updateStatus();
+loadModules();
+
+// Regelmäßiges Update
+setInterval(updateStatus, 5000);
+</script>

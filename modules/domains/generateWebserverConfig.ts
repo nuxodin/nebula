@@ -18,15 +18,9 @@ interface WebServerConfig {
 /**
  * Generiert Webserver-Konfigurationen basierend auf der ausgewählten Runtime
  */
-export async function generateWebserverConfig(domainId: number): Promise<WebServerConfig | null> {
+export async function generateWebserverConfig(domain): Promise<WebServerConfig | null> {
   try {
     // Domain-Informationen aus der Datenbank abrufen
-    const domain = db.queryEntries(`SELECT * FROM domains WHERE id = ?`, [domainId])[0];
-
-    if (!domain) {
-      logError(`Domain mit ID ${domainId} nicht gefunden`, "WebserverConfig");
-      return null;
-    }
 
     // Pfade für die Domain
     const domainPath = join(vhostsRoot, domain.name);
@@ -36,6 +30,8 @@ export async function generateWebserverConfig(domainId: number): Promise<WebServ
 
     // Verzeichnisse erstellen
     await Promise.all([
+      ensureDir(vhostsRoot),
+      ensureDir(httpdocsPath),
       ensureDir(confPath),
       ensureDir(logsPath)
     ]);
@@ -46,7 +42,8 @@ export async function generateWebserverConfig(domainId: number): Promise<WebServ
     // Konfigurationsdateien speichern
     await Promise.all([
       Deno.writeTextFile(join(confPath, "nginx.conf"), configs.nginx),
-      Deno.writeTextFile(join(confPath, "apache.conf"), configs.apache)
+      //Deno.writeTextFile(join(confPath, "apache.conf"), configs.apache),
+      Deno.writeTextFile(join('/etc/apache2/nebula-vhosts/', domain.name + '.conf'), configs.apache)
     ]);
 
     // Symlinks für Nginx erstellen (nur unter Linux/Mac)
@@ -69,6 +66,18 @@ async function createNginxSymlinks(domainName: string, confPath: string): Promis
   try {
     const nginxAvailablePath = join(sitesAvailablePath, `${domainName}.conf`);
     const nginxEnabledPath = join(sitesEnabledPath, `${domainName}.conf`);
+    const nginxConfPath = join(confPath, "nginx.conf");
+
+    // Ensure parent directories exist
+    await ensureDir(sitesAvailablePath);
+    await ensureDir(sitesEnabledPath);
+
+    // Check if source file exists
+    try {
+      await Deno.stat(nginxConfPath);
+    } catch (error) {
+      throw new Error(`nginx.conf nicht gefunden in ${nginxConfPath}`);
+    }
 
     // Bestehende Symlinks entfernen (falls vorhanden)
     for (const path of [nginxAvailablePath, nginxEnabledPath]) {
@@ -80,12 +89,13 @@ async function createNginxSymlinks(domainName: string, confPath: string): Promis
     }
 
     // Neue Symlinks erstellen
-    await Deno.symlink(join(confPath, "nginx.conf"), nginxAvailablePath);
+    await Deno.symlink(nginxConfPath, nginxAvailablePath);
     await Deno.symlink(nginxAvailablePath, nginxEnabledPath);
     
     logInfo(`Symlinks für ${domainName} erstellt`, "WebserverConfig");
   } catch (error) {
     logError(`Fehler beim Erstellen der Symlinks: ${error.message}`, "WebserverConfig");
+    throw error; // Propagate error to caller
   }
 }
 
@@ -160,6 +170,59 @@ function getConfigForRuntime(
         '    ' + apacheSecurityHeaders + '\n' +
         '</VirtualHost>'
     };
+  } else if (runtime === 'php') {
+    // PHP-FPM spezifische Konfiguration
+    //const phpVersion = runtime.version;
+    const phpVersion = 8.2;
+    const phpFpmSocket = `/run/php/php${phpVersion}-fpm.sock`;
+
+    return {
+      nginx: 
+        'server {\n' +
+        '    listen 80;\n' +
+        '    server_name ' + serverNames + ';\n' +
+        '    \n' +
+        '    root ' + documentRoot + ';\n' +
+        '    index index.php index.html;\n' +
+        '    \n' +
+        '    access_log ' + accessLog + ';\n' +
+        '    error_log ' + errorLog + ';\n' +
+        '    \n' +
+        '    location / {\n' +
+        '        try_files $uri $uri/ /index.php?$query_string;\n' +
+        '    }\n' +
+        '    \n' +
+        '    location ~ \\.php$ {\n' +
+        '        include fastcgi_params;\n' +
+        '        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;\n' +
+        '        fastcgi_pass unix:' + phpFpmSocket + ';\n' +
+        '        fastcgi_index index.php;\n' +
+        '    }\n' +
+        '    ' + nginxSecurityHeaders + '\n' +
+        '}',
+      apache: 
+        '<VirtualHost *:80>\n' +
+        '    ServerName ' + domainName + '\n' +
+        '    ServerAlias www.' + domainName + ' ' + domainName + '.preview.' + config.hostname + '\n' +
+        '    DocumentRoot "' + documentRoot + '"\n' +
+        '    \n' +
+        '    CustomLog "' + accessLog + '" combined\n' +
+        '    ErrorLog "' + errorLog + '"\n' +
+        '    \n' +
+        '    <Directory "' + documentRoot + '">\n' +
+        '        Options Indexes FollowSymLinks\n' +
+        '        AllowOverride All\n' +
+        '        Require all granted\n' +
+        '        DirectoryIndex index.php index.html\n' +
+        '    </Directory>\n' +
+        '    \n' +
+        '    <FilesMatch "\\.php$">\n' +
+        '        SetHandler "proxy:unix:' + phpFpmSocket + '|fcgi://localhost/"\n' +
+        '    </FilesMatch>\n' +
+        '    \n' +
+        '    ' + apacheSecurityHeaders + '\n' +
+        '</VirtualHost>'
+    };
   } else {
     // Static-Konfiguration (default)
     return {
@@ -193,7 +256,7 @@ function getConfigForRuntime(
         '        Require all granted\n' +
         '    </Directory>\n' +
         '    ' + apacheSecurityHeaders + '\n' +
-        '</VirtualHost>'
+        '</VirtualHost>',
     };
   }
 }
@@ -203,9 +266,8 @@ function getConfigForRuntime(
  */
 export async function setRuntime(domainId: number, runtime: string): Promise<boolean> {
   try {
-    if (!['static', 'deno'].includes(runtime)) {
-      throw new Error(`Ungültige Runtime: ${runtime}`);
-    }
+    
+    // todo: check if runtime exists        
     
     db.query(`UPDATE domains SET runtime = ? WHERE id = ?`, [runtime, domainId]);
     const result = await generateWebserverConfig(domainId);

@@ -1,8 +1,12 @@
 <div class="header">
-  <h1 id="pageTitle">System Packages</h1>
+  <h1>System Packages</h1>
 </div>
 
 <input type="search" id="packageSearch" placeholder="durchsuchen...">
+<div>
+  <span id="updateCount"></span>
+  <button id="updateAll" class="btn">Update all</button>
+</div>
 
 <u2-table sortable>
   <table>
@@ -14,6 +18,5 @@
         <th>Type
       </tr>
     <tbody id="packageGrid">
-    </tbody>
   </table>
 </u2-table>

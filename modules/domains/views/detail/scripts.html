@@ -36,8 +36,19 @@ async function loadDomainDetails() {
     document.getElementById('domainCreated').textContent = new Date(domain.created_at).toLocaleString();
     
     // Runtime-Informationen setzen
-    document.getElementById('runtime').textContent = getRuntimeDisplayName(domain.runtime);
-    document.getElementById('runtimeArgs').textContent = domain.runtime_version || 'Standard';
+    document.getElementById('runtime').textContent = domain.runtime;
+    
+    document.getElementById('runtimeVersion').innerHTML = `<select id="runtimeVersionSelect">
+      <option value="${domain.runtime_version}">${domain.runtime_version}</option>
+    </select>`;
+
+    apiFetch(`/api/${domain.runtime}/versions`)
+      .then(({versions}) => {
+        for (const [version, data] of Object.entries(versions)) {
+          if (!data.installed) continue;
+          document.getElementById('runtimeVersionSelect').innerHTML += `<option value="${version}">${version}</option>`;
+        }
+      });
     
     // Web Space & SSL Informationen
     document.getElementById('sslStatus').innerHTML = domain.ssl_enabled ? 
@@ -75,17 +86,7 @@ async function loadDomainDetails() {
   }
 }
 
-// Hilfsfunktion zur Anzeige des lesbareren Runtime-Namens
-function getRuntimeDisplayName(runtime) {
-  switch (runtime) {
-    case 'static': return 'Static Hosting';
-    case 'deno': return 'Deno';
-    default: return runtime || 'Unbekannt';
-  }
-}
-
 // Initial load
 loadDomainDetails();
 
 </script>
-

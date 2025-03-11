@@ -16,9 +16,13 @@ async function loadLogs() {
 // Logs filtern und anzeigen
 function renderLogs(logsToRender) {
   const tbody = document.getElementById('logGrid');
-  tbody.innerHTML = logsToRender.map(log => `
+  tbody.innerHTML = logsToRender.map(log => {
+    console.log(log);
+    const date = new Date(log.timestamp);
+    return `
     <tr>
-      <td>${new Date(log.timestamp).toLocaleString()}
+      <td>
+        <u2-time datetime="${date.toISOString()}" second type="relative">${date.toLocaleString()}</u2-time>
       <td>
         <small class="u2-badge ${log.level === 'error' ? 'status-inactive' : 'status-active'}">
           ${log.level.toUpperCase()}
@@ -26,7 +30,8 @@ function renderLogs(logsToRender) {
       <td>${log.message}
       <td>${log.source || '-'}
       <td>${log.user_login || '-'}
-  `).join('');
+  `;
+  }).join('');
 }
 
 // Log-Suche

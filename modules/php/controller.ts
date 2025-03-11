@@ -1,6 +1,10 @@
-import { run, isCommandAvailable, startService, stopService, status } from "../../utils/command.ts";
+import { run, isCommandAvailable, startService, stopService, status, packetManager } from "../../utils/command.ts";
 import { logError, logInfo } from "../../utils/logger.ts";
-import { packetManager } from "./utils.ts";
+import { registerRuntime } from "../../utils/runtime.ts";
+import { phpRuntime } from "./runtime.ts";
+
+
+registerRuntime('php', phpRuntime);
 
 // Die unterstützten PHP-Versionen werden jetzt dynamisch ausgelesen
 export async function getSupportedPhpVersions(): Promise<string[]> {
@@ -153,7 +157,6 @@ export async function startPhpService(version: string): Promise<boolean> {
         await startService(fpmService);
         await run("service", [fpmService, "start"], {sudo:true});
 
-
         logInfo(`PHP ${version} FPM Service wurde gestartet.`, "PHP");
         return true;
     } catch (error) {
@@ -178,37 +181,30 @@ export async function stopPhpService(version: string): Promise<boolean> {
 // cache
 let availableVersions: string[] | null = null;
 export async function getAvailableVersions(): Promise<string[]> {
-    if (!availableVersions) {
-        availableVersions = await fetchAvailableVersions();
-    }
+    if (!availableVersions) availableVersions = await fetchAvailableVersions();
     return availableVersions;
 }
 
 export async function fetchAvailableVersions(): Promise<string[]> {
     const pm = await packetManager();
-    try {
-        if (pm === "apt") {
-            const result = await run("apt", ["search", "php"], { silent: true });
-            const versions = new Set<string>();
-            const versionRegex = /php(\d+\.\d+)/;
-            result.stdout.split('\n').forEach(line => {
-                const match = line.match(versionRegex);
-                if (match) versions.add(match[1]);
-            });
-            return Array.from(versions).sort();
-        } else if (pm === "yum") {
-            const result = await run("dnf", ["list", "available", "php*", "--enablerepo=remi-php*"], { silent: true });
-            const versions = new Set<string>();
-            const versionRegex = /php(\d+\.\d+)/;
-            result.stdout.split('\n').forEach(line => {
-                const match = line.match(versionRegex);
-                if (match) versions.add(match[1]);
-            });
-            return Array.from(versions).sort();
-        }
-        return [];
-    } catch (error) {
-        logError(`Fehler beim Abrufen der verfügbaren PHP-Versionen: ${error}`, "PHP");
-        return [];
+    if (pm === "apt") {
+        const result = await run("apt", ["search", "php"], { silent: true });
+        const versions = new Set<string>();
+        const versionRegex = /php(\d+\.\d+)/;
+        result.stdout.split('\n').forEach(line => {
+            const match = line.match(versionRegex);
+            if (match) versions.add(match[1]);
+        });
+        return Array.from(versions).sort();
+    } else if (pm === "yum") {
+        const result = await run("dnf", ["list", "available", "php*", "--enablerepo=remi-php*"], { silent: true });
+        const versions = new Set<string>();
+        const versionRegex = /php(\d+\.\d+)/;
+        result.stdout.split('\n').forEach(line => {
+            const match = line.match(versionRegex);
+            if (match) versions.add(match[1]);
+        });
+        return Array.from(versions).sort();
     }
+    return [];
 }

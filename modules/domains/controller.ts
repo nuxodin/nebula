@@ -5,6 +5,7 @@ import { logInfo, logError } from "../../utils/logger.ts";
 import { join } from "https://deno.land/std/path/mod.ts";
 import { run } from "../../utils/command.ts";
 import { generateWebserverConfig } from "./generateWebserverConfig.ts";
+import { getRuntime } from "../../utils/runtime.ts";
 
 interface DomainOptions {
   name: string;
@@ -23,43 +24,41 @@ export async function createDomain(options: DomainOptions) {
     if (exists) throw new Error("Domain existiert bereits");
 
     // Erstelle Domain in der Datenbank
-
+    const domain = {
+      name: options.name,
+      owner_id: options.owner_id,
+      runtime: options.runtime || config.default_runtime,
+      runtime_version: options.runtime_version || 'latest',
+    };
     const { id: domain_id } = db.queryEntries(`
       INSERT INTO domains (
         name, owner_id, runtime, runtime_version
       ) VALUES (?, ?, ?, ?)
       RETURNING id
-    `, [
-      options.name,
-      options.owner_id,
-      options.runtime || config.default_runtime,
-      options.runtime_version || config.default_runtime_version
-    ])[0];
+    `, [ domain.name, domain.owner_id, domain.runtime, domain.runtime_version ])[0];
+    domain.id = domain_id;
 
-    await createDirectory(domain_id);
-    await createTemplate(domain_id);
+    await createDirectory(domain);
+    await createTemplate(domain);
 
-    if (options.runtime === 'deno') {
-      import('../deno/runtime.ts').then(({ denoRuntime }) => {
-        denoRuntime.initDomain(domain_id);
-      });
-    }
+    const runtime = getRuntime(domain.runtime)
+    runtime.initDomain(domain);
+
+    // import(`../${options.runtime}/runtime.ts`).then(({ runtime }) => {
+    //   runtime.initDomain(domain);
+    // });
 
     // erstelle ein system benutzer für die domain
     if (Deno.build.os !== "windows") {
       const domainPath = join(config.vhosts_root, options.name);
-      const linuxUser = `ne-do-${domain_id}`;
+      const linuxUser = `ne-do-${domain.id}`;
       await run('adduser', ['--system', '--group', '--home', domainPath, linuxUser], { sudo: true });
       await run('chown', ['-R', `${linuxUser}:${linuxUser}`, domainPath], { sudo: true });
     }
 
-    await createDefaultDnsRecords(domain_id);
-    
-    // Webserver-Konfiguration generieren (ersetzt createApacheConf und createNginxConf)
-    await generateWebserverConfig(domain_id);
-
-    // mail-server konfiguration
-
+    await createDefaultDnsRecords(domain);
+    await generateWebserverConfig(domain);
+    // todo: mail-server konfiguration
 
     logInfo(`Domain ${options.name} wurde erstellt`, "Domains");
     return { success: true, id: domain_id };
@@ -69,35 +68,18 @@ export async function createDomain(options: DomainOptions) {
   }
 }
 
-async function createDirectory(domain_id: number) {
-  const domain = db.queryEntries(`SELECT * FROM domains WHERE id = ?`,[domain_id])[0];
-  if (!domain) throw new Error("Domain not found");  
-
-  // Verwende den OS-spezifischen Pfad aus der Konfiguration
+async function createDirectory(domain) {
   const domainPath = join(config.vhosts_root, domain.name);
-  
-  const paths = [
-    join(domainPath, "httpdocs"),
-    join(domainPath, "logs"),
-    join(domainPath, "conf"),
-    join(domainPath, "tmp")
-  ];
-  
-  // Verzeichnisse erstellen
-  for (const path of paths) {
-    await ensureDir(path);
-    logInfo(`Verzeichnis erstellt: ${path}`, "Domains");
+  const folders = ["httpdocs","logs","conf","tmp"];
+  for (const folder of folders) {
+    await ensureDir(join(domainPath, folder));
   }
 }
 
 // todo: add full folder contents not only index.html
-async function createTemplate(domain_id: number) {
-  const domain = db.queryEntries(`SELECT * FROM domains WHERE id = ?`,[domain_id])[0];
-  if (!domain) throw new Error("Domain not found");
-
+async function createTemplate(domain) {
   const domainPath = join(config.vhosts_root, domain.name, "httpdocs", "index.html");
   const templatePath = join(Deno.cwd(), "data", "templates", "default", "index.html");
-  
   try {
     await copy(templatePath, domainPath);
     logInfo(`Template kopiert nach ${domainPath}/httpdocs`, "Domains");
@@ -106,38 +88,28 @@ async function createTemplate(domain_id: number) {
   }
 }
 
-async function createDefaultDnsRecords(domain_id: number) {
-  const domain = db.queryEntries('SELECT * FROM domains WHERE id = ?', [domain_id])[0];
-  if (!domain) throw new Error("Domain not found");
-
-  // Standardmäßige DNS Records
-  const records = [{
-      domain_id,
+async function createDefaultDnsRecords(domain) {
+  const records = [{ // Standardmäßige DNS Records
       record_type: 'NS',
       name: '@',
       value: config.dns_primary_ns,
     },{
-      domain_id,
       record_type: 'NS',
       name: '@',
       value: config.dns_secondary_ns,
     },{
-      domain_id,
       record_type: 'A',
       name: '@',
       value: config.default_ip === 'auto' ? '127.0.0.1' : config.default_ip,
     },{
-      domain_id,
       record_type: 'CNAME',
       name: 'www',
       value: '@',
     },{
-      domain_id,
       record_type: 'MX',
       name: '@',
       value: '@'      
     },{
-      domain_id,
       record_type: 'TXT',
       name: '@',
       value: 'v=spf1 a mx -all'
@@ -149,7 +121,7 @@ async function createDefaultDnsRecords(domain_id: number) {
     db.query(`
       INSERT INTO dns_records (domain_id, record_type, name, value)
       VALUES (?, ?, ?, ?)
-    `, [record.domain_id, record.record_type, record.name, record.value]);
+    `, [domain.id, record.record_type, record.name, record.value]);
   }
 
   // Generiere die Bind Zone-Datei

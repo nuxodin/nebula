@@ -1,5 +1,5 @@
 import { ensureDir } from "https://deno.land/std/fs/mod.ts";
-import { run } from "../../utils/command.ts";
+import { run, stat } from "../../utils/command.ts";
 import { config } from "../../utils/config.ts";
 import { logError, logInfo } from "../../utils/logger.ts";
 import db from "../../utils/database.ts";
@@ -47,9 +47,7 @@ export async function createBackup(domainId: number, options: BackupOptions) {
     // Mail-Daten sichern
     if (options.includeMailData !== false) {
       const mailDir = `/var/mail/${domain.name}`;
-      if (await Deno.stat(mailDir).catch(() => null)) {
-        tasks.push(run(`tar -czf ${backupDir}/mail.tar.gz -C ${mailDir} .`));
-      }
+      if (await stat(mailDir)) tasks.push(run(`tar -czf ${backupDir}/mail.tar.gz -C ${mailDir} .`));
     }
 
     // Konfigurationen sichern

@@ -1,19 +1,7 @@
 import { Context } from "hono";
 import { logError, logInfo } from "../../utils/logger.ts";
-import { renderTemplate } from "../../utils/template.ts";
-import { startService, stopService, run, isCommandAvailable } from "../../utils/command.ts";
+import { startService, stopService, reloadService, run, isCommandAvailable, useSystem } from "../../utils/command.ts";
 
-// View Controllers
-export const getServicesView = async (c: Context) => {
-    try {
-        const content = await Deno.readTextFile("./modules/services/views/content.html");
-        const scripts = await Deno.readTextFile("./modules/services/views/scripts.html");
-        return c.html(await renderTemplate("System Services", content, "", scripts));
-    } catch (err) {
-        logError("Fehler beim Laden der Services-Übersicht", "Services", c, err);
-        return c.text("Internal Server Error", 500);
-    }
-};
 
 // Service helper functions
 async function getWindowsServices() {
@@ -79,11 +67,12 @@ async function getWindowsServices() {
 }
 
 async function getLinuxServices() {
-    let services = [];
+    const services = [];
+    const use = await useSystem();
 
-    if (await isCommandAvailable("systemctl")) {
+    if (use === "systemctl") {
         // Systemd
-        const { stdout } = await run("systemctl", ["list-units", "--type=service", "--all", "--no-pager", "--no-legend"]);
+        const { stdout } = await run("systemctl", ["list-units", "--type=service", "--all", "--no-pager", "--no-legend"], { throw: true });
         const lines = stdout.split("\n");
 
         for (const line of lines) {
@@ -122,21 +111,14 @@ async function getLinuxServices() {
             }
         }
     } else {
-        // Traditional init system
-        const serviceCommand = await isCommandAvailable("service") ? "service" :
-            await isCommandAvailable("/etc/init.d/apache2") ? "/etc/init.d" : null;
 
-        if (!serviceCommand) {
-            console.error("No supported service management system found");
-            return [];
-        }
-
-        if (serviceCommand === "service") {
-            const { stdout } = await run("service", ["--status-all"]);
+        if (use === "service") {
+            const { stdout } = await run("service", ["--status-all"], { throw: true });
             const lines = stdout.split("\n");
 
 
             for (const line of lines) {
+
                 const match = line.match(/^\s*\[\s*([+\-\?])\s*\]\s+(\S+)/);
 
                 if (match) {
@@ -181,14 +163,13 @@ async function getLinuxServices() {
                 }
             }
         } else {
-            // Direct init.d script handling
             try {
                 const { stdout } = await run("ls", ["-1", "/etc/init.d"]);
                 const services = stdout.split("\n").filter(name => name.trim());
 
                 for (const name of services) {
                     try {
-                        const { code } = await run(`/etc/init.d/${name}`, ["status"]);
+                        const { code } = await run(`/etc/init.d/${name}`, ["status"], { throw: true });
                         const status = code === 0 ? "running" : "stopped";
 
                         let description = "";
@@ -237,9 +218,7 @@ export const api = {
                     if (Deno.build.os === "windows") {
                         const services = await getWindowsServices();
                         const service = services.find(s => s.name === name.toLowerCase());
-                        if (!service) {
-                            throw new Error(`Service ${name} not found`);
-                        }
+                        if (!service) throw new Error(`Service ${name} not found`);
                         serviceName = service.originalName;
                     }
 
@@ -261,9 +240,7 @@ export const api = {
                 if (Deno.build.os === "windows") {
                     const services = await getWindowsServices();
                     const service = services.find(s => s.name === name.toLowerCase());
-                    if (!service) {
-                        throw new Error(`Service ${name} not found`);
-                    }
+                    if (!service) throw new Error(`Service ${name} not found`);
                     serviceName = service.originalName;
                 }
                 await stopService(serviceName);
@@ -286,15 +263,9 @@ export const api = {
                         serviceName = service.originalName;
                     }
 
-                    // On Linux, we try to use the native restart command if available
-                    if (Deno.build.os !== "windows" && await isCommandAvailable("systemctl")) {
-                        const { code, stderr } = await run("systemctl", ["restart", serviceName], { sudo: true });
-                        if (code !== 0) throw new Error(stderr);
-                    } else {
-                        // Fallback to stop + start
-                        await stopService(serviceName);
-                        await startService(serviceName);
-                    }
+                    await stopService(serviceName);
+                    await startService(serviceName);
+
 
                     logInfo(`Service ${name} restarted`, "Services", c);
                     return { success: true, message: `Service ${name} restarted` };
@@ -307,3 +278,4 @@ export const api = {
         }
     }
 };
+

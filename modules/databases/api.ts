@@ -181,37 +181,29 @@ export const api = {
       
       try {
         const database = db.queryEntries('SELECT * FROM databases WHERE id = ?', [id])[0];
-        if (!database) {
-          return { error: 'Datenbank nicht gefunden' };
-        }
-
+        if (!database) return { error: 'Datenbank nicht gefunden' };
         const client = await dbClient(database.server_id);
-
         if (database.type === 'mysql') {
           await client.execute(`DROP DATABASE IF EXISTS \`${database.name}\``);
           await client.execute(`DROP USER IF EXISTS '${database.db_user}'@'%'`);
           await client.execute('FLUSH PRIVILEGES');
         } 
-        else if (database.type === 'postgresql') {
+        if (database.type === 'postgresql') {
           // We need to connect to a different database to drop the current one
           await client.queryObject(`
             SELECT pg_terminate_backend(pid) 
             FROM pg_stat_activity 
             WHERE datname = $1
           `, [database.name]);
-          
           await client.queryObject(`DROP DATABASE IF EXISTS ${database.name}`);
           await client.queryObject(`DROP USER IF EXISTS ${database.db_user}`);
         }
-
-        db.query('DELETE FROM databases WHERE id = ?', [id]);
-        
         logInfo(`Datenbank ${database.name} gelöscht`, 'Databases', c);
-        return { success: true };
       } catch (error) {
         logError(`Fehler beim Löschen der Datenbank: ${error.message}`, 'Databases', c, error);
-        return { error: error.message };
       }
+      db.query('DELETE FROM databases WHERE id = ?', [id]);
+      return { success: true };
     },
     'password': {
       post: async function(c: Context) {

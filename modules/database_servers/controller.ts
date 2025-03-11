@@ -44,15 +44,15 @@ export const api = {
           const dbResult = await client.execute('SHOW DATABASES');
           server.count_databases = dbResult.length;
         }
-        else if (server.type === 'postgresql') {
+        if (server.type === 'postgresql') {
           const version = await client.queryObject('SHOW server_version');
           server.version = version.rows[0]?.server_version;
           const dbResult = await client.queryObject('SELECT datname FROM pg_database WHERE datistemplate = false');
           server.count_databases = dbResult.rows.length;
         }
       } catch (error) {
-        console.error(error);
-        server.count_databases = 0;
+        //console.error(error);
+        server.count_databases = null;
         server.version = 'nicht verbunden';
       }
     }

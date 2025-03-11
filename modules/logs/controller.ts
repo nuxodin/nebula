@@ -1,18 +1,6 @@
 import { logError } from "../../utils/logger.ts";
-import { renderTemplate } from "../../utils/template.ts";
 import db from "../../utils/database.ts";
 
-// View Controller
-export const getLogsView = async (c) => {
-  try {
-    const content = await Deno.readTextFile("./modules/logs/views/content.html");
-    const scripts = await Deno.readTextFile("./modules/logs/views/scripts.html");
-    return c.html(await renderTemplate("Logs", content, "", scripts));
-  } catch (err) {
-    logError("Fehler beim Laden der Logs-Übersicht", "Logs", c, err);
-    return c.text("Internal Server Error", 500);
-  }
-};
 
 // API Controller
 export const getAllLogs = async (c) => {
@@ -24,7 +12,10 @@ export const getAllLogs = async (c) => {
       LEFT JOIN clients c ON l.user_id = c.id
       ORDER BY l.timestamp DESC
       LIMIT 100
-    `);
+    `).map((log) => {
+      log.timestamp = new Date(log.timestamp).toISOString();
+      return log;
+    });
     return c.json(logs);
   } catch (err) {
     logError("Fehler beim Abrufen der Logs", "Logs", c, err);

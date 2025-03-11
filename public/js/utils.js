@@ -1,3 +1,7 @@
+
+export * as dialog from 'https://cdn.jsdelivr.net/gh/u2ui/u2@x.x.x/js/dialog/dialog.js';
+
+
 export function apiFetch(url, { method, post, put, del, formData } = {}) {
     let data = null;
     if (method == null) {

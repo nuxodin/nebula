@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { renderTemplate } from "../../utils/template.ts";
 import { getSystemInfo, restart } from "./controller.ts";
 import { objToRoutes } from "../../utils/routes.ts";
+import { runtimes } from "../../utils/runtime.ts";
 
 const apiRoutes = new Hono();
 
@@ -17,6 +18,11 @@ const api = {
             }, 100);
             return { success: true, message: 'Shutting down...' };
         }        
+    },
+    runtimes: {
+        get: () => {
+            return Object.keys(runtimes);
+        }
     },
 };
 

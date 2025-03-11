@@ -178,6 +178,10 @@
     "https://esm.sh/util-deprecate@~1.0.1?target=denonext": "https://esm.sh/util-deprecate@1.0.2?target=denonext"
   },
   "remote": {
+    "https://cdn.jsdelivr.net/gh/u2ui/u2@0.1.0/attr/focusgroup/focusgroup.js": "d7a42c4c781a6af84de15fc6a5c2da799f3f9d249250df3aae006c2c9861e9c4",
+    "https://cdn.jsdelivr.net/gh/u2ui/u2@0.1.0/js/dialog/dialog.js": "95cede208b5c8fb7fd267f3a3d40f7c3d1d4ee7844b9ab55066a1d66827f6f11",
+    "https://cdn.jsdelivr.net/gh/u2ui/u2@x.x.x/attr/focusgroup/focusgroup.js": "be05e02cade89ecb961636e2871092e60377bb20cde45f6392ac41bb394154c1",
+    "https://cdn.jsdelivr.net/gh/u2ui/u2@x.x.x/js/dialog/dialog.js": "5a7460e9e6b14ab5388f76c170159b12b2f9cde61d6494b4070e6c839c6c967d",
     "https://deno.land/std@0.104.0/_util/assert.ts": "2f868145a042a11d5ad0a3c748dcf580add8a0dbc0e876eaa0026303a5488f58",
     "https://deno.land/std@0.104.0/async/deadline.ts": "1d6ac7aeaee22f75eb86e4e105d6161118aad7b41ae2dd14f4cfd3bf97472b93",
     "https://deno.land/std@0.104.0/async/debounce.ts": "b2f693e4baa16b62793fd618de6c003b63228db50ecfe3bd51fc5f6dc0bc264b",

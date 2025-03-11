@@ -13,6 +13,7 @@ export async function dbClient(serverId: number) {
     if (!server) throw new Error('Server nicht gefunden');
 
     let client;
+
     if (server.type === 'mysql') {
         client = await new Client().connect({
             hostname: server.host,
@@ -20,7 +21,8 @@ export async function dbClient(serverId: number) {
             username: server.admin_login,
             password: server.admin_password,
         });
-    } else if (server.type === 'postgresql') {
+    }
+    if (server.type === 'postgresql') {
         const pool = new Pool({
             hostname: server.host,
             port: server.port,
@@ -60,7 +62,8 @@ export async function getServerDatabases(server: any) {
             managed: managedDbs.has(row.name),
             tables: parseInt(row.table_count) || 0
         }));
-    } else if (server.type === 'postgresql') {
+    }
+    if (server.type === 'postgresql') {
         const result = await client.queryObject(`
             SELECT 
                 d.datname as name, 
@@ -103,7 +106,8 @@ export async function getServerProcesses(server: any) {
             WHERE COMMAND != 'Sleep'
         `);
         return results.rows;
-    } else if (server.type === 'postgresql') {
+    }
+    if (server.type === 'postgresql') {
         const result = await client.queryObject(`
             SELECT 
                 pid as id,

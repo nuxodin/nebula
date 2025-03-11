@@ -63,10 +63,11 @@ export async function installComponentBackground(component: string, version: str
             throw new Error(`Installation fehlgeschlagen`);
         }
     } else if (config.package) {
-        const done = await installPackages([config.package]);
-        if (!done) {
+        try {
+            await installPackages([config.package]);
+        } catch (error) {
             delete installing[component];
-            throw new Error(`Installation fehlgeschlagen code:${out.code}`);
+            throw error;
         }
     } else {
         delete installing[component];

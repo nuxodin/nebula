@@ -1,22 +1,37 @@
 <script type="module">
   import { apiFetch } from '/public/js/utils.js';
+  import * as dialog from "https://cdn.jsdelivr.net/gh/u2ui/u2@x.x.x/js/dialog/dialog.min.js";
 
   let allPackages = [];
   
   async function loadPackages() {
     try {
-      const response = await apiFetch('/api/packages');
-      // Extract packages array from response
-      allPackages = response;
+      allPackages = await apiFetch('/api/packages');
       filterAndRenderPackages();
+      
+      // Update counter anzeigen
+      const updateCount = allPackages.filter(p => p.hasUpdate).length;
+      document.getElementById('updateCount').textContent = updateCount ? `${updateCount} Updates verfügbar` : '';
+      document.getElementById('updateAll').style.display = updateCount ? '' : 'none';
     } catch (error) {
       console.error('API error:', error);
-      tbody.innerHTML = `<tr><td colspan="4" class="text-center">Fehler beim Laden: ${error.message}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center">Fehler beim Laden: ${error.message}</td></tr>`;
     }
   }
 
   const tbody = document.getElementById('packageGrid');
   const searchInput = document.getElementById('packageSearch');
+
+  // Update All Button Handler
+  document.getElementById('updateAll').addEventListener('click', async () => {
+    try {
+      await apiFetch('/api/packages/update', {post:{}});
+      await loadPackages(); 
+      dialog.alert('Packages wurden aktualisiert');
+    } catch (error) {
+      dialog.alert('Fehler beim Update: ' + error.message);
+    }
+  });
 
   // Search handler
   searchInput.addEventListener('input', () => {
@@ -38,7 +53,9 @@
     tbody.innerHTML = packagesToRender.map(pkg => `
       <tr>
         <td>${pkg.name}
-        <td>${pkg.version}
+        <td>
+          ${pkg.version}
+          ${pkg.hasUpdate ? `<small class="u2-badge">Update: ${pkg.availableVersion}</small>` : ''}
         <td>
           <small class="u2-badge ${pkg.installed ? 'status-active' : 'status-inactive'}">
             ${pkg.installed ? 'Installiert' : 'Nicht installiert'}

@@ -22,22 +22,26 @@ async function updateProcessList() {
             <tr>
                 <td>${proc.pid}
                 <td>${proc.name}
-                <td>${proc.domain || 'N/A'}
                 <td>${proc.user || 'N/A'}
                 <td>${proc.cpu?.toFixed(1)}%
                 <td>${proc.memory?.toFixed(1)}%
                 <td>${proc.diskRead || 0} KiB/s
                 <td>${proc.diskWrite || 0} KiB/s
                 <td>
+                    <u2-time datetime="${proc.startTime}" second type=relative>${proc.startTime}</u2-time>
+                <td>${proc.ports?.length ? proc.ports.join(', ') : '-'}
+                <td>${proc.parentProcess ? `${proc.parentProcess.name} (${proc.parentProcess.pid})` : '-'}
+                <td><small>${proc.command}</small>
+                <td>
                     <button class="u2-unstyle" u2-confirm="Möchten Sie den Prozess ${proc.pid} wirklich beenden?" onclick="window.killProcess(${proc.pid})" title="Prozess beenden">
                         <i class="mdi mdi-stop"></i>
                     </button>
             </tr>
-        `).join('') : '<tr><td colspan="8">Keine Prozesse gefunden</td></tr>';
+        `).join('') : '<tr><td colspan="12">Keine Prozesse gefunden</td></tr>';
     } catch (error) {
         console.error('Fehler beim Laden der Prozesse:', error);
         const tbody = document.getElementById('processList');
-        tbody.innerHTML = '<tr><td colspan="8" class="error">Fehler beim Laden der Prozesse</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="12" class="error">Fehler beim Laden der Prozesse</td></tr>';
     }
 }
 

@@ -3,19 +3,14 @@ import db from "../../utils/database.ts";
 import { join } from "https://deno.land/std/path/mod.ts";
 import { ensureDir } from 'https://deno.land/std/fs/mod.ts';
 import { config } from "../../utils/config.ts";
-import { run } from "../../utils/command.ts";
+import { run, stat } from "../../utils/command.ts";
 import { logError, logInfo } from "../../utils/logger.ts";
 
 
 const domainProcesses = new Map();
 
 class DenoRuntime implements Runtime {
-    async initDomain(domainId: number): Promise<void> {
-        const domain = db.queryEntries(`
-            SELECT id, name, runtime, runtime_version 
-            FROM domains WHERE id = ? AND runtime = 'deno'
-        `, [domainId])[0] as DomainConfig;
-        if (!domain) throw new Error("Domain not found or not a Deno domain");
+    async initDomain(domain): Promise<void> {
 
         const appDir = join(config.vhosts_root, domain.name, "deno-app");
         await ensureDir(appDir);
@@ -60,7 +55,7 @@ class DenoRuntime implements Runtime {
             FROM domains WHERE id = ? AND runtime = 'deno'
         `, [domainId])[0] as DomainConfig;
         if (!domain) return;
-        
+
         try {
             await this.stopDomainProcess(domainId);
             logInfo(`Deno-App für Domain ${domain.name} gelöscht`, "Deno");
@@ -69,10 +64,9 @@ class DenoRuntime implements Runtime {
         }
     }
 
-    async getInstalledVersions(): Promise<string[]> {
+    async installedVersions(): Promise<string[]> {
         try {
             const result = await run('/root/.dvm/bin/dvm', ['list'], { sudo: false });
-            console.log(result);
             if (result.code !== 0) throw new Error(`Fehler beim Abrufen der installierten Deno-Versionen: ${result.stderr}`);
             
             const lines = result.stdout.split('\n');
@@ -93,7 +87,9 @@ class DenoRuntime implements Runtime {
         try {
             const result = await run('/root/.dvm/bin/dvm', ['list-remote'], { sudo: true }); // todo: cronjob: remove cache from time to time
             if (result.code !== 0) throw new Error(`Fehler beim Abrufen der installierten Deno-Versionen: ${result.stderr}`);
-            return result.stdout.split('\n').filter(v => !v.trim()[0].match(/[0-0]/)).map(v => v.trim());
+            return result.stdout.split('\n')
+                .map(v => v.trim())
+                .filter(v => !v || v[0].match(/[0-9]/));
         } catch (error) {
             logError(`Fehler beim Abrufen der installierten Deno-Versionen: ${error.message}`, "Deno");
             return [];
@@ -102,21 +98,17 @@ class DenoRuntime implements Runtime {
 
     async startDomainProcess(domain: DomainConfig): Promise<void> {
         try {
-            const domainId = domain.id;
             const domainPath = join(config.vhosts_root, domain.name, "deno-app");
             const denoJsonPath = join(domainPath, "deno.json");
             
             // Prüfen, ob deno.json existiert
-            try {
-                await Deno.stat(denoJsonPath);
-            } catch {
+            if (!await stat(denoJsonPath)) {
                 throw new Error(`deno.json konnte nicht gefunden werden für Domain ${domain.name}`);
             }
             
-            // Port ist domainId + 3000
-            const port = domainId + 3000;
+            const port = domain.id + 3000;
             
-            const linuxUser = `ne-do-${domainId}`;
+            const linuxUser = `ne-do-${domain.id}`;
             
             if (Deno.build.os === "windows") throw new Error("Windows wird nicht unterstützt");
             
@@ -124,13 +116,16 @@ class DenoRuntime implements Runtime {
 
             // Auf Linux mit dem Domain-Benutzer ausführen
             //const cmd = `cd ${domainPath} && PORT=${port} /root/.dvm/bin/dvm use ${version} && PORT=${port} deno task start`;
-            const cmd = `runuser -u ${linuxUser} -- bash -c 'cd ${domainPath} && PORT=${port} /root/.dvm/bin/dvm use ${version} && nohup deno task start &'`;
+            //const cmd = `runuser -u ${linuxUser} -- bash -c 'cd ${domainPath} && PORT=${port} /root/.dvm/bin/dvm use ${version} && nohup deno task start &'`;
+            const cmd = `bash -c 'cd ${domainPath} && PORT=${port} /root/.dvm/bin/dvm use ${version} && nohup deno task start &'`;
+
+            console.log(cmd)
             // Normales sudo -u kann Probleme bei langlebigen Prozessen machen, daher würden hier ggf. andere Methoden verwendet
-            
+
             const command = new Deno.Command("bash", {
                 args: ["-c", cmd], // Beispiel: Ein Prozess, der 10 Sekunden läuft
                 env: {
-                    PORT: "8080",
+                    PORT: port.toString(),
                 },
                 stdout: "piped",
                 stderr: "piped",
@@ -142,11 +137,15 @@ class DenoRuntime implements Runtime {
             console.log("Exit Code:", code);
             console.log("Stdout:", new TextDecoder().decode(stdout));
             console.log("Stderr:", new TextDecoder().decode(stderr));
+
+            if (code !== 0) {
+                throw new Error(`Fehler beim Starten des Deno-Prozesses für Domain ${domain.name}`);
+            }
             
 
             // Process-ID in der Datenbank speichern
             if (process.pid) {
-                domainProcesses.set(domainId, process.pid);
+                domainProcesses.set(domain.id, process.pid);
                 logInfo(`Deno-Prozess für Domain ${domain.name} gestartet (PID: ${process.pid})`, "Deno");
             } else {
                 throw new Error("Konnte PID des gestarteten Prozesses nicht ermitteln");

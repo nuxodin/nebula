@@ -8,6 +8,9 @@ import db from "../../utils/database.ts";
 // Register Deno runtime
 registerRuntime('deno', denoRuntime);
 
+
+const installing: { [version: string]: boolean } = {};
+
 // API Controller
 export const api = {
   domains: async function(c: Context) {
@@ -20,10 +23,24 @@ export const api = {
     
     return { success: true, domains };
   },
-  
+
   versions: async function(c: Context) {
-    const versions = await denoRuntime.getInstalledVersions();
-    return { success: true, versions };
+    const installed = await denoRuntime.installedVersions();
+    const remote = await denoRuntime.remoteVersions();
+    const data: Record<string, { installed?: boolean, remote?: boolean, installing?: boolean }> = {};
+    for (const [version, isIt] of Object.entries(installing)) {
+      data[version] ??= {};
+      data[version].installing = isIt;
+    }
+    for (const version of installed) {
+      data[version] ??= {};
+      data[version].installed = true;
+    }
+    for (const version of remote) {
+      data[version] ??= {};
+      data[version].remote = true;
+    }
+    return { success: true, versions:data };
   },
   remoteVersions: async function(c: Context) {
     const versions = await denoRuntime.remoteVersions();
@@ -35,7 +52,10 @@ export const api = {
       const { version } = await c.req.json();
       if (!version) return { success: false, error: "Version muss angegeben werden" };
       
+      installing[version] = true;
       const result = await run('/root/.dvm/bin/dvm', ['install', version], { sudo: true });
+      installing[version] = false;
+
       if (result.code !== 0) throw new Error(`Installation fehlgeschlagen: ${result.stderr}`);
       
       logInfo(`Deno Version ${version} wurde installiert`, "Deno");
@@ -55,16 +75,11 @@ export const api = {
       return { success: true, message: `Deno Version ${version} wurde deinstalliert` };
     }
   },
-  [':id']: {
+  ':id': {
     start: {
       post: async function(c: Context) {
         const { id } = c.req.param();
-        const domain = db.queryEntries(`
-          SELECT id, name, runtime, runtime_version 
-          FROM domains WHERE id = ? AND runtime = 'deno'
-        `, [id])[0];
-        
-        if (!domain) return { success: false, error: "Domain nicht gefunden oder keine Deno-Domain" };
+        const domain = db.queryEntries(`SELECT * FROM domains WHERE id = ? AND runtime = 'deno'`, [id])[0];
         
         await denoRuntime.startDomainProcess(domain);
         logInfo(`Deno-Anwendung für Domain ${domain.name} gestartet`, "Deno");
@@ -75,11 +90,7 @@ export const api = {
     stop: {
       post: async function(c: Context) {
         const { id } = c.req.param();
-        const domain = db.queryEntries(`
-          SELECT id, name FROM domains WHERE id = ? AND runtime = 'deno'
-        `, [id])[0];
-        
-        if (!domain) return { success: false, error: "Domain nicht gefunden oder keine Deno-Domain" };
+        const domain = db.queryEntries(`SELECT id, name FROM domains WHERE id = ? AND runtime = 'deno'`, [id])[0];
         
         await denoRuntime.stopDomainProcess(domain.id);
         logInfo(`Deno-Anwendung für Domain ${domain.name} gestoppt`, "Deno");

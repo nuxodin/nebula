@@ -1,19 +1,15 @@
 <script type="module">
-import { apiFetch } from '/public/js/utils.js';
+import { apiFetch, dialog } from '/public/js/utils.js';
 
 // Domains und Versionen laden beim Seitenstart
-document.addEventListener('DOMContentLoaded', () => {
-    loadDomains();
-    loadVersions();
-});
+loadDomains();
+loadVersions();
 
 // Laden der Deno-Domains
 async function loadDomains() {
     try {
         const response = await apiFetch('/api/deno/domains');
-        if (!response.success) {
-            throw new Error(response.error || 'Fehler beim Laden der Domains');
-        }
+        if (!response.success) throw new Error(response.error || 'Fehler beim Laden der Domains');
         
         const domainList = document.getElementById('domainList');
         
@@ -27,8 +23,8 @@ async function loadDomains() {
                     <td id="domain-status-${domain.id}">Prüfe...
                     <td>${domain.runtime_version || 'Standard'}
                     <td>
-                        <button class="btn-action" onclick="startDomain(${domain.id}, '${domain.name}')">Start</button>
-                        <button class="btn-action" onclick="stopDomain(${domain.id}, '${domain.name}')">Stop</button>
+                        <button onclick="startDomain(${domain.id}, '${domain.name}')">Start</button>
+                        <button onclick="stopDomain(${domain.id}, '${domain.name}')">Stop</button>
                 </tr>`;
                 
                 // Status nach dem Rendern prüfen
@@ -68,51 +64,33 @@ async function checkDomainStatus(domainId) {
 
 // Laden der installierten Deno-Versionen
 async function loadVersions() {
+
     try {
-        const installed = await apiFetch('/api/deno/versions');
-
-        const remote = await apiFetch('/api/deno/remoteVersions');
-
-        const versions = {};
-        for (const v of installed.versions) {
-            versions[v] ??= {};
-            versions[v].installed = true;
-        }
-        for (const v of remote.versions) {
-            versions[v] ??= {};
-            versions[v].remote = true;
-        }
+        const {versions} = await apiFetch('/api/deno/versions');
         
         const versionsList = document.getElementById('versionsList');
         
-        if (versions) {
-            let html = '';
-            
-            for (const [version, data] of Object.entries(versions)) {
-                const count = 'todo';
-                
-                html += `
-                <tr>
-                    <td>${version}
-                    <td>${count}
-                    <td>${
-                        data.installed ? 
-                        `<button onclick="uninstallVersion('${version}')">Deinstallieren</button>` :
-                        `<button onclick="installVersion('${version}')">Installieren</button>`
-                    }
-                </tr>`;
-            }            
-            versionsList.innerHTML = html;
-        } else {
-            versionsList.innerHTML = `
-            <tr><td colspan="4">Keine Deno-Versionen installiert</tr>
+        let html = '';
+        for (const [version, data] of Object.entries(versions)) {
+            const count = 'todo';
+
+            let btn;
+            if (data.installed) btn = `<button onclick="uninstallVersion('${version}')">Deinstallieren</button>`;
+            else btn = `<button onclick="installVersion('${version}')">Installieren</button>`;
+            if (data.installing) btn = 'Installiere...';
+
+            if (data.installed) btn = `<input type=checkbox switch checked onclick="uninstallVersion('${version}')"">`;
+            else btn = `<input type=checkbox switch onclick="installVersion('${version}')">`;
+            if (data.installing) btn = 'Installiere...';
+
+            html += `
             <tr>
-                <td colspan="3">
-                    <input type="text" id="new-deno-version" placeholder="Version (z.B. 1.38.3)">
-                <td>
-                    <button class="btn-action" onclick="installNewVersion()">Installieren</button>
-            </tr>`;
-        }
+                <td>${version}
+                <td>${count}
+                <td>${btn}
+            `;
+        }            
+        versionsList.innerHTML = html;
     } catch (error) {
         console.error('Fehler beim Laden der Versionen:', error);
         document.getElementById('versionsList').innerHTML = 
@@ -136,55 +114,55 @@ async function countDomainsWithVersion(version) {
 // Die folgenden Funktionen müssen im globalen Scope sein, damit sie von onclick aufgerufen werden können
 window.startDomain = async function(domainId, domainName) {
     try {
-        if (!confirm(`Deno-Anwendung für ${domainName} starten?`)) return;
+        if (! await dialog.confirm(`Deno-Anwendung für ${domainName} starten?`)) return;
         
         const response = await apiFetch(`/api/deno/${domainId}/start`, {post:{}});
         
         if (response.success) {
-            alert(`Deno-Anwendung für ${domainName} erfolgreich gestartet.`);
+            dialog.alert(`Deno-Anwendung für ${domainName} erfolgreich gestartet.`);
             setTimeout(() => checkDomainStatus(domainId), 1000);
         } else {
             throw new Error(response.error || 'Unbekannter Fehler');
         }
     } catch (error) {
         console.error(`Fehler beim Starten der Deno-Anwendung für ${domainName}:`, error);
-        alert(`Fehler: ${error.message}`);
+        dialog.alert(`Fehler: ${error.message}`);
     }
 };
 
 window.stopDomain = async function(domainId, domainName) {
     try {
-        if (!confirm(`Deno-Anwendung für ${domainName} stoppen?`)) return;
+        if (! await dialog.confirm(`Deno-Anwendung für ${domainName} stoppen?`)) return;
         
         const response = await apiFetch(`/api/deno/${domainId}/stop`, {post:{}});
         
         if (response.success) {
-            alert(`Deno-Anwendung für ${domainName} erfolgreich gestoppt.`);
+            dialog.alert(`Deno-Anwendung für ${domainName} erfolgreich gestoppt.`);
             setTimeout(() => checkDomainStatus(domainId), 1000);
         } else {
             throw new Error(response.error || 'Unbekannter Fehler');
         }
     } catch (error) {
         console.error(`Fehler beim Stoppen der Deno-Anwendung für ${domainName}:`, error);
-        alert(`Fehler: ${error.message}`);
+        dialog.alert(`Fehler: ${error.message}`);
     }
 };
 
 window.installVersion = async function(version) {
     try {
-        if (!confirm(`Deno-Version ${version} installieren?`)) return;
+        if (! await dialog.confirm(`Deno-Version ${version} installieren?`)) return;
         
         const response = await apiFetch('/api/deno/install', {post:{ version }});
         
         if (response.success) {
-            alert(`Deno-Version ${version} wurde erfolgreich installiert.`);
+            dialog.alert(`Deno-Version ${version} wurde erfolgreich installiert.`);
             loadVersions(); // Liste aktualisieren
         } else {
             throw new Error(response.error || 'Unbekannter Fehler');
         }
     } catch (error) {
         console.error(`Fehler beim Installieren der Deno-Version ${version}:`, error);
-        alert(`Fehler: ${error.message}`);
+        dialog.alert(`Fehler: ${error.message}`);
     }
 };
 
@@ -193,23 +171,23 @@ window.uninstallVersion = async function(version) {
         const domainsCount = await countDomainsWithVersion(version);
         
         if (domainsCount > 0) {
-            alert(`Diese Version wird von ${domainsCount} Domain(s) verwendet und kann nicht deinstalliert werden.`);
+            dialog.alert(`Diese Version wird von ${domainsCount} Domain(s) verwendet und kann nicht deinstalliert werden.`);
             return;
         }
         
-        if (!confirm(`Deno-Version ${version} deinstallieren?`)) return;
+        if (! await dialog.confirm(`Deno-Version ${version} deinstallieren?`)) return;
         
         const response = await apiFetch('/api/deno/uninstall', {post:{ version }});
         
         if (response.success) {
-            alert(`Deno-Version ${version} wurde erfolgreich deinstalliert.`);
+            dialog.alert(`Deno-Version ${version} wurde erfolgreich deinstalliert.`);
             loadVersions(); // Liste aktualisieren
         } else {
             throw new Error(response.error || 'Unbekannter Fehler');
         }
     } catch (error) {
         console.error(`Fehler beim Deinstallieren der Deno-Version ${version}:`, error);
-        alert(`Fehler: ${error.message}`);
+        dialog.alert(`Fehler: ${error.message}`);
     }
 };
 </script>

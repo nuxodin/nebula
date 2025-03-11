@@ -16,12 +16,10 @@ Deno.readDirSync('./modules').filter((module) => module.isDirectory).forEach((mo
 });
 
 await install();
-
-
 for (const [, module] of modules) {
   if (! await exists(module.path+'/install.ts')) continue;
   await import(module.path+'/install.ts').then((moduleInstall) => {
-    moduleInstall.install();
+    moduleInstall.install?.();
   }).catch(console.error);
 }
 
@@ -51,6 +49,7 @@ app.use('*', authMiddleware);
 
 // redirect to dashboard
 app.get(`/`, (c: Context) => c.redirect('/dashboard'));
+
 
 for (const [name, module] of modules) {
   if (! await exists(module.path+'/routes.ts')) continue;
