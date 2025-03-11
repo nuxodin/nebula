@@ -14,6 +14,10 @@ Nebula is a modern server management and web hosting control panel built with De
 - User access control
 - Application deployment
 
+
+## Install
+`curl -L https://github.com/nuxodin/nebula/raw/main/install/install.sh | bash`
+
 ## Current Development Status
 
 - 🚧 Pre-alpha stage
