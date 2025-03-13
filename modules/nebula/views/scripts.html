@@ -1,5 +1,6 @@
 <script type="module">
 import { apiFetch } from '/public/js/utils.js';
+import * as dialog from "https://cdn.jsdelivr.net/gh/u2ui/u2@x.x.x/js/dialog/dialog.min.js";
 
 async function loadSystemInfo() {
     try {
@@ -62,6 +63,29 @@ async function loadSystemInfo() {
     }
 }
 
+async function loadGitInfo() {
+    try {
+        const data = await apiFetch('/api/nebula/git/info');
+        const gitBranchEl = document.getElementById('gitBranch');
+        const gitStatusEl = document.getElementById('gitStatus');
+        if (gitBranchEl) gitBranchEl.textContent = data.branch || 'Not a git repository';
+        if (gitStatusEl) {
+            if (data.error) {
+                gitStatusEl.textContent = `Error: ${data.error}`;
+                document.getElementById('updateButton').style.display = 'none';
+            } else {
+                gitStatusEl.innerHTML = data.hasUpdates ? 
+                    '<span class="u2-badge status-inactive">Updates available</span>' : 
+                    '<span class="u2-badge status-active">Up to date</span>';
+                document.getElementById('updateButton').style.display = data.hasUpdates ? 'inline-block' : 'none';
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load git info:', error);
+        document.getElementById('gitBranch').textContent = 'Error loading';
+        document.getElementById('gitStatus').textContent = 'Error loading';
+    }
+}
 
 window.restartNebula = async function() {
     if (!confirm('Are you sure you want to restart Nebula?')) return;
@@ -85,6 +109,26 @@ window.killNebula = async function() {
     }
 }
 
+window.updateNebula = async function() {
+    if (!confirm('Are you sure you want to update Nebula from git? This will pull the latest changes.')) return;
+    try {
+        const response = await apiFetch('/api/nebula/git/pull', {post:{}});
+        if (!response.success) throw new Error(response.error || 'Update failed');
+        dialog.alert({
+            title: 'Update Complete',
+            body: response.message,
+            onclose: () => window.location.reload()
+        });
+    } catch (error) {
+        dialog.alert('Failed to update Nebula: ' + error.message);
+    }
+}
+
+// Initial loads
 loadSystemInfo();
+loadGitInfo();
+
+// Set up intervals for updates
 setInterval(loadSystemInfo, 30000);
+setInterval(loadGitInfo, 10000);  // Check git status more frequently
 </script>

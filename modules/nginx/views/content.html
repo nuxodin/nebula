@@ -1,6 +1,6 @@
 <div class="header">
     <h1>
-        Apache-Verwaltung
+        Nginx-Verwaltung
         <small id="status-badge" class="u2-badge"></small>
     </h1>
 </div>
@@ -13,7 +13,7 @@
         <button id="stop">Stop</button>
         <button id="restart">Restart</button>
 
-        <a href="/files?file=%252F%252Fetc%252Fapache2%252Fapache2.conf">Main Config</a>        
+        <a href="/files?file=%252F%252Fetc%252Fnginx%252Fnginx.conf">Main Config</a>        
     </div>
 </div>
 
@@ -27,7 +27,7 @@
                     <td><span id="statusCell" class="u2-badge">Loading...</span>
                 <tr>
                     <th>Enabled
-                        <small>(Apache wird beim Systemstart gestartet)</small>
+                        <small>(Nginx wird beim Systemstart gestartet)</small>
                     <td><span id="enabledCell" class="u2-badge">Loading...</span>
                 <tr>
                     <th>Configuration check
@@ -36,12 +36,12 @@
                     <th>Logfile
                     <td>
                         <div id="logFileCell">Loading...</div>
-                        <a href="/files?file=%252F%252Fvar%252Flog%252Fapache2%252Ferror.log">more...</a>
+                        <a href="/files?file=%252F%252Fvar%252Flog%252Fnginx%252Ferror.log">more...</a>
                 <tr>
                     <th>Access Log
                     <td>
-                        <div id="accessLogCell">Loading...</div>
-                        <a href="/files?file=%252F%252Fvar%252Flog%252Fapache2%252Faccess.log">more...</a>
+                        <pre id="accessLogCell">Loading...</pre>
+                        <a href="/files?file=%252F%252Fvar%252Flog%252Fnginx%252Faccess.log">more...</a>
             </table>
             <br><br>
             <button>reload (todo)</button>

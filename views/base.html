@@ -169,6 +169,26 @@
         background: #fee2e2;
         color: #dc2626;
       }
+      .u2-badge {
+        &:is(.status-error, .status-inactive, .status-emerg) {
+          background: #fed7d7;
+          color: #e53e3e;
+        }
+        &:is(.status-warning, .status-warn) {
+          background: #fef3c7;
+          color: #d97706;
+        }
+        &:is(.status-info, .status-notice) {
+          background: #ebf8ff;
+          color: #3182ce;
+        }
+        &:is(.status-success, .status-active) {
+          background: #f0fff4;
+          color: #38a169;
+        }
+      }
+
+
       .form-group {
         margin-bottom: 1.5rem;
       }
@@ -238,6 +258,9 @@
           </a>
           <a href="/components" class="nav-item">
             <i class="mdi mdi-cogs"></i> Komponenten
+          </a>
+          <a href="/nginx" class="nav-item">
+            <i class="mdi mdi-cogs"></i> Nginx
           </a>
           <a href="/apache" class="nav-item">
             <i class="mdi mdi-cogs"></i>Apache

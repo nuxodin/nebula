@@ -2,12 +2,12 @@
 import { apiFetch } from '/public/js/utils.js';
 import * as dialog from "https://cdn.jsdelivr.net/gh/u2ui/u2@x.x.x/js/dialog/dialog.min.js";
 
-// Install Apache
+// Install Nginx
 document.getElementById('install').addEventListener('click', async () => {
     try {
-        await apiFetch('/api/apache/start', { post: {} });
+        await apiFetch('/api/nginx/install', { post: {} });
         await loadTroubleshootingData();
-        dialog.alert('Apache wurde erfolgreich installiert');
+        dialog.alert('Nginx wurde erfolgreich installiert');
     } catch (error) {
         dialog.alert('Fehler bei der Installation: ' + error.message);
     }
@@ -15,42 +15,42 @@ document.getElementById('install').addEventListener('click', async () => {
 
 document.getElementById('config').addEventListener('click', async () => {
     try {
-        await apiFetch('/api/apache/config', { post: {} });
+        await apiFetch('/api/nginx/config', { post: {} });
         await loadTroubleshootingData();
-        dialog.alert('Apache wurde erfolgreich konfiguriert');
+        dialog.alert('Nginx wurde erfolgreich konfiguriert');
     } catch (error) {
         dialog.alert('Fehler bei der Konfiguration: ' + error.message);
     }
 });
 
-// Start Apache
+// Start Nginx
 document.getElementById('start').addEventListener('click', async () => {
     try {
-        await apiFetch('/api/apache/start', { post: {} });
+        await apiFetch('/api/nginx/start', { post: {} });
         await loadTroubleshootingData();
-        dialog.alert('Apache wurde erfolgreich gestartet');
+        dialog.alert('Nginx wurde erfolgreich gestartet');
     } catch (error) {
         dialog.alert('Fehler beim Starten: ' + error.message);
     }
 });
 
-// Stop Apache
+// Stop Nginx
 document.getElementById('stop').addEventListener('click', async () => {
     try {
-        await apiFetch('/api/apache/stop', { post: {} });
+        await apiFetch('/api/nginx/stop', { post: {} });
         await loadTroubleshootingData();
-        dialog.alert('Apache wurde erfolgreich gestoppt');
+        dialog.alert('Nginx wurde erfolgreich gestoppt');
     } catch (error) {
         dialog.alert('Fehler beim Stoppen: ' + error.message);
     }
 });
 
-// Restart Apache
+// Restart Nginx
 document.getElementById('restart').addEventListener('click', async () => {
     try {
-        await apiFetch('/api/apache/restart', { post: {} });
+        await apiFetch('/api/nginx/restart', { post: {} });
         await loadTroubleshootingData();
-        dialog.alert('Apache wurde erfolgreich neu gestartet');
+        dialog.alert('Nginx wurde erfolgreich neu gestartet');
     } catch (error) {
         dialog.alert('Fehler beim Neustarten: ' + error.message);
     }
@@ -59,7 +59,7 @@ document.getElementById('restart').addEventListener('click', async () => {
 // Fetch and display troubleshooting data
 async function loadTroubleshootingData() {
     try {
-        const data = await apiFetch('/api/apache/troubleshooting');
+        const data = await apiFetch('/api/nginx/troubleshooting');
         const badge = document.getElementById('status-badge');
         if (badge) {
             badge.textContent = data.status ? 'Aktiv' : 'Inaktiv';
@@ -112,7 +112,7 @@ async function loadTroubleshootingData() {
 async function loadModules() {
     const tbody = document.getElementById('moduleList');
     try {
-        const modules = await apiFetch('/api/apache/modules');
+        const modules = await apiFetch('/api/nginx/modules');
         tbody.innerHTML = modules.map(module => `
             <label class="u2-flex" u2-skin="invert" style="border-radius:.5rem; padding:.3em .8em; justify-content:space-between; align-items:center; margin:0">
                 ${module.name}
@@ -133,9 +133,9 @@ async function loadModules() {
 window.toggleModule = async (name, isEnabled) => {
     try {
         if (isEnabled) {
-            await apiFetch(`/api/apache/module/${name}/disable`, {post:{}});
+            await apiFetch(`/api/nginx/module/${name}/disable`, {post:{}});
         } else {
-            await apiFetch(`/api/apache/module/${name}/enable`, {post:{}});
+            await apiFetch(`/api/nginx/module/${name}/enable`, {post:{}});
         }
         await loadModules();
     } catch (error) {
@@ -146,7 +146,7 @@ window.toggleModule = async (name, isEnabled) => {
 // View Full Status
 document.getElementById('viewFullStatus').addEventListener('click', async () => {
     try {
-        const status = await apiFetch('/api/apache/fullstatus');
+        const status = await apiFetch('/api/nginx/fullstatus');
         dialog.alert({
             body: '<pre style="font-size:.7em">' + status + '</pre>'
         });

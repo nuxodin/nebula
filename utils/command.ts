@@ -125,7 +125,7 @@ export const installPackages = async (packages: string[]) => {
     }
   }
   console.log(`✅ Pakete ${packages.join(", ")} wurden erfolgreich installiert!`);
-}
+}  
 
 
 export const updatePackages = async () => {
@@ -240,6 +240,7 @@ export const startService = async (service: string) => {
   const mapping = commands[commandKey];
   if (!mapping) throw new Error(`❌ Kein geeigneter Befehl zum Starten von ${service} gefunden.`);
   const result = await run(mapping.cmd ?? commandKey, mapping.args, { sudo: true });
+console.log(result, mapping.cmd ?? commandKey, mapping.args)
   if (result.code !== 0) throw new Error(`❌ Fehler beim Starten von ${service}: ${result.stderr}`);
 };
 
@@ -251,10 +252,10 @@ export const stopService = async (service: string) => {
   console.log(`\n⚙️ ${service} wird gestoppt...`);
   const commandKey = await useSystem();
   const commands: any = {
-    sc: { args: ["stop", service] },
+    sc: {        args: ["stop", service] },
     systemctl: { args: ["stop", service] },
-    service: { args: [service, "stop"] },
-    init: { cmd: `/etc/init.d/${service}`, args: ["stop"] },
+    service: {   args: [service, "stop"] },
+    init: {      args: ["stop"], cmd: `/etc/init.d/${service}` },
   };
   const mapping = commands[commandKey];
   if (!mapping) throw new Error(`❌ Kein geeigneter Befehl zum Stoppen von ${service} gefunden.`);
@@ -316,7 +317,6 @@ export const enableService = async (service: string) => {
 
 
 export const status = async (service: string) => {
-  console.log(`\n⚙️ Status von ${service} wird überprüft...`);
   const commandKey = await useSystem();
   const commands: any = {
     sc: { args: ["query", service] },
@@ -328,7 +328,6 @@ export const status = async (service: string) => {
   if (!mapping) throw new Error(`❌ Kein geeigneter Befehl zum Überprüfen des Status von ${service} gefunden.`);
   const result = await run(mapping.cmd ?? commandKey, mapping.args, { sudo: true });
   const isRunning = result.code === 0;
-  console.log(`✅ ${service} ist ${isRunning ? "aktiv" : "inaktiv"}`);
   return isRunning;
 };
 

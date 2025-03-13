@@ -46,6 +46,20 @@
         <br>
         <button onclick="killNebula()">Nebula beenden</button>
     </div>
+
+    <div class="card">
+        <h3><i class="mdi mdi-source-branch"></i> Git Status</h3>
+        <dl class="cd-left-right" id="gitInfo">
+            <dt>Branch</dt><dd id="gitBranch">Loading...</dd>
+            <dt>Status</dt><dd id="gitStatus">Loading...</dd>
+        </dl>
+        <div style="margin-top: 1rem">
+            <button id="updateButton" onclick="updateNebula()" style="display:none" class="btn btn-primary">
+                <i class="mdi mdi-source-branch"></i> Update from Git
+            </button>
+        </div>
+    </div>
+
 </div>
 
 <div class="card" style="margin-top: 1rem;">
