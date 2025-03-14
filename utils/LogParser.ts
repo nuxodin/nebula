@@ -145,28 +145,17 @@ const parsers = {
             });
         }
     },
-
-    zzzzDenoLog: {
-        // Matched z.B.: "Mar 14 15:02:24 gcdn deno[222294]: ℹ️ Datenbank bereits mit 3 Benutzern initialisiert"
-        regex: /^([A-Z][a-z]{2}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})\s+(\S+)\s+deno\[(\d+)\]:\s+(.+)$/,
-        parse: ([, dateStr, host, pid, message]) => {
-            const date = new Date(new Date().getFullYear() + " " + dateStr);
-            
-            // Level aus Emoji oder Text bestimmen
-            let level = 'info';
-            if (message.includes('❌') || message.includes('[ERROR]')) level = 'error';
-            else if (message.includes('⚠️') || message.includes('[WARN]')) level = 'warning';
-            else if (message.includes('ℹ️') || message.includes('[INFO]')) level = 'info';
-            else if (message.includes('🔍') || message.includes('[DEBUG]')) level = 'debug';
-            
+    PythonLog: {
+        // Matched z.B.: "2025-03-14 03:43:47,987:DEBUG:certbot._internal.main:Discovered plugins: PluginsRegistry(...)"
+        regex: /^(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2},\d{3}):([^:]+):([^:]+):(.+)$/,
+        parse: ([, dateStr, level, module, message]) => {
             return createEntry({
-                date,
-                level,
-                message: message,
-                context: {
-                    host,
-                    pid,
-                    type: 'deno'
+                date: new Date(dateStr.replace(',', '.')),
+                level: level.toLowerCase(),
+                message: message.trim(),
+                context: { 
+                    module,
+                    type: 'python'
                 }
             });
         }

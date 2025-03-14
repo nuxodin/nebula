@@ -12,6 +12,15 @@ const LOG_CATEGORIES = {
             "/var/log/syslog",
             "/var/log/messages",
             "/var/log/dmesg",
+            "/var/log/kern.log",
+            "/var/log/boot.log",
+            // faillog
+            "/var/log/faillog",
+            "/var/log/lastlog",
+            "/var/log/wtmp",
+            "/var/log/btmp",
+            "/var/log/utmp",
+            "/var/log/letsencrypt/letsencrypt.log",
             // Windows
             "C:\\Windows\\System32\\winevt\\Logs\\System.evtx",
             "C:\\Windows\\System32\\winevt\\Logs\\Application.evtx"
@@ -26,10 +35,12 @@ const LOG_CATEGORIES = {
             "/var/log/nginx/error.log",
             "/var/log/apache2/access.log",
             "/var/log/apache2/error.log",
+            "/var/log/apache2/ssl_error.log",
+            "/var/log/apache2/ssl_access.log",
             // Windows
             "C:\\inetpub\\logs\\LogFiles",
             "C:\\xampp\\apache\\logs",
-            "%ProgramFiles%\\nginx\\logs"
+            "%ProgramFiles%\\nginx\\logs",
         ]
     },
     database: {

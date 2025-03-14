@@ -88,10 +88,11 @@ function renderFiles(files) {
 
     tbody.innerHTML = files.map(file => `
         <tr class="log-file-row" data-path="${file.path}">
-            <td>${file.name}
-            <td>${file.type}
-            <td>${formatFileSize(file.size)}
-            <td>${file.modified ? new Date(file.modified).toLocaleString() : '-'}
+            <td>
+                ${file.name}<br>
+                <small>${file.path}</small>
+            <td><u2-bytes>${file.size}</u2-bytes>
+            <td><u2-time second datetime="${file.modified}" type="relative">${file.modified}</u2-time>
         </tr>
     `).join('');
 
@@ -230,14 +231,6 @@ async function analyzeCurrentLog() {
 }
 
 // Hilfsfunktionen
-function formatFileSize(bytes) {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
 function debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {
