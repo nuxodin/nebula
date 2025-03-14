@@ -95,8 +95,8 @@ const packetManager_noCache = async () => {
   if (Deno.build.os === "windows") return "winget";
   if (Deno.build.os === "darwin") return "brew";
   if (await isCommandAvailable("apt")) return "apt";
+  if (await isCommandAvailable("dnf")) return "dnf"; // prefer dnf over yum
   if (await isCommandAvailable("yum")) return "yum";
-  if (await isCommandAvailable("dnf")) return "dnf";
   return "apt";
 };
 let pm_cache = null;
