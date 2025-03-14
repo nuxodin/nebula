@@ -1,37 +1,166 @@
 <div class="header">
-  <h1 id="pageTitle">Log Browser</h1>
+    <h1>Log Browser 2.0</h1>
 </div>
 
-<div class="toolbar">
-  <input type="text" id="filter-input" placeholder="Filtern...">
-  <button id="apply-filter-btn">Filter</button>
-  <select id="lines-select">
-    <option value="50">50</option>
-    <option value="100" selected>100</option>
-    <option value="500">500</option>
-    <option value="1000">1000</option>
-  </select>
-  <button id="refresh-btn" u2-icon="refresh">Aktualisieren</button>
+<div class="u2-grid">
+    <!-- Log Categories Panel -->
+    <div class="card">
+        <h2>Log-Kategorien</h2>
+        <div id="categories-list"></div>
+    </div>
+
+    <!-- Files Panel -->
+    <div class="card">
+        <h2>Log-Dateien</h2>
+        <div class="toolbar">
+            <input type="text" id="file-search" placeholder="Dateien durchsuchen...">
+            <select id="type-filter">
+                <option value="">Alle Typen
+                <option value="error">Error Logs
+                <option value="access">Access Logs
+                <option value="debug">Debug Logs
+                <option value="audit">Audit Logs
+                <option value="general">Allgemein
+            </select>
+        </div>
+        <u2-table sortable>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name
+                        <th>Typ
+                        <th>Größe
+                        <th>Letzte Änderung
+                <tbody id="files-list">
+                    <tr><td colspan="4">Bitte wähle eine Kategorie
+            </table>
+        </u2-table>
+    </div>
+
+    <!-- Log Content Panel -->
+    <div class="card log-content-panel">
+        <h2>Log-Inhalt</h2>
+        <div class="toolbar">
+            <input type="text" id="content-filter" placeholder="Inhalt filtern...">
+            <select id="line-count">
+                <option value="50">50 Zeilen
+                <option value="100" selected>100 Zeilen
+                <option value="500">500 Zeilen
+                <option value="1000">1000 Zeilen
+            </select>
+            <select id="format">
+                <option value="auto">Auto-Erkennung
+                <option value="Syslog">Syslog
+                <option value="Apache">Apache
+                <option value="Nginx">Nginx
+                <option value="Json">JSON
+            </select>
+            <button id="refresh-btn" title="Aktualisieren">
+                <i class="mdi mdi-refresh"></i>
+            </button>
+            <button id="analyze-btn" title="Analysieren">
+                <i class="mdi mdi-chart-bar"></i>
+            </button>
+        </div>
+        <div id="log-content">Wähle eine Log-Datei aus</div>
+    </div>
 </div>
 
-<div class="layout-row">
-  <div class="left-panel">
-    <div class="box">
-      <h3>Log-Typen</h3>
-      <ul id="log-types-list">
-        <li>Lädt...</li>
-      </ul>
+<!-- Analysis Modal -->
+<dialog id="analysis-modal">
+    <h2>Log-Analyse</h2>
+    <div class="analysis-content">
+        <div class="analysis-section">
+            <h3>Statistik</h3>
+            <div id="log-stats"></div>
+        </div>
+        <div class="analysis-section">
+            <h3>Level-Verteilung</h3>
+            <div id="level-distribution"></div>
+        </div>
+        <div class="analysis-section">
+            <h3>Zeitliche Verteilung</h3>
+            <div id="time-distribution"></div>
+        </div>
     </div>
-  </div>
-  
-  <div class="main-panel">
-    <div id="log-files-container" class="box">
-      <div class="message">Log-Typ auswählen</div>
+    <div class="dialog-buttons">
+        <button onclick="this.closest('dialog').close()">Schließen</button>
     </div>
-    
-    <div class="log-viewer">
-      <div id="current-log-path" class="path">Datei auswählen</div>
-      <pre id="log-content">Wähle eine Log-Datei aus</pre>
-    </div>
-  </div>
-</div>
+</dialog>
+
+<style>
+.toolbar {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.toolbar input[type="text"] {
+    flex: 1;
+}
+
+.log-content-panel {
+    grid-column: span 2;
+}
+
+#log-content {
+    height: 40rem;
+    overflow: auto;
+    background: #f5f5f5;
+    padding: 1rem;
+    font-size: 0.9em;
+}
+
+.analysis-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+}
+
+.analysis-section {
+    background: #f5f5f5;
+    padding: 1rem;
+    border-radius: 4px;
+}
+
+dialog {
+    border: none;
+    border-radius: 8px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.dialog-buttons {
+    margin-top: 1rem;
+    text-align: right;
+}
+
+#categories-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.category-item {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.category-item:hover {
+    background-color: #f0f0f0;
+}
+
+.category-item.active {
+    background-color: #e0e0e0;
+}
+
+.error-level { color: #d32f2f; }
+.warning-level { color: #f57c00; }
+.info-level { color: #0288d1; }
+.debug-level { color: #388e3c; }
+</style>

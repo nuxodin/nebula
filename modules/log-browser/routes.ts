@@ -8,15 +8,11 @@ const apiRoutes = new Hono();
 objToRoutes(apiRoutes, api);
 
 // View Routes
-
-// View Controller
-const getLogBrowserView = async (c: Context) => {
-    const content = await Deno.readTextFile("./modules/log-browser/views/content.html");
-    const scripts = await Deno.readTextFile("./modules/log-browser/views/scripts.html");
-    return c.html(await renderTemplate("Log Browser", content, "", scripts));
-};
-
 const viewRoutes = new Hono();
-viewRoutes.get("/", getLogBrowserView);
+viewRoutes.get("/", async (c: Context) => {
+    const content = await Deno.readTextFile("./modules/log-browser2/views/content.html");
+    const scripts = await Deno.readTextFile("./modules/log-browser2/views/scripts.html");
+    return c.html(await renderTemplate("Log Browser 2.0", content, "", scripts));
+});
 
 export { apiRoutes, viewRoutes };
