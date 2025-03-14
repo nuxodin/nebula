@@ -55,5 +55,9 @@
   "git": {
     "category": "tools",
     "package": "git"
+  },
+  "certbot": {
+    "category": "ssl",
+    "package": "certbot"
   }
 }

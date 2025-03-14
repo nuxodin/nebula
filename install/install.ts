@@ -45,6 +45,7 @@ function initializeDatabase() {
         runtime_version TEXT,
 
         ssl_enabled BOOLEAN DEFAULT 0,
+        ssl_type TEXT,
         ssl_expires_at DATETIME,
 
         dns_ttl INTEGER DEFAULT 3600,
@@ -57,6 +58,10 @@ function initializeDatabase() {
         FOREIGN KEY (owner_id) REFERENCES clients(id)
       );
     `);
+    // add ssl_type if not exists (migration)
+    try {
+      db.query(`ALTER TABLE domains ADD COLUMN ssl_type TEXT;`);
+    } catch { }
 
     db.query(`
       CREATE TABLE IF NOT EXISTS dns_records (

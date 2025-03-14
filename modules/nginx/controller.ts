@@ -58,14 +58,13 @@ export const api = {
         const accessParser = new LogParser("/var/log/nginx/access.log");
         const accessLogs = await accessParser.getEntries({order: "desc", limit: 7});
 
-        const status = await api.status();
         const enabled = await run("systemctl", ["is-enabled", "nginx"], { sudo: true }).then(res => res.code === 0);
         const errorLog = errorsLogs;
         const accessLog = accessLogs;
         const configCheck = await run("nginx", ["-t"], { sudo: true });
 
         return {
-            status,
+            status: await status("nginx"),
             enabled,
             errorLog,
             accessLog,

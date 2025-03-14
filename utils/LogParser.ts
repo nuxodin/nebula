@@ -85,50 +85,6 @@ export class LogParser {
     
         return entries.slice(0, limit);
     }
-    async xxxgetEntries(options = {}) {
-        const { order = 'asc', limit = Infinity, search = '' } = options;
-    
-        const file = await Deno.open(this.filePath);
-        const decoder = new TextDecoder();
-        let entries = [];
-        let buffer = "";
-    
-        try {
-            // Alle Zeilen lesen
-            for await (const chunk of file.readable) {
-                buffer += decoder.decode(chunk, { stream: true });
-                const lines = buffer.split("\n");
-                buffer = lines.pop(); // Letzter unvollständiger Teil bleibt im Buffer
-    
-                for (const line of lines) {
-                    if (!line.trim()) continue;
-                    const entry = this.parseLine(line);
-                    if (search && !entry.message.toLowerCase().includes(search.toLowerCase())) continue;
-                    entries.push(entry);
-                }
-            }
-    
-            // Rest im Buffer verarbeiten
-            if (buffer.trim()) {
-                const entry = this.parseLine(buffer);
-                if (!search || entry.message.toLowerCase().includes(search.toLowerCase())) {
-                    entries.push(entry);
-                }
-            }
-    
-            // Reihenfolge und Limit anpassen
-            if (order === 'desc') {
-                entries.reverse(); // Umkehren für die letzten Zeilen
-            }
-            
-            // Nur die gewünschte Anzahl zurückgeben
-            return entries.slice(0, limit);
-    
-        } finally {
-            // Kein explizites file.close() nötig, da der Stream die Ressource freigibt
-        }
-    }
-
 
     parseLine(line) {
         const parserObj = this.format === "auto"

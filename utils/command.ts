@@ -120,13 +120,10 @@ export const installPackages = async (packages: string[]) => {
   };
   for (const cmd of commands[pm]) {
     const result = await run(pm, cmd, { sudo: true });
-    if (result.code !== 0) {
-      throw new Error(`❌ Fehler beim Ausführen von '${pm} ${cmd.join(" ")}': (code ${result.code}) ${result.stderr}`);
-    }
+    if (result.code !== 0) throw new Error(`❌ Fehler beim Ausführen von '${pm} ${cmd.join(" ")}': (code ${result.code}) ${result.stderr}`);
   }
   console.log(`✅ Pakete ${packages.join(", ")} wurden erfolgreich installiert!`);
 }  
-
 
 export const updatePackages = async () => {
   const pm = await packetManager();
@@ -150,45 +147,6 @@ export const updatePackages = async () => {
 
 };
 
-
-
-
-
-// export const old_installPackages = async (packages: string[]) => {
-//   const isWindows = Deno.build.os === "windows";
-//   console.log(`🔍 Verfügbare Paketmanager werden überprüft...`);
-
-
-//   const packageManagers: { name: string; commands: string[][] }[] = isWindows
-//     ? [{ name: "winget", commands: [["install", "-e", ...packages]] }]
-//     : [
-//         { name: "apt", commands: [["update"], ["install", "-y", ...packages]] },
-//         { name: "yum", commands: [["install", "-y", ...packages]] },
-//         { name: "dnf", commands: [["install", "-y", ...packages]] },
-//         { name: "apk", commands: [["update"], ["add", ...packages]] },
-//       ];
-
-//   for (const pm of packageManagers) {
-//     if (await isCommandAvailable(pm.name)) {
-//       console.log(`📦 ${pm.name} wird verwendet, um Pakete zu installieren: ${packages.join(", ")}`);
-//       for (const cmd of pm.commands) {
-//         const result = await run(pm.name, cmd, {sudo:true});
-//         if (result.code !== 0) {
-//           throw new Error(`❌ Fehler beim Ausführen von '${pm.name} ${cmd.join(" ")}': (code ${result.code}) ${result.stderr}`);
-//         }
-//       }
-//       console.log(`✅ Pakete ${packages.join(", ")} wurden erfolgreich installiert!`);
-//       return true;
-//     }
-//   }
-//   console.error(`❌ Kein unterstützter Paketmanager gefunden (${isWindows ? "winget" : "apt, yum, dnf, apk"}).`);
-// };
-
-
-
-/**
- * Checks if a package is installed using the appropriate package manager (apt, yum, dnf, apk)
- */
 export const isPackageInstalled = async (pkg: string): Promise<boolean> => {
   const isWindows = Deno.build.os === "windows";
   const cmds = isWindows 
@@ -210,6 +168,10 @@ export const isPackageInstalled = async (pkg: string): Promise<boolean> => {
 };
 
 
+/**
+ * Service Management
+ */
+
 const useSystem_noCache = async (): Promise<string> => {
   if (Deno.build.os === "windows") return "sc";
   const initSystem = await run("cat", ["/proc/1/comm"]);
@@ -224,14 +186,10 @@ export async function useSystem() {
   return useSystemCache ?? (useSystemCache = await useSystem_noCache());
 };
 
-/**
- * Starts a service using systemctl, service, or direct commands
- */
-
 export const startService = async (service: string) => {
   console.log(`\n⚙️ Dienst ${service} wird gestartet...`);
   const commandKey = await useSystem();
-  const commands: any = {
+  const commands = {
     sc:        { args: ["start", service] },
     systemctl: { args: ["start", service] },
     service:   { args: [service, "start"] },
@@ -240,18 +198,13 @@ export const startService = async (service: string) => {
   const mapping = commands[commandKey];
   if (!mapping) throw new Error(`❌ Kein geeigneter Befehl zum Starten von ${service} gefunden.`);
   const result = await run(mapping.cmd ?? commandKey, mapping.args, { sudo: true });
-console.log(result, mapping.cmd ?? commandKey, mapping.args)
   if (result.code !== 0) throw new Error(`❌ Fehler beim Starten von ${service}: ${result.stderr}`);
 };
 
-
-/**
- * Stops a service using systemctl, service, or direct commands
- */
 export const stopService = async (service: string) => {
   console.log(`\n⚙️ ${service} wird gestoppt...`);
   const commandKey = await useSystem();
-  const commands: any = {
+  const commands = {
     sc: {        args: ["stop", service] },
     systemctl: { args: ["stop", service] },
     service: {   args: [service, "stop"] },
@@ -264,13 +217,10 @@ export const stopService = async (service: string) => {
   console.log(`✅ ${service} wurde erfolgreich gestoppt!`);
 };
 
-/**
- * Reloads a service using systemctl, service, or direct commands
- */
 export const restartService = async (service: string) => {
   console.log(`\n⚙️ ${service} wird neu geladen...`);
   const commandKey = await useSystem();
-  const commands: any = {
+  const commands = {
     sc: { args: ["restart", service] },
     systemctl: { args: ["restart", service] },
     service: { args: [service, "restart"] },
@@ -286,7 +236,7 @@ export const restartService = async (service: string) => {
 export const reloadService = async (service: string) => {
   console.log(`\n⚙️ ${service} wird neu geladen...`);
   const commandKey = await useSystem();
-  const commands: any = {
+  const commands = {
     sc: { args: ["reload", service] },
     systemctl: { args: ["reload", service] },
     service: { args: [service, "reload"] },
@@ -295,6 +245,7 @@ export const reloadService = async (service: string) => {
   const mapping = commands[commandKey];
   if (!mapping) throw new Error(`❌ Kein geeigneter Befehl zum Neuladen von ${service} gefunden.`);
   const result = await run(mapping.cmd ?? commandKey, mapping.args, { sudo: true });
+console.log('reloadService -> result', result);
   if (result.code !== 0) throw new Error(`❌ Fehler beim Neuladen von ${service}: ${result.stderr}`);
   console.log(`✅ ${service} wurde erfolgreich neu geladen!`);
 };
@@ -302,7 +253,7 @@ export const reloadService = async (service: string) => {
 export const enableService = async (service: string) => {
   console.log(`\n⚙️ ${service} wird aktiviert...`);
   const commandKey = await useSystem();
-  const commands: any = {
+  const commands = {
     sc: { args: ["config", service, "start=auto"] },
     systemctl: { args: ["enable", service] },
     service: { args: [service, "enable"] },
@@ -318,7 +269,7 @@ export const enableService = async (service: string) => {
 
 export const status = async (service: string) => {
   const commandKey = await useSystem();
-  const commands: any = {
+  const commands = {
     sc: { args: ["query", service] },
     systemctl: { args: ["status", service] },
     service: { args: [service, "status"] },
@@ -330,18 +281,3 @@ export const status = async (service: string) => {
   const isRunning = result.code === 0;
   return isRunning;
 };
-
-
-// export const status = async (service: string) => {
-//   let result;
-//   if (Deno.build.os === "windows") {
-//     result = await run("sc", ["query", service], {sudo:true});
-//   } else if (await isCommandAvailable("systemctl")) {
-//     result = await run("systemctl", ["status", service], {sudo:true});
-//   } else if (await isCommandAvailable("service")) {
-//     result = await run("service", [service, "status"], {sudo:true});
-//   } else {
-//     result = await run(`/etc/init.d/${service}`, ["status"], {sudo:true});
-//   }
-//   return result.code === 0;
-// };
