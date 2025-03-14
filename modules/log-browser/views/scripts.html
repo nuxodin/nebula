@@ -27,7 +27,7 @@ function setupEventListeners() {
 // Kategorien laden und anzeigen
 async function loadCategories() {
     try {
-        const { categories } = await apiFetch('/api/log-browser2/categories');
+        const { categories } = await apiFetch('/api/log-browser/categories');
         const container = document.getElementById('categories-list');
         container.innerHTML = '';
 
@@ -54,7 +54,7 @@ async function loadCategories() {
 // Log-Dateien einer Kategorie laden
 async function loadFiles(categoryId) {
     try {
-        const { files } = await apiFetch(`/api/log-browser2/files/${categoryId}`);
+        const { files } = await apiFetch(`/api/log-browser/files/${categoryId}`);
         logFiles = files;
         filterFiles();
     } catch (error) {
@@ -118,7 +118,7 @@ async function loadLogContent() {
         const lines = document.getElementById('line-count').value;
         const format = document.getElementById('format').value;
 
-        const { content, entries, error } = await apiFetch('/api/log-browser2/content', {
+        const { content, entries, error } = await apiFetch('/api/log-browser/content', {
             post: {
                 path: currentLogPath,
                 filter,
@@ -184,7 +184,7 @@ async function analyzeCurrentLog() {
     }
 
     try {
-        const analysis = await apiFetch('/api/log-browser2/analyze', {
+        const analysis = await apiFetch('/api/log-browser/analyze', {
             post: { path: currentLogPath }
         });
 
