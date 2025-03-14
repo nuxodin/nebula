@@ -1,43 +1,26 @@
 <div class="header">
-    <h1>Log Browser 2.0</h1>
+    <h1>System Logs</h1>
 </div>
 
-<div class="u2-grid">
-    <!-- Log Categories Panel -->
-    <div class="card">
-        <h2>Log-Kategorien</h2>
-        <div id="categories-list"></div>
-    </div>
-
-    <!-- Files Panel -->
-    <div class="card">
+<div class="u2-flex">
+    <div class="card" style="grid-column: span 2">
         <h2>Log-Dateien</h2>
-        <div class="toolbar">
-            <input type="text" id="file-search" placeholder="Dateien durchsuchen...">
-            <select id="type-filter">
-                <option value="">Alle Typen
-                <option value="error">Error Logs
-                <option value="access">Access Logs
-                <option value="debug">Debug Logs
-                <option value="audit">Audit Logs
-                <option value="general">Allgemein
-            </select>
-        </div>
         <u2-table sortable>
             <table>
                 <thead>
                     <tr>
                         <th>Name
+                        <th>Pfad
                         <th>Größe
                         <th>Letzte Änderung
                 <tbody id="files-list">
-                    <tr><td colspan="4">Bitte wähle eine Kategorie
+                    <tr><td colspan="4">Lade Logs...</td></tr>
+                </tbody>
             </table>
         </u2-table>
     </div>
 
-    <!-- Log Content Panel -->
-    <div class="card log-content-panel">
+    <div class="card log-content-panel" style="flex:1 1 50rem;">
         <h2>Log-Inhalt</h2>
         <div class="toolbar">
             <input type="text" id="content-filter" placeholder="Inhalt filtern...">
@@ -47,45 +30,13 @@
                 <option value="500">500 Zeilen
                 <option value="1000">1000 Zeilen
             </select>
-            <select id="format">
-                <option value="auto">Auto-Erkennung
-                <option value="Syslog">Syslog
-                <option value="Apache">Apache
-                <option value="Nginx">Nginx
-                <option value="Json">JSON
-            </select>
             <button id="refresh-btn" title="Aktualisieren">
                 <i class="mdi mdi-refresh"></i>
-            </button>
-            <button id="analyze-btn" title="Analysieren">
-                <i class="mdi mdi-chart-bar"></i>
             </button>
         </div>
         <div id="log-content">Wähle eine Log-Datei aus</div>
     </div>
 </div>
-
-<!-- Analysis Modal -->
-<dialog id="analysis-modal">
-    <h2>Log-Analyse</h2>
-    <div class="analysis-content">
-        <div class="analysis-section">
-            <h3>Statistik</h3>
-            <div id="log-stats"></div>
-        </div>
-        <div class="analysis-section">
-            <h3>Level-Verteilung</h3>
-            <div id="level-distribution"></div>
-        </div>
-        <div class="analysis-section">
-            <h3>Zeitliche Verteilung</h3>
-            <div id="time-distribution"></div>
-        </div>
-    </div>
-    <div class="dialog-buttons">
-        <button onclick="this.closest('dialog').close()">Schließen</button>
-    </div>
-</dialog>
 
 <style>
 .toolbar {
@@ -93,73 +44,29 @@
     gap: 0.5rem;
     margin-bottom: 1rem;
 }
-
 .toolbar input[type="text"] {
     flex: 1;
-}
-
-.log-content-panel {
-    grid-column: span 2;
 }
 
 #log-content {
     height: 40rem;
     overflow: auto;
-    background: #f5f5f5;
-    padding: 1rem;
+    background: #f9f9f9;
     font-size: 0.9em;
 }
 
-.analysis-content {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1rem;
-    padding: 1rem;
-}
-
-.analysis-section {
-    background: #f5f5f5;
-    padding: 1rem;
+.log-entry {
+    margin-bottom: 0.5em;
+    padding: 0.5em;
     border-radius: 4px;
+    border-left: 4px solid transparent;
 }
 
-dialog {
-    border: none;
-    border-radius: 8px;
-    padding: 2rem;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
+.log-entry.error-level { border-left-color: #d32f2f; background: rgba(211, 47, 47, 0.05); }
+.log-entry.warning-level { border-left-color: #f57c00; background: rgba(245, 124, 0, 0.05); }
+.log-entry.info-level { border-left-color: #0288d1; background: rgba(2, 136, 209, 0.05); }
+.log-entry.debug-level { border-left-color: #388e3c; background: rgba(56, 142, 60, 0.05); }
 
-.dialog-buttons {
-    margin-top: 1rem;
-    text-align: right;
-}
-
-#categories-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.category-item {
-    display: flex;
-    align-items: center;
-    padding: 0.5rem;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.category-item:hover {
-    background-color: #f0f0f0;
-}
-
-.category-item.active {
-    background-color: #e0e0e0;
-}
-
-.error-level { color: #d32f2f; }
-.warning-level { color: #f57c00; }
-.info-level { color: #0288d1; }
-.debug-level { color: #388e3c; }
+tr { cursor: pointer; }
+tr.active { background: #e3f2fd; }
 </style>

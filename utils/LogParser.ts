@@ -86,6 +86,22 @@ function createEntry({ date, level, message, context = {} }) {
 }
 
 const parsers = {
+    DpkgLog: {
+        // Matches: "2025-03-14 02:10:36 status half-configured python3-certifi:all 2022.9.24-1"
+        regex: /^(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(\w+)\s+(.*)$/,
+        parse: ([, dateStr, action, rest]) => {
+            return createEntry({
+                date: new Date(dateStr),
+                level: action === 'configure' ? 'info' : 'debug',
+                message: rest,
+                context: { 
+                    action,
+                    raw: rest
+                }
+            });
+        }
+    },
+    
     Syslog: {
         regex: /^\[([^\]]+)\] \[([^:]+):([^\]]+)\] (.*)$/,
         parse: ([, dateStr, module, level, rest]) => {

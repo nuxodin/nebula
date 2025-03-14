@@ -1,81 +1,34 @@
 <script type="module">
 import { apiFetch } from '/public/js/utils.js';
 
-let currentCategory = null;
 let currentLogPath = null;
 let logFiles = [];
 
 // Initialisierung
 document.addEventListener('DOMContentLoaded', () => {
-    loadCategories();
+    loadFiles();
     setupEventListeners();
 });
 
 function setupEventListeners() {
-    // Filter-Ereignisse
-    document.getElementById('file-search').addEventListener('input', filterFiles);
-    document.getElementById('type-filter').addEventListener('change', filterFiles);
+    // Content-Filter und Refresh
     document.getElementById('content-filter').addEventListener('input', debounce(reloadLogContent, 300));
     document.getElementById('line-count').addEventListener('change', reloadLogContent);
-    document.getElementById('format').addEventListener('change', reloadLogContent);
-    
-    // Buttons
     document.getElementById('refresh-btn').addEventListener('click', reloadLogContent);
-    document.getElementById('analyze-btn').addEventListener('click', analyzeCurrentLog);
 }
 
-// Kategorien laden und anzeigen
-async function loadCategories() {
+// Log-Dateien laden
+async function loadFiles() {
     try {
-        const { categories } = await apiFetch('/api/log-browser/categories');
-        const container = document.getElementById('categories-list');
-        container.innerHTML = '';
-
-        categories.forEach(category => {
-            const item = document.createElement('div');
-            item.className = 'category-item';
-            item.textContent = category.name;
-            item.dataset.id = category.id;
-
-            item.addEventListener('click', () => {
-                document.querySelectorAll('.category-item').forEach(el => el.classList.remove('active'));
-                item.classList.add('active');
-                currentCategory = category.id;
-                loadFiles(category.id);
-            });
-
-            container.appendChild(item);
-        });
-    } catch (error) {
-        console.error('Fehler beim Laden der Kategorien:', error);
-    }
-}
-
-// Log-Dateien einer Kategorie laden
-async function loadFiles(categoryId) {
-    try {
-        const { files } = await apiFetch(`/api/log-browser/files/${categoryId}`);
-        logFiles = files;
-        filterFiles();
+        const { files } = await apiFetch('/api/log-browser/files');
+        // Filtere 0-Byte Dateien
+        logFiles = files.filter(file => file.size > 0);
+        renderFiles(logFiles);
     } catch (error) {
         console.error('Fehler beim Laden der Dateien:', error);
         document.getElementById('files-list').innerHTML = 
             `<tr><td colspan="4">Fehler beim Laden der Dateien: ${error.message}</tr>`;
     }
-}
-
-// Dateien filtern und anzeigen
-function filterFiles() {
-    const searchTerm = document.getElementById('file-search').value.toLowerCase();
-    const typeFilter = document.getElementById('type-filter').value;
-    
-    const filteredFiles = logFiles.filter(file => {
-        const matchesSearch = file.name.toLowerCase().includes(searchTerm);
-        const matchesType = !typeFilter || file.type === typeFilter;
-        return matchesSearch && matchesType;
-    });
-
-    renderFiles(filteredFiles);
 }
 
 // Dateien in der Tabelle anzeigen
@@ -88,11 +41,10 @@ function renderFiles(files) {
 
     tbody.innerHTML = files.map(file => `
         <tr class="log-file-row" data-path="${file.path}">
-            <td>
-                ${file.name}<br>
-                <small>${file.path}</small>
-            <td><u2-bytes>${file.size}</u2-bytes>
-            <td><u2-time second datetime="${file.modified}" type="relative">${file.modified}</u2-time>
+            <td>${file.name}
+            <td><small>${file.path.substring(0, file.path.lastIndexOf('/'))  || '/'}<small>
+            <td><small><u2-bytes>${file.size}</u2-bytes><small>
+            <td><small><u2-time second datetime="${file.modified.trim()}" type=relative>${file.modified}</u2-time><small>
         </tr>
     `).join('');
 
@@ -103,8 +55,23 @@ function renderFiles(files) {
             row.classList.add('active');
             currentLogPath = row.dataset.path;
             loadLogContent();
+            
+            // Update URL
+            const url = new URL(window.location.href);
+            url.searchParams.set('file', currentLogPath);
+            window.history.pushState({}, '', url);
         });
     });
+
+    // Prüfe ob ein File in der URL ist
+    const urlParams = new URLSearchParams(window.location.search);
+    const fileParam = urlParams.get('file');
+    if (fileParam) {
+        const row = tbody.querySelector(`[data-path="${fileParam}"]`);
+        if (row) {
+            row.click();
+        }
+    }
 }
 
 // Log-Inhalt laden
@@ -117,14 +84,12 @@ async function loadLogContent() {
     try {
         const filter = document.getElementById('content-filter').value;
         const lines = document.getElementById('line-count').value;
-        const format = document.getElementById('format').value;
 
         const { content, entries, error } = await apiFetch('/api/log-browser/content', {
             post: {
                 path: currentLogPath,
                 filter,
-                lines: parseInt(lines),
-                format: format === 'auto' ? undefined : format
+                lines: parseInt(lines)
             }
         });
 
@@ -133,19 +98,21 @@ async function loadLogContent() {
             return;
         }
 
-        logContent.innerHTML = formatLogContent(content, entries);
+        if (entries) {
+            logContent.innerHTML = formatLogEntries(entries);
+        } else {
+            logContent.innerHTML = formatRawContent(content);
+        }
         logContent.scrollTop = 0;
     } catch (error) {
         logContent.innerHTML = `<div class="error">Fehler beim Laden: ${error.message}</div>`;
     }
 }
 
-// Log-Inhalt formatieren mit Syntax-Highlighting und verbesserter Darstellung
-function formatLogContent(content, entries) {
-    if (!entries) return content;
-
+// Formatiert strukturierte Log-Einträge
+function formatLogEntries(entries) {
     return entries.map(entry => {
-        const level = entry.level.toLowerCase();
+        const level = entry.level?.toLowerCase() || 'info';
         let cssClass = 'info-level';
         if (level.includes('error')) cssClass = 'error-level';
         else if (level.includes('warn')) cssClass = 'warning-level';
@@ -168,7 +135,7 @@ function formatLogContent(content, entries) {
                                 ${entry.date}
                             </u2-time>
                         ` : '<span class="no-date">Kein Datum</span>'}
-                        <small class="u2-badge status-${level}">${entry.level}</small>
+                        <small class="u2-badge status-${level}">${entry.level || 'INFO'}</small>
                     </div>
                     ${contextHtml}
                 </div>
@@ -177,57 +144,20 @@ function formatLogContent(content, entries) {
     }).join('');
 }
 
-// Log-Datei analysieren
-async function analyzeCurrentLog() {
-    if (!currentLogPath) {
-        alert('Bitte wähle erst eine Log-Datei aus');
-        return;
-    }
-
-    try {
-        const analysis = await apiFetch('/api/log-browser/analyze', {
-            post: { path: currentLogPath }
-        });
-
-        // Statistik anzeigen
-        document.getElementById('log-stats').innerHTML = `
-            <p>Anzahl Einträge: ${analysis.totalEntries}</p>
-            <p>Level-Verteilung:</p>
-            <ul>
-                ${Object.entries(analysis.levels)
-                    .map(([level, count]) => `<li>${level}: ${count}</li>`)
-                    .join('')}
-            </ul>
-        `;
-
-        // Level-Verteilung visualisieren
-        const levelDist = document.getElementById('level-distribution');
-        levelDist.innerHTML = Object.entries(analysis.levels)
-            .map(([level, count]) => `
-                <div class="level-bar">
-                    <div class="level-label">${level}</div>
-                    <div class="level-value" style="width: ${(count / analysis.totalEntries * 100)}%">
-                        ${count}
-                    </div>
-                </div>
-            `).join('');
-
-        // Zeitverteilung visualisieren
-        const timeDist = document.getElementById('time-distribution');
-        timeDist.innerHTML = Object.entries(analysis.timeDistribution)
-            .map(([hour, count]) => `
-                <div class="time-bar">
-                    <div class="time-label">${hour}:00</div>
-                    <div class="time-value" style="height: ${(count / analysis.totalEntries * 100)}%">
-                        ${count}
-                    </div>
-                </div>
-            `).join('');
-
-        document.getElementById('analysis-modal').showModal();
-    } catch (error) {
-        alert('Fehler bei der Analyse: ' + error.message);
-    }
+// Formatiert rohen Log-Inhalt
+function formatRawContent(content) {
+    if (!content) return '';
+    
+    const lines = content.split('\n');
+    return lines.map(line => {
+        let cssClass = 'info-level';
+        const lower = line.toLowerCase();
+        if (lower.includes('error') || lower.includes('err]')) cssClass = 'error-level';
+        else if (lower.includes('warn')) cssClass = 'warning-level';
+        else if (lower.includes('debug')) cssClass = 'debug-level';
+        
+        return `<div class="log-entry ${cssClass}">${line}</div>`;
+    }).join('');
 }
 
 // Hilfsfunktionen
@@ -249,92 +179,49 @@ function reloadLogContent() {
 </script>
 
 <style>
-.level-bar, .time-bar {
-    display: flex;
-    align-items: center;
-    margin-bottom: 4px;
-}
-
-.level-label, .time-label {
-    width: 80px;
-    font-size: 0.8em;
-}
-
-.level-value, .time-value {
-    background: #2196f3;
-    color: white;
-    padding: 2px 8px;
-    border-radius: 2px;
-    transition: width 0.3s;
-    text-align: right;
-    font-size: 0.8em;
-}
-
-.time-distribution {
-    display: flex;
-    align-items: flex-end;
-    height: 150px;
-    gap: 2px;
-}
-
-.time-bar {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    height: 100%;
-}
-
-.time-value {
-    width: 100%;
-    background: #4caf50;
-}
-
-.log-file-row {
-    cursor: pointer;
-}
-
-.log-file-row:hover {
-    background-color: #f5f5f5;
-}
-
-.log-file-row.active {
-    background-color: #e3f2fd;
-}
-
 .log-entry {
-    margin: 0.5em 0;
+    margin-bottom: 0.5em;
     padding: 0.5em;
     border-radius: 4px;
     border-left: 4px solid transparent;
 }
 
-.log-entry.error-level { border-left-color: #d32f2f; background: rgba(211, 47, 47, 0.05); }
-.log-entry.warning-level { border-left-color: #f57c00; background: rgba(245, 124, 0, 0.05); }
-.log-entry.info-level { border-left-color: #0288d1; background: rgba(2, 136, 209, 0.05); }
-.log-entry.debug-level { border-left-color: #388e3c; background: rgba(56, 142, 60, 0.05); }
+.log-entry.error-level { 
+    border-left-color: #d32f2f; 
+    background: rgba(211, 47, 47, 0.05); 
+}
+.log-entry.warning-level { 
+    border-left-color: #f57c00; 
+    background: rgba(245, 124, 0, 0.05); 
+}
+.log-entry.info-level { 
+    border-left-color: #0288d1; 
+    background: rgba(2, 136, 209, 0.05); 
+}
+.log-entry.debug-level { 
+    border-left-color: #388e3c; 
+    background: rgba(56, 142, 60, 0.05); 
+}
 
 .log-header {
     color: #666;
     font-size: 0.8em;
+    margin-bottom: 0.3em;
 }
-.log-meta {
-    display: flex;
-    align-items: center;
-    gap: 0.5em;
-}
-
 .context-item {
     display: inline-block;
-    margin-right: .8em;
 }
+
 .context-item strong {
     color: #444;
 }
 
-.no-date {
-    color: #999;
-    font-style: italic;
-}
+tr { cursor: pointer; }
+tr.active { background: #e3f2fd; }
 
+/* Status Badge Farben */
+.status-error { background: #d32f2f; }
+.status-warn { background: #f57c00; }
+.status-info { background: #0288d1; }
+.status-debug { background: #388e3c; }
 </style>

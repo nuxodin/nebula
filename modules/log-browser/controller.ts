@@ -4,77 +4,101 @@ import { run } from "../../utils/command.ts";
 import { join, basename } from "https://deno.land/std@0.208.0/path/mod.ts";
 import { LogParser } from "../../utils/LogParser.ts";
 
-// Definiert verschiedene Log-Kategorien und ihre Pfade
-const LOG_CATEGORIES = {
-    system: {
-        name: "System Logs",
-        paths: [
-            "/var/log/syslog",
-            "/var/log/messages",
-            "/var/log/dmesg",
-            "/var/log/kern.log",
-            "/var/log/boot.log",
-            // faillog
-            "/var/log/faillog",
-            "/var/log/lastlog",
-            "/var/log/wtmp",
-            "/var/log/btmp",
-            "/var/log/utmp",
-            "/var/log/letsencrypt/letsencrypt.log",
-            // Windows
-            "C:\\Windows\\System32\\winevt\\Logs\\System.evtx",
-            "C:\\Windows\\System32\\winevt\\Logs\\Application.evtx"
-        ]
-    },
-    webserver: {
-        name: "Webserver",
-        paths: [
-            "/var/log/nginx",
-            "/var/log/apache2",
-            "/var/log/nginx/access.log",
-            "/var/log/nginx/error.log",
-            "/var/log/apache2/access.log",
-            "/var/log/apache2/error.log",
-            "/var/log/apache2/ssl_error.log",
-            "/var/log/apache2/ssl_access.log",
-            // Windows
-            "C:\\inetpub\\logs\\LogFiles",
-            "C:\\xampp\\apache\\logs",
-            "%ProgramFiles%\\nginx\\logs",
-        ]
-    },
-    database: {
-        name: "Datenbanken",
-        paths: [
-            "/var/log/mysql",
-            "/var/log/postgresql",
-            "/var/log/mysql/error.log",
-            "/var/log/mariadb/mariadb.log",
-            // Windows
-            "%ProgramFiles%\\MySQL\\MySQL Server*\\data\\*.err",
-            "%ProgramFiles%\\PostgreSQL\\*\\data\\log"
-        ]
-    },
-    application: {
-        name: "Anwendungs-Logs",
-        paths: [
-            "./logs",
-            "./nebula-data/logs",
-            // Windows
-            "%LOCALAPPDATA%\\Temp\\*.log",
-            "%TEMP%\\*.log"
-        ]
-    },
-    security: {
-        name: "Sicherheits-Logs",
-        paths: [
-            "/var/log/auth.log",
-            "/var/log/secure",
-            // Windows
-            "C:\\Windows\\System32\\winevt\\Logs\\Security.evtx"
-        ]
-    }
-};
+const LOG_PATHS = [
+    // Linux System Logs
+    "/var/log/syslog",
+    "/var/log/messages",
+    "/var/log/dmesg",
+    "/var/log/kern.log",
+    "/var/log/auth.log",
+    "/var/log/boot.log",
+    "/var/log/daemon.log",
+    "/var/log/dpkg.log",
+    "/var/log/faillog",
+    "/var/log/alternatives.log",
+    "/var/log/lastlog",
+    "/var/log/mail.log",
+    "/var/log/user.log",
+    "/var/log/debug",
+    "/var/log/wtmp",
+    "/var/log/btmp",
+    "/var/log/utmp",
+
+    // Linux Webserver Logs
+    "/var/log/nginx/access.log",
+    "/var/log/nginx/error.log",
+    "/var/log/apache2/access.log",
+    "/var/log/apache2/error.log",
+    "/var/log/apache2/other_vhosts_access.log",
+    "/var/log/httpd/access_log",
+    "/var/log/httpd/error_log",
+
+    // Linux Database Logs
+    "/var/log/mysql/error.log",
+    "/var/log/mysql/mysql.log",
+    "/var/log/mysql/mysql-slow.log",
+    "/var/log/postgresql/postgresql-main.log",
+    "/var/log/mariadb/mariadb.log",
+
+    // Linux Mail Logs
+    "/var/log/mail.info",
+    "/var/log/mail.warn",
+    "/var/log/mail.err",
+    "/var/log/exim4/",
+    "/var/log/dovecot.log",
+
+    // Linux Security Logs
+    "/var/log/secure",
+    "/var/log/fail2ban.log",
+    "/var/log/clamav/freshclam.log",
+    "/var/log/ufw.log",
+
+    // Application Logs
+    "/var/log/php/error.log",
+    "/var/log/php-fpm/error.log",
+    "/var/log/php-fpm/www-error.log",
+    "/var/log/redis/redis-server.log",
+    "/var/log/supervisor/supervisord.log",
+    "/var/log/jenkins/jenkins.log",
+    "/var/log/letsencrypt/letsencrypt.log",
+
+    // Windows System Logs
+    "C:\\Windows\\System32\\winevt\\Logs\\System.evtx",
+    "C:\\Windows\\System32\\winevt\\Logs\\Application.evtx",
+    "C:\\Windows\\System32\\winevt\\Logs\\Security.evtx",
+    "C:\\Windows\\debug\\WIA\\wiatrace.log",
+    "C:\\Windows\\SoftwareDistribution\\ReportingEvents.log",
+    "C:\\Windows\\WindowsUpdate.log",
+    "C:\\Windows\\Panther\\UnattendGC\\setupact.log",
+    "C:\\Windows\\inf\\setupapi.dev.log",
+    "C:\\Windows\\Logs\\CBS\\CBS.log",
+    "C:\\Windows\\Logs\\DISM\\dism.log",
+
+    // Windows IIS Logs
+    "C:\\inetpub\\logs\\LogFiles\\W3SVC1\\u_ex*.log",
+    "C:\\inetpub\\logs\\LogFiles\\HTTPERR\\httperr*.log",
+
+    // Windows Program Logs
+    "C:\\Program Files\\Microsoft SQL Server\\*\\MSSQL\\Log\\ERRORLOG",
+    "%ProgramFiles%\\MySQL\\MySQL Server*\\data\\*.err",
+    "%ProgramFiles%\\PostgreSQL\\*\\data\\log\\postgresql-*.log",
+    "%ProgramData%\\MySQL\\MySQL Server*\\data\\*.err",
+    
+    // Windows XAMPP Logs
+    "C:\\xampp\\apache\\logs\\access.log",
+    "C:\\xampp\\apache\\logs\\error.log",
+    "C:\\xampp\\mysql\\data\\mysql_error.log",
+    "C:\\xampp\\php\\logs\\php_error_log",
+
+    // Windows Nginx Logs
+    "%ProgramFiles%\\nginx\\logs\\access.log",
+    "%ProgramFiles%\\nginx\\logs\\error.log",
+
+    // Application Data Logs
+    "%LOCALAPPDATA%\\*.log",
+    "%TEMP%\\*.log",
+    "%PROGRAMDATA%\\*.log"
+];
 
 // Findet und filtert Log-Dateien
 async function findLogFiles(paths: string[]): Promise<Array<{name: string; path: string; size: number; modified: Date | null; type: string}>> {
@@ -149,23 +173,22 @@ function getLogType(filename: string): string {
 
 // API Controller
 export const api = {
-    categories: {
-        get: () => {
-            return { categories: Object.entries(LOG_CATEGORIES).map(([id, cat]) => ({
-                id,
-                name: cat.name
-            }))};
-        }
-    },
-
     files: {
-        ':category': async (c: Context) => {
-            const { category } = c.req.param();
-            if (!LOG_CATEGORIES[category]) {
-                return c.json({ error: "Ungültige Kategorie" }, 400);
+        get: async () => {
+            const files = [];
+            for (const path of LOG_PATHS) {
+                try {
+                    const stat = await Deno.stat(path);
+                    files.push({
+                        name: basename(path),
+                        path: path,
+                        size: stat.size,
+                        modified: stat.mtime
+                    });
+                } catch {
+                    // Ignoriere nicht existierende Dateien
+                }
             }
-
-            const files = await findLogFiles(LOG_CATEGORIES[category].paths);
             return { files };
         }
     },
@@ -203,39 +226,6 @@ export const api = {
                 content: entries.map(entry => entry.toString()).join('\n'),
                 entries: entries
             };
-        }
-    },
-
-    analyze: {
-        post: async (c: Context) => {
-            const { path } = await c.req.json();
-            
-            if (!path) {
-                return c.json({ error: "Kein Pfad angegeben" }, 400);
-            }
-
-            const parser = new LogParser(path);
-            const entries = await parser.getEntries({ limit: 1000 });
-
-            // Analyse der Log-Einträge
-            const analysis = {
-                totalEntries: entries.length,
-                levels: {} as Record<string, number>,
-                timeDistribution: {} as Record<string, number>,
-                commonPatterns: [] as Array<{pattern: string, count: number}>,
-            };
-
-            // Zähle Level und Zeitverteilung
-            for (const entry of entries) {
-                analysis.levels[entry.level] = (analysis.levels[entry.level] || 0) + 1;
-                
-                if (entry.date) {
-                    const hour = entry.date.getHours();
-                    analysis.timeDistribution[hour] = (analysis.timeDistribution[hour] || 0) + 1;
-                }
-            }
-
-            return analysis;
         }
     }
 };
