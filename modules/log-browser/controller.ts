@@ -49,6 +49,7 @@ const LOG_CATEGORIES = {
             "/var/log/mysql",
             "/var/log/postgresql",
             "/var/log/mysql/error.log",
+            "/var/log/mariadb/mariadb.log",
             // Windows
             "%ProgramFiles%\\MySQL\\MySQL Server*\\data\\*.err",
             "%ProgramFiles%\\PostgreSQL\\*\\data\\log"
