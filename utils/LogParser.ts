@@ -22,7 +22,9 @@ export class LogParser {
             }
             return entries;
         } catch (error) {
-            throw error instanceof Deno.errors.NotFound ? new Error(`Datei nicht gefunden: ${this.filePath}`) : new Error(`Fehler beim Lesen der Datei: ${error.message}`);
+            throw error instanceof Deno.errors.NotFound ? 
+                new Error(`Datei nicht gefunden: ${this.filePath}`) : 
+                new Error(`Fehler beim Lesen der Datei: ${error.message}`);
         }
     }
 
@@ -122,6 +124,51 @@ const parsers = {
             } catch {
                 return createEntry({ message: "Invalid JSON", context: { raw: line } });
             }
+        }
+    },
+    Systemd: {
+        // Matched z.B.: "Mar 14 15:02:22 gcdn systemd[1]: nebula.service: Succeeded."
+        regex: /^([A-Z][a-z]{2}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})\s+(\S+)\s+(\S+)\[(\d+)\]:\s+(.+)$/,
+        parse: ([, dateStr, host, program, pid, message]) => {
+            const date = new Date(new Date().getFullYear() + " " + dateStr);
+            return createEntry({
+                date,
+                level: message.toLowerCase().includes('error') ? 'error' : 
+                       message.toLowerCase().includes('failed') ? 'error' :
+                       message.toLowerCase().includes('warn') ? 'warning' : 'info',
+                message: message,
+                context: { 
+                    host,
+                    program,
+                    pid
+                }
+            });
+        }
+    },
+
+    zzzzDenoLog: {
+        // Matched z.B.: "Mar 14 15:02:24 gcdn deno[222294]: ℹ️ Datenbank bereits mit 3 Benutzern initialisiert"
+        regex: /^([A-Z][a-z]{2}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})\s+(\S+)\s+deno\[(\d+)\]:\s+(.+)$/,
+        parse: ([, dateStr, host, pid, message]) => {
+            const date = new Date(new Date().getFullYear() + " " + dateStr);
+            
+            // Level aus Emoji oder Text bestimmen
+            let level = 'info';
+            if (message.includes('❌') || message.includes('[ERROR]')) level = 'error';
+            else if (message.includes('⚠️') || message.includes('[WARN]')) level = 'warning';
+            else if (message.includes('ℹ️') || message.includes('[INFO]')) level = 'info';
+            else if (message.includes('🔍') || message.includes('[DEBUG]')) level = 'debug';
+            
+            return createEntry({
+                date,
+                level,
+                message: message,
+                context: {
+                    host,
+                    pid,
+                    type: 'deno'
+                }
+            });
         }
     }
 };
