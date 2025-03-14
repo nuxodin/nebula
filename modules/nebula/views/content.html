@@ -41,10 +41,10 @@
 
     <div class="card">
         <h3><i class="mdi mdi-restart"></i> System Control</h3>
-        <button onclick="restartNebula()">Restart Nebula</button>
+        <button onclick="restartNebula()" u2-confirm="Are you sure you want to restart Nebula?">Restart Nebula</button>
         <br>
         <br>
-        <button onclick="killNebula()">Nebula beenden</button>
+        <button onclick="killNebula()" u2-confirm="Are you sure you want to shutdown Nebula? You will need console access to restart it.">Nebula beenden</button>
     </div>
 
     <div class="card">

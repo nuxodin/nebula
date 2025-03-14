@@ -88,29 +88,26 @@ async function loadGitInfo() {
 }
 
 window.restartNebula = async function() {
-    if (!confirm('Are you sure you want to restart Nebula?')) return;
     try {
         const response = await apiFetch('/api/nebula/restart', {post:{}});
         if (!response.success) throw new Error('Restart failed');
-        alert('Nebula is restarting...');
+        dialog.alert('Nebula is restarting...');
     } catch (error) {
-        alert('Failed to restart Nebula: ' + error.message);
+        dialog.alert('Failed to restart Nebula: ' + error.message);
     }
 }
 
 window.killNebula = async function() {
-    if (!confirm('Are you sure you want to shutdown Nebula? You will need console access to restart it.')) return;
     try {
         const response = await apiFetch('/api/nebula/kill', {post:{}});
         if (!response.success) throw new Error('Shutdown failed');
-        alert('Nebula is shutting down...');
+        dialog.alert('Nebula is shutting down...');
     } catch (error) {
-        alert('Failed to shutdown Nebula: ' + error.message);
+        dialog.alert('Failed to shutdown Nebula: ' + error.message);
     }
 }
 
 window.updateNebula = async function() {
-    if (!confirm('Are you sure you want to update Nebula from git? This will pull the latest changes.')) return;
     try {
         const response = await apiFetch('/api/nebula/git/pull', {post:{}});
         if (!response.success) throw new Error(response.error || 'Update failed');
