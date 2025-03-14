@@ -67,6 +67,12 @@ export const api = {
                     '--email', 'lets-encrypt-test@shwups.ch' // Todo: domein.user_id > email
                 ], { sudo: true });
 
+
+                // todo: in die nginx und apache config einfügen, nginx:
+                // ssl_certificate /etc/letsencrypt/live/${domain.name}/fullchain.pem;
+                // ssl_certificate_key /etc/letsencrypt/live/${domain.name}/privkey.pem;
+                // oder sudo certbot --nginx                
+
                 if (result.code === 0) {
                     db.query(
                         'UPDATE domains SET ssl_enabled = 1, ssl_type = ?, ssl_expires_at = ? WHERE id = ?',

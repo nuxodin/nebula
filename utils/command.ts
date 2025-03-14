@@ -245,7 +245,6 @@ export const reloadService = async (service: string) => {
   const mapping = commands[commandKey];
   if (!mapping) throw new Error(`❌ Kein geeigneter Befehl zum Neuladen von ${service} gefunden.`);
   const result = await run(mapping.cmd ?? commandKey, mapping.args, { sudo: true });
-console.log('reloadService -> result', result);
   if (result.code !== 0) throw new Error(`❌ Fehler beim Neuladen von ${service}: ${result.stderr}`);
   console.log(`✅ ${service} wurde erfolgreich neu geladen!`);
 };
