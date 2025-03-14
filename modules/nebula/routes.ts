@@ -19,9 +19,7 @@ const api = {
     },
     kill: {
         post: () => {
-            setTimeout(() => {
-                Deno.exit(0);
-            }, 100);
+            setTimeout(() => Deno.exit(0), 100);
             return { success: true, message: 'Shutting down...' };
         }        
     },
