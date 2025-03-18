@@ -1,37 +1,49 @@
-<style>
-    .error-message {
-        color: #dc2626;
-        text-align: center;
-        margin-bottom: 1rem;
-        display: none;
-    }
-</style>
 
-<div class="card" style="max-width:30rem; margin:3rem auto;">
+<div class="card" style="max-width:33rem; margin: 2rem auto;">
     <div style="text-align:center; margin-bottom: 2rem;">
         <h1>🌌 Nebula</h1>
         <p>Bitte melden Sie sich an</p>
     </div>
-    <div id="errorMessage" class="error-message"></div>
-    <form method="POST" action="/login">
+    <form id="loginForm">
         <label>
             Benutzername
-            <input type="text" id="login" name="login" required autofocus>
+            <input name="login" required>
         </label>
         <label>
             Passwort
-            <input type="password" id="password" name="password" required>
+            <input type="password" name="password" required>
         </label>
-        <input type="hidden" name="returnUrl" value="RETURN_URL_PLACEHOLDER">
-        <div class="u2-flex" style="margin-top:1.6rem; justify-content: end;">
-            <button>Anmelden</button>
-        </div>
+
+        <u2-alert variant="error" id="error" dismissable></u2-alert>
+
+        <button style="margin-top:1rem">
+            Mit Passwort anmelden
+        </button>
+
+        <div class="separator">oder</div>
+
+        <button type="button" id="passkeyButton" class="u2-unstyle">
+            <i class="mdi mdi-fingerprint"></i>
+            Mit Passkey anmelden
+        </button>
     </form>
 </div>
-<script>
-    if (window.loginError) {
-        const errorDiv = document.getElementById('errorMessage');
-        errorDiv.textContent = window.loginError;
-        errorDiv.style.display = 'block';
-    }
-</script>
+
+<style>
+.separator {
+    text-align: center;
+    color: #64748b;
+    margin: 1rem 0;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.separator::before,
+.separator::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #e5e7eb;
+}
+</style>

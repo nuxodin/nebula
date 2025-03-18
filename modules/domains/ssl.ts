@@ -1,4 +1,4 @@
-import { run } from "../../utils/command.ts";
+import { run, reloadService } from "../../utils/command.ts";
 import { config } from "../../utils/config.ts";
 import { logError, logInfo } from "../../utils/logger.ts";
 import { ensureDir } from "https://deno.land/std/fs/mod.ts";
@@ -30,7 +30,7 @@ export async function installSSL(domainId: number, certType: 'lets_encrypt' | 'c
     }
 
     // Apache neu laden
-    await run('systemctl reload apache2');
+    await reloadService('apache2');
     
     logInfo(`SSL certificate installed for ${domain.name}`, 'SSL');
     return { success: true };

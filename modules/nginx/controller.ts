@@ -1,6 +1,6 @@
 import { run, installPackages, startService, stopService, restartService, reloadService, status } from "../../utils/command.ts";
 import { logInfo } from "../../utils/logger.ts";
-import { LogParser } from '../../utils/LogParser.ts';
+import { LogParser } from '../../utils/LogParser.js';
 
 
 // API Controller

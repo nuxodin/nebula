@@ -13,13 +13,13 @@ document.getElementById('passkeyButton').addEventListener('click', async () => {
     
     try {
         // Hole Authentifizierungsoptionen vom Server
-        const options = await api.post('/api/login2/get-auth-options');
+        const options = await api.post('/api/login/get-auth-options');
 
         // Starte Authentifizierung
         const authResponse = await startAuthentication(options);
 
         // Verifiziere die Authentifizierung mit vollständiger Response
-        const verifyResult = await api.post('/api/login2/verify-auth', {assertion: authResponse});
+        const verifyResult = await api.post('/api/login/verify-auth', {assertion: authResponse});
         if (verifyResult.success) {
             window.location.href = '/';
         } else {
@@ -41,7 +41,7 @@ document.getElementById('loginForm').onsubmit = async (e) => {
     error.textContent = '';
 
     try {
-        const result = await api.post('/api/login2/login', {
+        const result = await api.post('/api/login/login', {
             login: form.login.value,
             password: form.password.value
         });
@@ -52,10 +52,10 @@ document.getElementById('loginForm').onsubmit = async (e) => {
 
             if (shouldRegister) {
                 try {
-                    const options = await api.post('/api/login2/register-device');
+                    const options = await api.post('/api/login/register-device');
                     const regResponse = await startRegistration(options);
                     const deviceName = await dialog.prompt('Gerätename:', 'Mein Gerät') || 'Unbenanntes Gerät';
-                    const verifyResult = await api.post('/api/login2/verify-registration', {
+                    const verifyResult = await api.post('/api/login/verify-registration', {
                         ...regResponse,
                         deviceName
                     });

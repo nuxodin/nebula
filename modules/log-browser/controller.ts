@@ -2,7 +2,7 @@ import { Context } from "hono";
 import { logError } from "../../utils/logger.ts";
 import { run } from "../../utils/command.ts";
 import { join, basename } from "https://deno.land/std@0.208.0/path/mod.ts";
-import { LogParser } from "../../utils/LogParser.ts";
+import { LogParser } from "../../utils/LogParser.js";
 
 const LOG_PATHS = [
     // Linux System Logs

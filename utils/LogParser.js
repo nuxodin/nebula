@@ -1,3 +1,4 @@
+
 export class LogParser {
     constructor(filePath) {
         this.filePath = filePath;
@@ -10,22 +11,17 @@ export class LogParser {
     }
 
     async getEntries({ order = "asc", limit = Infinity, search = "" } = {}) {
-        try {
-            using file = await Deno.open(this.filePath);
-            const entries = [];
-            for await (const line of readLines(file, order)) {
-                const entry = this.parseLine(line);
-                if (!search || entry.message.toLowerCase().includes(search.toLowerCase())) {
-                    if (entries.length < limit) entries.push(entry);
-                    else break;
-                }
+        const file = await Deno.open(this.filePath);
+        const entries = [];
+        for await (const line of readLines(file, order)) {
+            const entry = this.parseLine(line);
+            if (!search || entry.message.toLowerCase().includes(search.toLowerCase())) {
+                if (entries.length < limit) entries.push(entry);
+                else break;
             }
-            return entries;
-        } catch (error) {
-            throw error instanceof Deno.errors.NotFound ? 
-                new Error(`Datei nicht gefunden: ${this.filePath}`) : 
-                new Error(`Fehler beim Lesen der Datei: ${error.message}`);
         }
+        file.close();
+        return entries;
     }
 
     parseLine(line) {

@@ -8,8 +8,6 @@ objToRoutes(apiRoutes, api);
 
 // View Routes
 const viewRoutes = new Hono();
-viewRoutes.get("/", async (c) => {
-  return getFilesView(c, { rootPath: "/" });
-});
+viewRoutes.get("/", getFilesView);
 
 export { apiRoutes, viewRoutes };

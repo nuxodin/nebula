@@ -1,7 +1,7 @@
 import { Context, Next } from "hono";
 import { createMiddleware } from "hono/helper.ts";
 //import { getLogin } from "../modules/login/controller.ts";
-import { getLoginView } from "../modules/login2/controller.ts";
+import { getLoginView } from "../modules/login/controller.ts";
 
 // use createMiddleware
 export const authMiddleware = createMiddleware(async (c: Context, next: Next) => {

@@ -4,7 +4,6 @@ import { Hono, Context } from "hono";
 import { serveStatic } from "https://deno.land/x/hono@v3.11.7/middleware.ts";
 import { sessionMiddleware } from "./middleware/session.ts";
 import { authMiddleware } from "./middleware/auth.ts";
-import { getLogin, postLogin, getLogout } from "./modules/login/controller.ts";
 import { logError } from "./utils/logger.ts";
 import { exists } from "jsr:@std/fs/exists";
 
@@ -32,15 +31,11 @@ app.use('/public/*', serveStatic({ root: './' }));
 
 // Ungeschützte Routen
 
-await import('./modules/login2/routes.ts').then(({ pubApis, pubViews }) => {
-  app.route(`/api/login2`, pubApis);
-  app.route(`/login2`, pubViews);
+await import('./modules/login/routes.ts').then(({ pubApis, pubViews }) => {
+  app.route(`/api/login`, pubApis);
+  app.route(`/login`, pubViews);
+  app.route(`/logout`, pubViews);
 }).catch(console.log);
-
-
-app.get("/login", getLogin);
-app.post("/login", postLogin);
-app.get("/logout", getLogout);
 
 
 

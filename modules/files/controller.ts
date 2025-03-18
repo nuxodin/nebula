@@ -1,7 +1,6 @@
 import { join } from "https://deno.land/std@0.208.0/path/mod.ts";
 import { ensureDir } from "https://deno.land/std@0.208.0/fs/ensure_dir.ts";
 import { renderTemplate } from "../../utils/template.ts";
-import { file } from 'https://esm.sh/jszip@3.5.0/index.d.ts';
 
 // View Controller
 export const getFilesView = async (c) => {
@@ -171,6 +170,7 @@ export const uploadFile = async (c, {rootPath='/'}={}) => {
   
   return { success: true, files: results };
 };
+
 
 // API-Objekt für objToRoutes
 export const api = {
