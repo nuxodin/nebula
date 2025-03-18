@@ -1,5 +1,5 @@
 <script type="module">
-import { apiFetch } from '/public/js/utils.js';
+import { api } from '/public/js/utils.js';
 import * as dialog from "https://cdn.jsdelivr.net/gh/u2ui/u2@x.x.x/js/dialog/dialog.min.js";
 
 let allVersions = new Set();
@@ -8,8 +8,8 @@ let allVersions = new Set();
 async function loadData() {
     try {
         const [installed, available] = await Promise.all([
-            apiFetch('/api/php/installed'),
-            apiFetch('/api/php/available')
+            api.get('/api/php/installed'),
+            api.get('/api/php/available')
         ]);
 
         allVersions = new Set([...installed.map(v => v.version), ...available]);
@@ -56,11 +56,11 @@ document.querySelector('.js-versions').addEventListener('click', async (e) => {
     const version = btn.dataset.version;
     try {
         if (btn.classList.contains('js-install')) {
-            await apiFetch('/api/php/install', {post:{ version }});
+            await api.post('/api/php/install', { version });
         } else if (btn.classList.contains('js-start')) {
-            await apiFetch(`/api/php/service/${version}/start`, {post:{}});
+            await api.post(`/api/php/service/${version}/start`);
         } else if (btn.classList.contains('js-stop')) {
-            await apiFetch(`/api/php/service/${version}/stop`, {post:{}});
+            await api.post(`/api/php/service/${version}/stop`);
         }
         await loadData();
     } catch (error) {
@@ -71,7 +71,7 @@ document.querySelector('.js-versions').addEventListener('click', async (e) => {
 // Repository aktivieren
 document.querySelector('#enable-repo-btn')?.addEventListener('click', async () => {
     try {
-        await apiFetch('/api/php/enable-repo', {post:{}});
+        await api.post('/api/php/enable-repo');
         await loadData();
         dialog.alert('PHP-Repository wurde aktiviert');
     } catch (error) {

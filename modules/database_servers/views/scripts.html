@@ -1,11 +1,11 @@
 <script type="module">
-import { apiFetch } from '/public/js/utils.js';
+import { api } from '/public/js/utils.js';
 
 loadServers();
 async function loadServers() {
     
     try {
-        const servers = await apiFetch('/api/database_servers');
+        const servers = await api.get('/api/database_servers');
         renderServers(servers);
     } catch (error) {
         alert('Fehler beim Laden der Datenbankserver: ' + error.message);
@@ -20,7 +20,7 @@ function renderServers(servers) {
             <td>${server.port}
             <td>${server.type}
             <td>${server.version || ''}
-            <td>${server.admin_login}
+            <td>${server.username}
             <td>${server.count_databases || 'Nicht verbunden?'}
             <td>
                 <button class="u2-unstyle" onclick="importDatabases(${server.id}, '${server.host}')" title="Datenbanken importieren">
@@ -39,7 +39,7 @@ document.getElementById('addServerForm').onsubmit = async (e) => {
     const data = Object.fromEntries(formData);
 
     try {
-        await apiFetch('/api/database_servers', {post:data});
+        await api.post('/api/database_servers');
         e.target.reset();
         document.getElementById('addServerModal').close();
         loadServers();
@@ -52,7 +52,7 @@ document.getElementById('addServerForm').onsubmit = async (e) => {
 window.importDatabases = async (id, host) => {
     if (!confirm(`Alle nicht verwalteten Datenbanken von ${host} importieren?`)) return;
     try {
-        const result = await apiFetch(`/api/database_servers/${id}/import`, {post:{}});
+        const result = await api.post(`/api/database_servers/${id}/import`);
         alert(`${result.imported} Datenbank(en) wurden erfolgreich importiert`);
         loadServers();
     } catch (error) {
@@ -63,9 +63,7 @@ window.importDatabases = async (id, host) => {
 window.deleteServer = async (id, host) => {
     if (!confirm(`Server ${host} wirklich löschen?`)) return;
     try {
-        await apiFetch(`/api/database_servers/${id}`, {
-            method: 'DELETE'
-        });
+        await api.delete(`/api/database_servers/${id}`);
         loadServers();
     } catch (error) {
         alert('Fehler beim Löschen des Servers: ' + error.message);

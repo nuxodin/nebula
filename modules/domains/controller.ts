@@ -90,27 +90,27 @@ async function createTemplate(domain) {
 
 async function createDefaultDnsRecords(domain) {
   const records = [{ // Standardmäßige DNS Records
-      record_type: 'NS',
+      type: 'NS',
       name: '@',
       value: config.dns_primary_ns,
     },{
-      record_type: 'NS',
+      type: 'NS',
       name: '@',
       value: config.dns_secondary_ns,
     },{
-      record_type: 'A',
+      type: 'A',
       name: '@',
       value: config.default_ip === 'auto' ? '127.0.0.1' : config.default_ip,
     },{
-      record_type: 'CNAME',
+      type: 'CNAME',
       name: 'www',
       value: '@',
     },{
-      record_type: 'MX',
+      type: 'MX',
       name: '@',
       value: '@'      
     },{
-      record_type: 'TXT',
+      type: 'TXT',
       name: '@',
       value: 'v=spf1 a mx -all'
     }
@@ -119,9 +119,9 @@ async function createDefaultDnsRecords(domain) {
   // Records in die Datenbank einfügen
   for (const record of records) {
     db.query(`
-      INSERT INTO dns_records (domain_id, record_type, name, value)
+      INSERT INTO dns_records (domain_id, type, name, value)
       VALUES (?, ?, ?, ?)
-    `, [domain.id, record.record_type, record.name, record.value]);
+    `, [domain.id, record.type, record.name, record.value]);
   }
 
   // Generiere die Bind Zone-Datei

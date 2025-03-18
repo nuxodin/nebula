@@ -62,8 +62,8 @@ export const api = {
     const data = await c.req.json();
     try {
       db.query(
-        'INSERT INTO database_servers (host, port, type, admin_login, admin_password) VALUES (?, ?, ?, ?, ?)',
-        [data.host, data.port, data.type, data.admin_login, data.admin_password]
+        'INSERT INTO database_servers (host, port, type, username, password) VALUES (?, ?, ?, ?, ?)',
+        [data.host, data.port, data.type, data.username, data.password]
       );
       logInfo(`Datenbankserver ${data.host}:${data.port} hinzugefügt`, 'Database Servers', c);
       return { success: true };

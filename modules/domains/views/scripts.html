@@ -1,6 +1,6 @@
 <script type="module">
   import * as dialog from "https://cdn.jsdelivr.net/gh/u2ui/u2@x.x.x/js/dialog/dialog.min.js"
-  import { apiFetch } from '/public/js/utils.js';
+  import { api } from '/public/js/utils.js';
 
   let allDomains = [];
   let currentDomainToDelete = null;
@@ -8,7 +8,7 @@
   // Domains laden
   async function loadDomains() {
     try {
-      allDomains = await apiFetch('/api/domains');
+      allDomains = await api.get('/api/domains');
       filterAndRenderDomains();
     } catch (error) {
       alert('Fehler beim Laden der Domains: ' + error.message);
@@ -66,7 +66,7 @@
 
   async function confirmDeleteDomain(id) {
     try {
-      const response = await apiFetch(`/api/domains/${id}`, {method: 'DELETE'});
+      const response = await api.delete(`/api/domains/${id}`);
       loadDomains();
     } catch (error) {
       dialog.alert(error.message || 'Fehler beim Löschen der Domain');
@@ -81,7 +81,7 @@
       runtime: formData.get('runtime')
     };
     try {
-      const response = await apiFetch('/api/domains', {post:data});
+      const response = await api.post('/api/domains', data);
       loadDomains();
       e.target.reset();
       document.getElementById('addDomainModal').close();
@@ -93,7 +93,7 @@
   loadDomains();
 
   // runtime select
-  apiFetch('/api/nebula/runtimes').then(runtimes => {
+  api.get('/api/nebula/runtimes').then(runtimes => {
     const select = document.getElementById('addDomainRuntime');
     runtimes.forEach(runtime => {
       const option = document.createElement('option');

@@ -1,10 +1,10 @@
 <script type="module">
-import { apiFetch } from '/public/js/utils.js';
+import { api } from '/public/js/utils.js';
 import * as dialog from "https://cdn.jsdelivr.net/gh/u2ui/u2@x.x.x/js/dialog/dialog.min.js";
 
 async function loadSystemInfo() {
     try {
-        const data = await apiFetch('/api/nebula/info');
+        const data = await api.get('/api/nebula/info');
         
         // Update Overview
         const overview = {
@@ -65,7 +65,7 @@ async function loadSystemInfo() {
 
 async function loadGitInfo() {
     try {
-        const data = await apiFetch('/api/nebula/git/info');
+        const data = await api.get('/api/nebula/git/info');
         const gitBranchEl = document.getElementById('gitBranch');
         const gitStatusEl = document.getElementById('gitStatus');
         if (gitBranchEl) gitBranchEl.textContent = data.branch || 'Not a git repository';
@@ -89,7 +89,7 @@ async function loadGitInfo() {
 
 window.restartNebula = async function() {
     try {
-        const response = await apiFetch('/api/nebula/restart', {post:{}});
+        const response = await api.post('/api/nebula/restart');
         if (!response.success) throw new Error('Restart failed');
         dialog.alert('Nebula is restarting...');
     } catch (error) {
@@ -99,7 +99,7 @@ window.restartNebula = async function() {
 
 window.killNebula = async function() {
     try {
-        const response = await apiFetch('/api/nebula/kill', {post:{}});
+        const response = await api.post('/api/nebula/kill');
         if (!response.success) throw new Error('Shutdown failed');
         dialog.alert('Nebula is shutting down...');
     } catch (error) {
@@ -109,7 +109,7 @@ window.killNebula = async function() {
 
 window.updateNebula = async function() {
     try {
-        const response = await apiFetch('/api/nebula/git/pull', {post:{}});
+        const response = await api.post('/api/nebula/git/pull');
         if (!response.success) throw new Error(response.error || 'Update failed');
         dialog.alert({
             title: 'Update Complete',

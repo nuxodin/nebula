@@ -15,19 +15,20 @@ export async function dbClient(serverId: number) {
     let client;
 
     if (server.type === 'mysql') {
+        console.log(server)
         client = await new Client().connect({
             hostname: server.host,
             port: server.port,
-            username: server.admin_login,
-            password: server.admin_password,
+            username: server.username,
+            password: server.password,
         });
     }
     if (server.type === 'postgresql') {
         const pool = new Pool({
             hostname: server.host,
             port: server.port,
-            user: server.admin_login,
-            password: server.admin_password,
+            user: server.username,
+            password: server.password,
             database: 'postgres',
         }, 1);
         client = await pool.connect();

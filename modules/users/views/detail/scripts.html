@@ -1,11 +1,11 @@
 <script type="module">
-import { apiFetch } from '/public/js/utils.js';
+import { api } from '/public/js/utils.js';
 
 const userId = location.pathname.match(/\/users\/(\d+)/)[1];
 loadUser();
 
 async function loadUser() {
-    const user = await apiFetch('/api/users/' + userId);
+    const user = await api.get('/api/users/' + userId);
     document.getElementById('userLogin').textContent = user.login;
     document.getElementById('userEmail').textContent = user.email;
     
@@ -25,7 +25,7 @@ async function loadUser() {
 window.deleteUser = async function() {
     if (!confirm('Benutzer wirklich löschen?')) return;
     try {
-        await apiFetch('/api/users/' + userId, { method: 'DELETE' });
+        await api.delete('/api/users/' + userId);
         location.href = '/users';
     } catch (error) {
         alert('Fehler beim Löschen des Benutzers: ' + error.message);
@@ -52,7 +52,7 @@ window.changePassword = async function(event) {
     }
     
     try {
-        await apiFetch('/api/users/' + userId + '/password', { password: pw1.value });
+        await api.post('/api/users/' + userId + '/password', { password: pw1.value });
         
         closeChangePasswordDialog();
         pw1.value = pw2.value = '';

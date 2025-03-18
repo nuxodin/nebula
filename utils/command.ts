@@ -212,8 +212,8 @@ export const stopService = async (service: string) => {
   };
   const mapping = commands[commandKey];
   if (!mapping) throw new Error(`❌ Kein geeigneter Befehl zum Stoppen von ${service} gefunden.`);
-  const result = await run(mapping.cmd ?? commandKey, mapping.args, { sudo: true });
-  if (result.code !== 0) throw new Error(`❌ Fehler beim Stoppen von ${service}: ${result.stderr}`);
+  const result = await run(mapping.cmd ?? commandKey, mapping.args, { sudo: true });  
+  if (result.code !== 0) throw new Error(`❌ Fehler beim Stoppen von ${service}: ${result.stdout +'' + result.stderr}`);
   console.log(`✅ ${service} wurde erfolgreich gestoppt!`);
 };
 

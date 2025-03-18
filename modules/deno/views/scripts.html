@@ -1,5 +1,5 @@
 <script type="module">
-import { apiFetch, dialog } from '/public/js/utils.js';
+import { api, dialog } from '/public/js/utils.js';
 
 // Domains und Versionen laden beim Seitenstart
 loadDomains();
@@ -8,7 +8,7 @@ loadVersions();
 // Laden der Deno-Domains
 async function loadDomains() {
     try {
-        const response = await apiFetch('/api/deno/domains');
+        const response = await api.get('/api/deno/domains');
         if (!response.success) throw new Error(response.error || 'Fehler beim Laden der Domains');
         
         const domainList = document.getElementById('domainList');
@@ -45,7 +45,7 @@ async function loadDomains() {
 // Deno-Domain-Status prüfen
 async function checkDomainStatus(domainId) {
     try {
-        const response = await apiFetch(`/api/prozess/status?domain_id=${domainId}&type=deno`);
+        const response = await api.get(`/api/prozess/status?domain_id=${domainId}&type=deno`);
         const statusCell = document.getElementById(`domain-status-${domainId}`);
         
         if (statusCell) {
@@ -66,7 +66,7 @@ async function checkDomainStatus(domainId) {
 async function loadVersions() {
 
     try {
-        const {versions} = await apiFetch('/api/deno/versions');
+        const {versions} = await api.get('/api/deno/versions');
         
         const versionsList = document.getElementById('versionsList');
         
@@ -101,7 +101,7 @@ async function loadVersions() {
 // Anzahl der Domains zählen, die eine bestimmte Version verwenden
 async function countDomainsWithVersion(version) {
     try {
-        const response = await apiFetch('/api/deno/domains');
+        const response = await api.get('/api/deno/domains');
         if (!response.success || !response.domains) return 0;
         
         return response.domains.filter(domain => domain.runtime_version === version).length;
@@ -116,7 +116,7 @@ window.startDomain = async function(domainId, domainName) {
     try {
         if (! await dialog.confirm(`Deno-Anwendung für ${domainName} starten?`)) return;
         
-        const response = await apiFetch(`/api/deno/${domainId}/start`, {post:{}});
+        const response = await api.post(`/api/deno/${domainId}/start`);
         
         if (response.success) {
             dialog.alert(`Deno-Anwendung für ${domainName} erfolgreich gestartet.`);
@@ -134,7 +134,7 @@ window.stopDomain = async function(domainId, domainName) {
     try {
         if (! await dialog.confirm(`Deno-Anwendung für ${domainName} stoppen?`)) return;
         
-        const response = await apiFetch(`/api/deno/${domainId}/stop`, {post:{}});
+        const response = await api.post(`/api/deno/${domainId}/stop`);
         
         if (response.success) {
             dialog.alert(`Deno-Anwendung für ${domainName} erfolgreich gestoppt.`);
@@ -152,7 +152,7 @@ window.installVersion = async function(version) {
     try {
         if (! await dialog.confirm(`Deno-Version ${version} installieren?`)) return;
         
-        const response = await apiFetch('/api/deno/install', {post:{ version }});
+        const response = await api.post('/api/deno/install', { version });
         
         if (response.success) {
             dialog.alert(`Deno-Version ${version} wurde erfolgreich installiert.`);
@@ -177,7 +177,7 @@ window.uninstallVersion = async function(version) {
         
         if (! await dialog.confirm(`Deno-Version ${version} deinstallieren?`)) return;
         
-        const response = await apiFetch('/api/deno/uninstall', {post:{ version }});
+        const response = await api.post('/api/deno/uninstall', { version });
         
         if (response.success) {
             dialog.alert(`Deno-Version ${version} wurde erfolgreich deinstalliert.`);

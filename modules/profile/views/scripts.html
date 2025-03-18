@@ -1,5 +1,5 @@
 <script type="module">
-import { apiFetch } from '/public/js/utils.js';
+import { api } from '/public/js/utils.js';
 import * as dialog from "https://cdn.jsdelivr.net/gh/u2ui/u2@x.x.x/js/dialog/dialog.min.js";
 
 // on passwordForm change
@@ -12,7 +12,7 @@ document.getElementById('passwordForm').addEventListener('submit', async (e) => 
     return;
   }
   try {
-    await apiFetch('/api/profile/password', {post: data});
+    await api.post('/api/profile/password', data);
     dialog.alert('Passwort erfolgreich geändert');
     e.target.reset();
   } catch (error) {
@@ -23,7 +23,7 @@ document.getElementById('passwordForm').addEventListener('submit', async (e) => 
 // Profildaten laden
 async function loadProfileData() {
   try {
-    const user = await apiFetch('/api/users/me');
+    const user = await api.get('/api/users/me');
     
     // Benutzerdaten anzeigen
     document.getElementById('userLogin').textContent = user.login;
@@ -36,7 +36,7 @@ async function loadProfileData() {
 // Passkey Liste laden
 async function loadPasskeys() {
     try {
-        const response = await apiFetch('/api/profile/passkeys');
+        const response = await api.get('/api/profile/passkeys');
         const passkeys = response.devices;
         
         const container = document.getElementById('passkeys-list');
@@ -76,7 +76,7 @@ async function loadPasskeys() {
 async function deletePasskey(id) {
     if (!confirm('Möchten Sie diesen Passkey wirklich löschen?')) return;
     try {
-        await apiFetch('/api/profile/passkeys/' + id, {del:{}});
+        await api.delette('/api/profile/passkeys/' + id);
         loadPasskeys(); // Liste neu laden
     } catch (error) {
         alert('Fehler beim Löschen des Passkeys: ' + error.message);

@@ -259,12 +259,12 @@ export const api = {
 
             // Copy data
             if (Deno.build.os !== 'windows') {
-              //await run(`mysqldump -h ${database.host} -P ${database.port} -u ${database.admin_login} -p${database.admin_password} ${database.name} | mysql -h ${database.host} -P ${database.port} -u ${database.admin_login} -p${database.admin_password} ${newName}`);
-              //await run('sh', ['-c', `mysqldump -h ${database.host} -P ${database.port} -u ${database.admin_login} -p${database.admin_password} ${database.name} | mysql -h ${database.host} -P ${database.port} -u ${database.admin_login} -p${database.admin_password} ${newName}`]);
-              const out = await run('sh', ['-c', `mysqldump -h ${database.host} -P ${database.port} -u ${database.admin_login} ${database.name} | mysql -h ${database.host} -P ${database.port} -u ${database.admin_login} ${newName}`]);
+              //await run(`mysqldump -h ${database.host} -P ${database.port} -u ${database.username} -p${database.password} ${database.name} | mysql -h ${database.host} -P ${database.port} -u ${database.username} -p${database.password} ${newName}`);
+              //await run('sh', ['-c', `mysqldump -h ${database.host} -P ${database.port} -u ${database.username} -p${database.password} ${database.name} | mysql -h ${database.host} -P ${database.port} -u ${database.username} -p${database.password} ${newName}`]);
+              const out = await run('sh', ['-c', `mysqldump -h ${database.host} -P ${database.port} -u ${database.username} ${database.name} | mysql -h ${database.host} -P ${database.port} -u ${database.username} ${newName}`]);
               console.log(out);
             } else {
-              const out = await run('cmd', ['/c', `mysqldump -h ${database.host} -P ${database.port} -u ${database.admin_login} ${database.name} | mysql -h ${database.host} -P ${database.port} -u ${database.admin_login} ${newName}`]);
+              const out = await run('cmd', ['/c', `mysqldump -h ${database.host} -P ${database.port} -u ${database.username} ${database.name} | mysql -h ${database.host} -P ${database.port} -u ${database.username} ${newName}`]);
               console.log(out);
             }
           } else if (database.type === 'postgresql') {
@@ -274,7 +274,7 @@ export const api = {
             await client.queryObject(`GRANT ALL PRIVILEGES ON DATABASE ${newName} TO ${newUser}`);
             
             // Copy data
-            await run(`PGPASSWORD=${database.admin_password} pg_dump -h ${database.host} -p ${database.port} -U ${database.admin_login} ${database.name} | PGPASSWORD=${database.admin_password} psql -h ${database.host} -p ${database.port} -U ${database.admin_login} ${newName}`);
+            await run(`PGPASSWORD=${database.password} pg_dump -h ${database.host} -p ${database.port} -U ${database.username} ${database.name} | PGPASSWORD=${database.password} psql -h ${database.host} -p ${database.port} -U ${database.username} ${newName}`);
           }
 
           // Save in database
@@ -305,10 +305,10 @@ export const api = {
           const tmpFile = await Deno.makeTempFile({ suffix: '.sql' });
 
           if (database.type === 'mysql') {
-            await run(`mysqldump -h ${database.host} -P ${database.port} -u ${database.admin_login} -p${database.admin_password} ${database.name} > ${tmpFile}`);
+            await run(`mysqldump -h ${database.host} -P ${database.port} -u ${database.username} -p${database.password} ${database.name} > ${tmpFile}`);
           } 
           else if (database.type === 'postgresql') {
-            await run(`PGPASSWORD=${database.admin_password} pg_dump -h ${database.host} -p ${database.port} -U ${database.admin_login} ${database.name} > ${tmpFile}`);
+            await run(`PGPASSWORD=${database.password} pg_dump -h ${database.host} -p ${database.port} -U ${database.username} ${database.name} > ${tmpFile}`);
           }
 
           // Read file and clean up
@@ -347,10 +347,10 @@ export const api = {
           await Deno.writeFile(tmpFile, new Uint8Array(await file.arrayBuffer()));
 
           if (database.type === 'mysql') {
-            await run(`mysql -h ${database.host} -P ${database.port} -u ${database.admin_login} -p${database.admin_password} ${database.name} < ${tmpFile}`);
+            await run(`mysql -h ${database.host} -P ${database.port} -u ${database.username} -p${database.password} ${database.name} < ${tmpFile}`);
           } 
           else if (database.type === 'postgresql') {
-            await run(`PGPASSWORD=${database.admin_password} psql -h ${database.host} -p ${database.port} -U ${database.admin_login} ${database.name} < ${tmpFile}`);
+            await run(`PGPASSWORD=${database.password} psql -h ${database.host} -p ${database.port} -U ${database.username} ${database.name} < ${tmpFile}`);
           }
 
           // Clean up

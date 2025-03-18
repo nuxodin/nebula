@@ -1,12 +1,12 @@
 <script type="module">
-import { apiFetch } from '/public/js/utils.js';
+import { api } from '/public/js/utils.js';
 import * as dialog from "https://cdn.jsdelivr.net/gh/u2ui/u2@x.x.x/js/dialog/dialog.min.js";
 
 async function loadComponents() {
     try {
         const [available, installed] = await Promise.all([
-            apiFetch('/api/components'),
-            apiFetch('/api/components/installed')
+            api.get('/api/components'),
+            api.get('/api/components/installed')
         ]);
         renderComponents(groupByCategory(available), installed);
     } catch (error) {
@@ -125,9 +125,7 @@ async function installComponent(name, version) {
         // Wartezeit für UI-Feedback
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        const response = await apiFetch('/api/components/install', {
-            post: { component: name, version }
-        });
+        const response = await api.post('/api/components/install', { component: name, version });
         
         if (!response.success) {
             throw new Error(response.error || 'Unbekannter Fehler bei der Installation');

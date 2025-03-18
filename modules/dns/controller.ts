@@ -30,7 +30,7 @@ export const api = {
       SELECT r.*, d.name as domain_name
       FROM dns_records r
       JOIN domains d ON r.domain_id = d.id
-      ORDER BY d.name, r.record_type
+      ORDER BY d.name, r.type
     `);
   },
 
@@ -39,7 +39,7 @@ export const api = {
 
     try {
       db.query(`
-        INSERT INTO dns_records (domain_id, record_type, name, value, ttl, priority)
+        INSERT INTO dns_records (domain_id, type, name, value, ttl, priority)
         VALUES (?, ?, ?, ?, ?, ?)
       `, [data.domain_id, data.type, data.name, data.content, data.ttl || 3600, data.type === 'MX' ? (data.priority || 10) : null]);
 
@@ -70,7 +70,7 @@ export const api = {
 
         db.query(`
           UPDATE dns_records 
-          SET record_type = ?, name = ?, value = ?, ttl = ?, priority = ?
+          SET type = ?, name = ?, value = ?, ttl = ?, priority = ?
           WHERE id = ?
         `, [data.type, data.name, data.content, data.ttl || 3600, data.type === 'MX' ? (data.priority || 10) : null, id]);
 

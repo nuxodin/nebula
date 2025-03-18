@@ -1,12 +1,12 @@
 <script type="module">
-import { apiFetch } from '/public/js/utils.js';
+import { api } from '/public/js/utils.js';
 
 let logs = [];
 
 // Logs laden
 async function loadLogs() {
   try {
-    const logs = await apiFetch('/api/logs');
+    const logs = await api.get('/api/logs');
     renderLogs(logs);
   } catch (error) {
     alert('Fehler beim Laden der Logs: ' + error.message);

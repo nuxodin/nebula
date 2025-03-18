@@ -1,5 +1,5 @@
 <script type="module">
-import { apiFetch } from '/public/js/utils.js';
+import { api } from '/public/js/utils.js';
 
 let allDnsRecords = [];
 let allDomains = [];
@@ -8,8 +8,8 @@ let allDomains = [];
 async function loadDnsRecords() {
   try {
     const [records, domains] = await Promise.all([
-      apiFetch('/api/dns'),
-      apiFetch('/api/domains')
+      api.get('/api/dns'),
+      api.get('/api/domains')
     ]);
     allDnsRecords = records;
     allDomains = domains;
@@ -57,7 +57,7 @@ function filterAndRenderRecords() {
       record.name.toLowerCase().includes(searchTerm) ||
       record.value.toLowerCase().includes(searchTerm);
     
-    const matchesType = selectedType === '' || record.record_type === selectedType;
+    const matchesType = selectedType === '' || record.type === selectedType;
     const matchesDomain = selectedDomain === '' || record.domain_id === parseInt(selectedDomain);
     
     return matchesSearch && matchesType && matchesDomain;
@@ -102,14 +102,14 @@ function renderRecords(records) {
     <tr data-id="${record.id}">
       <td>${record.domain_name}
       <td>
-        <span class="dns-type ${record.record_type.toLowerCase()}">${record.record_type}</span>
+        <span class="dns-type ${record.type.toLowerCase()}">${record.type}</span>
       <td>${record.name}
       <td data-field="value">
         <input type="text" value="${record.value}" style="width:100%">
       <td data-field="ttl">
         <input type="number" value="${record.ttl}" style="width:100%" min="60" max="86400">
       <td data-field="priority">
-        ${record.record_type === 'MX' ? `<input type="number" value="${record.priority || 10}" style="width:100%" min="0" max="65535">` : ''}
+        ${record.type === 'MX' ? `<input type="number" value="${record.priority || 10}" style="width:100%" min="0" max="65535">` : ''}
       <td>
         <button class="u2-unstyle -delete" onclick="deleteRecord(${record.id})">
           <i class="mdi mdi-delete"></i>
@@ -123,7 +123,7 @@ function renderRecords(records) {
 
     const valueInput = row.querySelector('[data-field="value"] input');
     if (valueInput) {
-      configureDnsInput(valueInput, record.record_type);
+      configureDnsInput(valueInput, record.type);
       valueInput.addEventListener('change', () => {
         if (!valueInput.checkValidity()) {
           alert('Ungültiger Wert für diesen Record-Typ');
@@ -180,16 +180,16 @@ async function updateRecord(cell, value) {
     const updatedRecord = { 
       ...record,
       [field]: value,
-      type: record.record_type,
+      type: record.type,
       content: field === 'value' ? value : record.value
     };
     
-    await apiFetch(`/api/dns/${recordId}`, {put:updatedRecord});
+    await api.put(`/api/dns/${recordId}`, updatedRecord);
 
     // Update local data
     Object.assign(record, { 
       [field]: value,
-      type: record.record_type,
+      type: record.type,
       content: field === 'value' ? value : record.value 
     });
   } catch (error) {
@@ -207,7 +207,7 @@ async function deleteRecord(id) {
   if (!confirm('DNS Record wirklich löschen?')) return;
 
   try {
-    await apiFetch(`/api/dns/${id}`, { method: 'DELETE' });
+    await api.delete(`/api/dns/${id}`);
     allDnsRecords = allDnsRecords.filter(r => r.id !== id);
     filterAndRenderRecords();
   } catch (error) {
@@ -222,13 +222,11 @@ editForm.addEventListener('submit', async (e) => {
   const type = formData.type;
 
   try {
-    const response = await apiFetch('/api/dns', {
-      post: {
+    const response = await api.post('/api/dns', {
         ...formData,
         type: type,
         content: formData.content,
         priority: type === 'MX' ? parseInt(formData.priority) || 10 : null
-      }
     });
 
     if (response.success) {

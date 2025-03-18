@@ -1,5 +1,5 @@
 <script type="module">
-import { apiFetch } from '/public/js/utils.js';
+import { api } from '/public/js/utils.js';
 
 const terminalOutput = document.getElementById('terminal-output');
 const terminalInput = document.getElementById('terminal-input');
@@ -9,7 +9,7 @@ async function executeCommand(command) {
     // Zeige den eingegebenen Befehl im Output an
     appendToOutput(`$ ${command}`, 'command-line');
     
-    const response = await apiFetch('/api/terminal', { post: { command } });
+    const response = await api.post('/api/terminal', { command });
 
     // response = { code: 0, stdout: '...', stderr: '...' }
 

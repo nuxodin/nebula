@@ -1,5 +1,5 @@
 <script type="module">
-import { apiFetch } from '/public/js/utils.js';
+import { api } from '/public/js/utils.js';
 
 let currentAccount = null;
 
@@ -8,7 +8,7 @@ async function loadMailDetails() {
   const id = window.location.pathname.split('/')[2];
   
   try {
-    const account = await apiFetch(`/api/mail/${id}`);
+    const account = await api.get(`/api/mail/${id}`);
     currentAccount = account;
     
     // Seitentitel und Überschrift aktualisieren
@@ -24,7 +24,7 @@ async function loadMailDetails() {
     document.getElementById('mailCreated').textContent = new Date(account.created_at).toLocaleString();
 
     // Speicherplatz-Nutzung
-    const diskInfo = await apiFetch(`/api/mail/${id}/disk`);
+    const diskInfo = await api.get(`/api/mail/${id}/disk`);
     document.getElementById('diskUsage').textContent = `${diskInfo.used} MB von ${diskInfo.total} MB`;
     const usagePercent = (diskInfo.used / diskInfo.total) * 100;
     document.getElementById('diskUsageBar').value = usagePercent;
@@ -79,7 +79,7 @@ document.getElementById('settingsForm').addEventListener('submit', async (e) => 
   }
 
   try {
-    await apiFetch(`/api/mail/${currentAccount.id}/password`, {password});
+    await api.post(`/api/mail/${currentAccount.id}/password`, {password});
 
     alert('Passwort wurde geändert');
     document.getElementById('newPassword').value = '';
@@ -99,8 +99,7 @@ document.getElementById('aliasForm').addEventListener('submit', async (e) => {
   }
 
   try {
-    await apiFetch(`/api/mail/${currentAccount.id}/alias`, {post:{ alias }});
-
+    await api.post(`/api/mail/${currentAccount.id}/alias`, { alias });
     document.getElementById('aliasInput').value = '';
     loadMailDetails();
   } catch (error) {
@@ -111,8 +110,7 @@ document.getElementById('aliasForm').addEventListener('submit', async (e) => {
 // Alias löschen
 window.deleteAlias = async (alias) => {
   try {
-    await apiFetch(`/api/mail/${currentAccount.id}/alias`, {del: { alias }});
-
+    await api.delete(`/api/mail/${currentAccount.id}/alias`, { alias });
     loadMailDetails();
   } catch (error) {
     alert('Fehler beim Löschen des Aliases: ' + error.message);
@@ -139,7 +137,7 @@ document.getElementById('autoresponderForm').addEventListener('submit', async (e
   };
 
   try {
-    await apiFetch(`/api/mail/${currentAccount.id}/autoresponder`, {post:data});
+    await api.post(`/api/mail/${currentAccount.id}/autoresponder`, data);
 
     alert('Automatische Antwort wurde gespeichert');
     loadMailDetails();
@@ -158,8 +156,7 @@ document.getElementById('forwardersForm').addEventListener('submit', async (e) =
     .filter(line => line);
 
   try {
-    await apiFetch(`/api/mail/${currentAccount.id}/forwarders`, {put:{ forwarders }});
-
+    await api.put(`/api/mail/${currentAccount.id}/forwarders`, { forwarders });
     alert('Weiterleitungen wurden gespeichert');
     loadMailDetails();
   } catch (error) {
@@ -170,7 +167,7 @@ document.getElementById('forwardersForm').addEventListener('submit', async (e) =
 // Event-Listener für Löschen-Button
 document.querySelector('.-delete').addEventListener('click', async () => {
   try {
-    await apiFetch(`/api/mail/${currentAccount.id}`, {del:{}});
+    await api.delete(`/api/mail/${currentAccount.id}`);
     window.location.href = '/mail';
   } catch (error) {
     alert('Fehler beim Löschen des E-Mail Kontos: ' + error.message);

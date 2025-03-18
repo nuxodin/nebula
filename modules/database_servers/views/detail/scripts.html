@@ -1,5 +1,5 @@
 <script type="module">
-import { apiFetch } from '/public/js/utils.js';
+import { api } from '/public/js/utils.js';
 
 let serverId;
 
@@ -7,7 +7,7 @@ async function loadServerDetails() {
   serverId = window.location.pathname.split('/')[2];
 
   try {
-    const server = await apiFetch(`/api/database_servers/${serverId}`);
+    const server = await api.get(`/api/database_servers/${serverId}`);
     
     // Server Informationen setzen
     document.getElementById('pageTitle').textContent = `Datenbankserver ${server.host}:${server.port}`;
@@ -24,7 +24,7 @@ async function loadServerDetails() {
 
     // Automatische Aktualisierung der Prozesse alle 5 Sekunden
     setInterval(async () => {
-      const updatedServer = await apiFetch(`/api/database_servers/${serverId}`);
+      const updatedServer = await api.get(`/api/database_servers/${serverId}`);
       renderProcesses(updatedServer.processes);
     }, 5000);
 
@@ -85,10 +85,7 @@ async function importDatabase(name) {
   if (!confirm(`Datenbank "${name}" in die Verwaltung importieren?`)) return;
 
   try {
-    const response = await apiFetch(`/api/database_servers/${serverId}/import`, {
-      method: 'POST',
-      body: { databases: [name] }
-    });
+    const response = await api.post(`/api/database_servers/${serverId}/import`, { databases: [name] });
 
     if (response.success) {
       loadServerDetails(); // Neu laden
@@ -102,10 +99,8 @@ async function killProcess(processId) {
   if (!confirm('Prozess wirklich beenden?')) return;
 
   try {
-    await apiFetch(`/api/database_servers/${serverId}/processes`, {
-      method: 'DELETE',
-      body: { processId }
-    });
+    await api.delete(`/api/database_servers/${serverId}/processes/${processId}`, { processId });
+
   } catch (error) {
     alert('Fehler beim Beenden des Prozesses: ' + error.message);
   }

@@ -1,5 +1,5 @@
 <script type="module">
-import { apiFetch } from '/public/js/utils.js';
+import { api } from '/public/js/utils.js';
 
 const id = window.location.pathname.split('/')[2];
 loadDatabaseDetails();
@@ -16,7 +16,7 @@ async function loadDatabaseDetails() {
 }
 
 async function loadBasicInfo() {
-    const database = await apiFetch(`/api/databases/${id}`);
+    const database = await api.get(`/api/databases/${id}`);
         
     // Update page title
     document.getElementById('pageTitle').textContent = `Datenbank ${database.name}`;
@@ -41,7 +41,7 @@ async function loadBasicInfo() {
 }
 
 async function loadTables() {
-    const tables = await apiFetch(`/api/databases/${id}/tables`);
+    const tables = await api.get(`/api/databases/${id}/tables`);
     const tbody = document.getElementById('tablesGrid');
     tbody.innerHTML = tables.map(table => `
         <tr>
@@ -68,7 +68,7 @@ window.copyDatabase = async function(event) {
     const newName = document.getElementById('copyName').value;
     
     try {
-        await apiFetch(`/api/databases/${id}/copy`, {post: { name: newName }});
+        await api.post(`/api/databases/${id}/copy`, { name: newName });
         document.getElementById('copyDialog').close();
 //window.location.href = '/databases';
     } catch (error) {
@@ -118,7 +118,7 @@ window.importDatabase = async function(event) {
 
 window.checkDatabase = async function() {
     try {
-        const result = await apiFetch(`/api/databases/${id}/check`, {post:{}});
+        const result = await api.post(`/api/databases/${id}/check`);
         alert(result.message || 'Datenbank-Check abgeschlossen');
     } catch (error) {
         alert('Fehler beim Prüfen der Datenbank: ' + error.message);
@@ -129,7 +129,7 @@ window.optimizeDatabase = async function() {
     if (!confirm('Datenbank optimieren? Dies kann bei großen Datenbanken einige Zeit dauern.')) return;
     
     try {
-        const result = await apiFetch(`/api/databases/${id}/optimize`, {post:{}});
+        const result = await api.post(`/api/databases/${id}/optimize`);
         alert(result.message || 'Datenbank wurde optimiert');
     } catch (error) {
         alert('Fehler bei der Datenbank-Optimierung: ' + error.message);
@@ -141,7 +141,7 @@ window.deleteDatabase = async function() {
     if (!confirm('Diese Datenbank wirklich löschen?')) return;
     
     try {
-        await apiFetch(`/api/databases/${id}`, {del:{}});
+        await api.delete(`/api/databases/${id}`);
         window.location.href = '/databases';
     } catch (error) {
         alert('Fehler beim Löschen der Datenbank: ' + error.message);
@@ -161,7 +161,7 @@ window.changePassword = async function(event) {
     const password = document.getElementById('newPassword').value;
     
     try {
-        await apiFetch(`/api/databases/${id}/password`, {post: { password }});
+        await api.post(`/api/databases/${id}/password`, { password });
         closeChangePasswordDialog();
         alert('Passwort wurde erfolgreich geändert');
     } catch (error) {
@@ -172,7 +172,7 @@ window.changePassword = async function(event) {
 
 window.showTableDetails = async function(tableName) {
     try {
-        const details = await apiFetch(`/api/databases/${id}/tables/${tableName}`);
+        const details = await api.get(`/api/databases/${id}/tables/${tableName}`);
         document.getElementById('tableDetailsName').textContent = tableName;
         
         // Render columns

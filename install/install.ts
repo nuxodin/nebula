@@ -67,7 +67,7 @@ function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS dns_records (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         domain_id INTEGER,
-        record_type TEXT,
+        type TEXT,
         name TEXT,
         value TEXT,
         ttl INTEGER,
@@ -82,8 +82,8 @@ function initializeDatabase() {
         host TEXT NOT NULL,
         port INTEGER NOT NULL,
         type TEXT NOT NULL,
-        admin_login TEXT NOT NULL,
-        admin_password TEXT NOT NULL
+        username TEXT NOT NULL,
+        password TEXT NOT NULL
       );
     `);
 
@@ -177,8 +177,8 @@ const exampleData = {
     { name: "test.com", owner_id: 2, status: "aktiv" }
   ],
   database_servers: [
-    { host: 'localhost', port: 3306, type: 'mysql', admin_login: 'root', admin_password: 'root' },
-    { host: 'localhost', port: 5432, type: 'postgresql', admin_login: 'postgres', admin_password: 'postgres' }
+    { host: 'localhost', port: 3306, type: 'mysql', username: 'root', password: 'root' },
+    { host: 'localhost', port: 5432, type: 'postgresql', username: 'postgres', password: 'postgres' }
   ],
   databases: [
     { dom_id: 1, server_id: 1, name: "example_db", type: "mysql" },
@@ -188,14 +188,14 @@ const exampleData = {
     { dom_id: 2, server_id: 1, name: "app_db", type: "mysql" }
   ],
   dns_records: [
-    { domain_id: 1, record_type: "A", name: "@", value: "192.168.1.1", ttl: 3600 },
-    { domain_id: 1, record_type: "CNAME", name: "www", value: "@", ttl: 3600 },
-    { domain_id: 1, record_type: "MX", name: "@", value: "mail.example.com", ttl: 3600, priority: 10 },
-    { domain_id: 1, record_type: "TXT", name: "@", value: "v=spf1 mx ~all", ttl: 3600 },
-    { domain_id: 2, record_type: "A", name: "@", value: "192.168.1.2", ttl: 3600 },
-    { domain_id: 2, record_type: "CNAME", name: "www", value: "@", ttl: 3600 },
-    { domain_id: 2, record_type: "MX", name: "@", value: "mail.test.com", ttl: 3600, priority: 10 },
-    { domain_id: 2, record_type: "TXT", name: "@", value: "v=spf1 mx ~all", ttl: 3600 }
+    { domain_id: 1, type: "A", name: "@", value: "192.168.1.1", ttl: 3600 },
+    { domain_id: 1, type: "CNAME", name: "www", value: "@", ttl: 3600 },
+    { domain_id: 1, type: "MX", name: "@", value: "mail.example.com", ttl: 3600, priority: 10 },
+    { domain_id: 1, type: "TXT", name: "@", value: "v=spf1 mx ~all", ttl: 3600 },
+    { domain_id: 2, type: "A", name: "@", value: "192.168.1.2", ttl: 3600 },
+    { domain_id: 2, type: "CNAME", name: "www", value: "@", ttl: 3600 },
+    { domain_id: 2, type: "MX", name: "@", value: "mail.test.com", ttl: 3600, priority: 10 },
+    { domain_id: 2, type: "TXT", name: "@", value: "v=spf1 mx ~all", ttl: 3600 }
   ],
   mail: [
     { dom_id: 1, mail_name: "info@example.com", password: "infopass" },
@@ -226,8 +226,8 @@ async function initializeExampleData() {
 
       for (const server of exampleData.database_servers) {
         db.query(
-          "INSERT INTO database_servers (host, port, type, admin_login, admin_password) VALUES (?, ?, ?, ?, ?)",
-          [server.host, server.port, server.type, server.admin_login, server.admin_password]
+          "INSERT INTO database_servers (host, port, type, username, password) VALUES (?, ?, ?, ?, ?)",
+          [server.host, server.port, server.type, server.username, server.password]
         );
       }
 
@@ -237,8 +237,8 @@ async function initializeExampleData() {
       }
 
       for (const dnsRecord of exampleData.dns_records) {
-        db.query("INSERT INTO dns_records (domain_id, record_type, name, value, ttl, priority) VALUES (?, ?, ?, ?, ?, ?)", 
-          [dnsRecord.domain_id, dnsRecord.record_type, dnsRecord.name, dnsRecord.value, dnsRecord.ttl, dnsRecord.priority]);
+        db.query("INSERT INTO dns_records (domain_id, type, name, value, ttl, priority) VALUES (?, ?, ?, ?, ?, ?)", 
+          [dnsRecord.domain_id, dnsRecord.type, dnsRecord.name, dnsRecord.value, dnsRecord.ttl, dnsRecord.priority]);
       }
 
       for (const mailEntry of exampleData.mail) {

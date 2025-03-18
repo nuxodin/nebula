@@ -6,7 +6,7 @@ import { run } from "../../utils/command.ts";
 interface DnsRecord {
   id?: number;
   domain_id?: number;
-  record_type: string;
+  type: string;
   name: string;
   value: string;
   ttl?: number;
@@ -25,14 +25,14 @@ export function generateZoneFile(domainId: number): string {
   if (!domain) throw new Error(`Domain ${domainId} not found`);
 
   const records = db.queryEntries<DnsRecord>(
-    "SELECT * FROM dns_records WHERE domain_id = ? ORDER BY record_type, name, priority", 
+    "SELECT * FROM dns_records WHERE domain_id = ? ORDER BY type, name, priority", 
     [domainId]
   );
 
   // fix record
   records.push({
     name: "@",
-    record_type: "CNAME",
+    type: "CNAME",
     value: `${domain.name}.preview.${config.domain}`,
   });
 

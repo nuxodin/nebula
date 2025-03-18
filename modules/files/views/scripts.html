@@ -1,5 +1,5 @@
 <script type="module">
-import { apiFetch } from '/public/js/utils.js';
+import { api } from '/public/js/utils.js';
 import * as dialog from "https://cdn.jsdelivr.net/gh/u2ui/u2@x.x.x/js/dialog/dialog.min.js";
 
 const endpoint = '/api'+location.pathname;
@@ -21,7 +21,7 @@ document.addEventListener('click', (e) => {
     dialog.prompt('Rename', name).then(newName => {
         if (!newName) return;
         const newPath = path.split(/[\/\\]/).slice(0, -1).join('/') + '/' + newName;
-        apiFetch(endpoint+'/rename', {post: { oldPath: path, newPath }})
+        api.post(endpoint+'/rename', { oldPath: path, newPath })
           .then(() => loadFiles())
           .catch(error => dialog.alert('Fehler beim Umbenennen: ' + error.message));
       });
@@ -158,11 +158,9 @@ async function uploadFiles(files) {
       const subPath = file.webkitRelativePath.split('/').slice(0, -1).join('/');
       if (subPath) {
         try {
-          await apiFetch(endpoint, {
-            post: { 
-              path: join(currentPath, subPath), 
-              type: 'directory' 
-            }
+          await api.post(endpoint, {
+            path: join(currentPath, subPath), 
+            type: 'directory' 
           });
         } catch (err) { // Ignore directory already exists errors
           console.log('Directory creation error (might already exist):', err);
@@ -175,7 +173,7 @@ async function uploadFiles(files) {
   }
 
   try {
-    await apiFetch(endpoint+'/upload', { formData });
+    await api.formData(endpoint+'/upload', formData);
     loadFiles();
   } catch (error) {
     dialog.alert('Error uploading files: ' + error.message);
@@ -185,7 +183,7 @@ async function uploadFiles(files) {
 // Load files and directories
 async function loadFiles() {
   const listPath = encodeURIComponent(currentPath);
-  const data = await apiFetch(endpoint+'/list?path=' + listPath);
+  const data = await api.get(endpoint+'/list?path=' + listPath);
   if (data.error) throw new Error(data.error);
 
   renderPath();
@@ -279,7 +277,7 @@ function renderFiles(items) {
 // File preview
 async function previewFile(path) {
   try {
-    const content = await apiFetch(endpoint+'/content?path=' + encodeURIComponent(path));
+    const content = await api.get(endpoint+'/content?path=' + encodeURIComponent(path));
     document.getElementById('fileContent').value = content;
     document.getElementById('previewTitle').textContent = path.split(/[\/\\]/).pop();
     setupEditor(path);
@@ -307,7 +305,7 @@ function setupEditor(path) {
 async function saveFile(path) {
   try {
     const content = document.getElementById('fileContent').value;
-    await apiFetch(endpoint+'/content', {put: { path, content }});
+    await api.put(endpoint+'/content', { path, content });
   } catch (error) {
     dialog.alert('Fehler beim Speichern der Datei: ' + error.message);
   }
@@ -320,7 +318,7 @@ async function createNewFile(type='file') {
   if (!name) return;
   try {
     const path = join(currentPath, name);
-    await apiFetch(endpoint, {post: { path, type }});
+    await api.post(endpoint, { path, type });
     await loadFiles();
   } catch (error) {
     dialog.alert('Fehler beim Erstellen Datei / Ordner: ' + error.message);
@@ -335,7 +333,7 @@ async function deleteItem(path) {
   const ok = await dialog.confirm('Sind Sie sicher, dass Sie dieses Element löschen möchten?');
   if (!ok) return;
   try {
-    await apiFetch(endpoint, {del: { path }});
+    await api.delete(endpoint, { path });
     loadFiles();
   } catch (error) {
     dialog.alert('Fehler beim Löschen: ' + error.message);

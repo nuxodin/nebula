@@ -1,5 +1,5 @@
 <script type="module">
-import { apiFetch } from '/public/js/utils.js';
+import { api } from '/public/js/utils.js';
 
 let currentDomainId;
 
@@ -12,7 +12,7 @@ async function loadDomainDetails() {
 
   try {
     // Domain Hauptdaten laden
-    const domain = await apiFetch(`/api/domains/${currentDomainId}`);
+    const domain = await api.get(`/api/domains/${currentDomainId}`);
     
     // Seitentitel und Überschrift aktualisieren
     document.getElementById('pageTitle').textContent = `Domain ${domain.name}`;
@@ -42,7 +42,7 @@ async function loadDomainDetails() {
       <option value="${domain.runtime_version}">${domain.runtime_version}</option>
     </select>`;
 
-    apiFetch(`/api/${domain.runtime}/versions`)
+    api.get(`/api/${domain.runtime}/versions`)
       .then(({versions}) => {
         for (const [version, data] of Object.entries(versions)) {
           if (!data.installed) continue;

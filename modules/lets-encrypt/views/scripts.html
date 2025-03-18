@@ -1,5 +1,5 @@
 <script type="module">
-import { apiFetch, dialog } from '/public/js/utils.js';
+import { api, dialog } from '/public/js/utils.js';
 
 // Load both certificate status and domain list on page load
 loadCertStatus();
@@ -7,7 +7,7 @@ loadCertificates();
 
 async function loadCertStatus() {
     try {
-        const { output } = await apiFetch('/api/lets-encrypt/status');
+        const { output } = await api.get('/api/lets-encrypt/status');
         document.getElementById('certStatus').textContent = output;
     } catch (error) {
         document.getElementById('certStatus').textContent = `Fehler beim Laden des Status: ${error.message}`;
@@ -16,7 +16,7 @@ async function loadCertStatus() {
 
 async function loadCertificates() {
     try {
-        const { domains } = await apiFetch('/api/lets-encrypt/certificates');
+        const { domains } = await api.get('/api/lets-encrypt/certificates');
         const tbody = document.getElementById('certList');
         
         if (domains.length > 0) {
@@ -72,9 +72,7 @@ window.issueCert = async (domainId, domainName) => {
     if (!await dialog.confirm(`Let's Encrypt Zertifikat für ${domainName} erstellen?`)) return;
     
     try {
-        await apiFetch(`/api/lets-encrypt/certificates/issue`, {
-            post: { domainId }
-        });
+        await api.post(`/api/lets-encrypt/certificates/issue`, { domainId });
         await loadCertificates();
         await loadCertStatus();
         dialog.alert('Zertifikat wurde erfolgreich erstellt');
@@ -87,9 +85,7 @@ window.renewCert = async (domainId, domainName) => {
     if (!await dialog.confirm(`Zertifikat für ${domainName} erneuern?`)) return;
     
     try {
-        await apiFetch(`/api/lets-encrypt/certificates/renew`, {
-            post: { domainId }
-        });
+        await api.post(`/api/lets-encrypt/certificates/renew`, { domainId });
         await loadCertificates();
         await loadCertStatus();
         dialog.alert('Zertifikat wurde erfolgreich erneuert');
@@ -102,9 +98,7 @@ window.deleteCert = async (domainId, domainName) => {
     if (!await dialog.confirm(`Zertifikat für ${domainName} wirklich löschen?`)) return;
     
     try {
-        await apiFetch(`/api/lets-encrypt/certificates/delete`, {
-            post: { domainId }
-        });
+        await api.post(`/api/lets-encrypt/certificates/delete`, { domainId });
         await loadCertificates();
         await loadCertStatus();
         dialog.alert('Zertifikat wurde erfolgreich gelöscht');
@@ -115,7 +109,7 @@ window.deleteCert = async (domainId, domainName) => {
 
 document.getElementById('setUp').addEventListener('click', async () => {
     try {
-        await apiFetch('/api/lets-encrypt/setUp', { post: {} });
+        await api.post('/api/lets-encrypt/setUp');
         dialog.alert('Let\'s Encrypt wurde erfolgreich eingerichtet');
         await loadCertificates();
         await loadCertStatus();

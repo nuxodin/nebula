@@ -33,3 +33,22 @@ export function apiFetch(url, { method, post, put, del, formData } = {}) {
         });
     });
 }
+
+
+export const api = {
+    get(url) {
+        return apiFetch(url);
+    },
+    post(url, data = {}) {
+        return apiFetch(url, { post: data });
+    },
+    put(url, data = {}) {
+        return apiFetch(url, { put: data });
+    },
+    delete(url) {
+        return apiFetch(url, { del: true });
+    },
+    formData(url, formData) {
+        return apiFetch(url, { formData: formData });
+    }
+};

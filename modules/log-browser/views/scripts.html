@@ -1,5 +1,5 @@
 <script type="module">
-import { apiFetch } from '/public/js/utils.js';
+import { api } from '/public/js/utils.js';
 
 let currentLogPath = null;
 let logFiles = [];
@@ -20,7 +20,7 @@ function setupEventListeners() {
 // Log-Dateien laden
 async function loadFiles() {
     try {
-        const { files } = await apiFetch('/api/log-browser/files');
+        const { files } = await api.get('/api/log-browser/files');
         // Filtere 0-Byte Dateien
         logFiles = files.filter(file => file.size > 0);
         renderFiles(logFiles);
@@ -85,12 +85,10 @@ async function loadLogContent() {
         const filter = document.getElementById('content-filter').value;
         const lines = document.getElementById('line-count').value;
 
-        const { content, entries, error } = await apiFetch('/api/log-browser/content', {
-            post: {
-                path: currentLogPath,
-                filter,
-                lines: parseInt(lines)
-            }
+        const { content, entries, error } = await api.post('/api/log-browser/content', {
+            path: currentLogPath,
+            filter,
+            lines: parseInt(lines)
         });
 
         if (error) {
@@ -113,10 +111,10 @@ async function loadLogContent() {
 function formatLogEntries(entries) {
     return entries.map(entry => {
         const level = entry.level?.toLowerCase() || 'info';
-        let cssClass = 'info-level';
-        if (level.includes('error')) cssClass = 'error-level';
-        else if (level.includes('warn')) cssClass = 'warning-level';
-        else if (level.includes('debug')) cssClass = 'debug-level';
+        let variant = 'info';
+        if (level.includes('error')) variant = 'error';
+        else if (level.includes('warn')) variant = 'warn';
+        else if (level.includes('debug')) variant = 'success';
 
         const contextHtml = entry.context && Object.keys(entry.context).length > 0 
             ? `<div class="log-context">
@@ -127,7 +125,7 @@ function formatLogEntries(entries) {
             : '';
 
         return `
-            <div class="log-entry ${cssClass}">
+            <u2-alert variant="${variant}" open>
                 <div class="log-header">
                     <div class="log-meta">
                         ${entry.date ? `
@@ -140,7 +138,7 @@ function formatLogEntries(entries) {
                     ${contextHtml}
                 </div>
                 <div class="log-message">${entry.message}</div>
-            </div>`;
+            </u2-alert>`;
     }).join('');
 }
 
@@ -177,51 +175,3 @@ function reloadLogContent() {
     if (currentLogPath) loadLogContent();
 }
 </script>
-
-<style>
-.log-entry {
-    margin-bottom: 0.5em;
-    padding: 0.5em;
-    border-radius: 4px;
-    border-left: 4px solid transparent;
-}
-
-.log-entry.error-level { 
-    border-left-color: #d32f2f; 
-    background: rgba(211, 47, 47, 0.05); 
-}
-.log-entry.warning-level { 
-    border-left-color: #f57c00; 
-    background: rgba(245, 124, 0, 0.05); 
-}
-.log-entry.info-level { 
-    border-left-color: #0288d1; 
-    background: rgba(2, 136, 209, 0.05); 
-}
-.log-entry.debug-level { 
-    border-left-color: #388e3c; 
-    background: rgba(56, 142, 60, 0.05); 
-}
-
-.log-header {
-    color: #666;
-    font-size: 0.8em;
-    margin-bottom: 0.3em;
-}
-.context-item {
-    display: inline-block;
-}
-
-.context-item strong {
-    color: #444;
-}
-
-tr { cursor: pointer; }
-tr.active { background: #e3f2fd; }
-
-/* Status Badge Farben */
-.status-error { background: #d32f2f; }
-.status-warn { background: #f57c00; }
-.status-info { background: #0288d1; }
-.status-debug { background: #388e3c; }
-</style>

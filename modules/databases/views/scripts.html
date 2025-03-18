@@ -1,5 +1,5 @@
 <script type="module">
-import { apiFetch } from '/public/js/utils.js';
+import { api } from '/public/js/utils.js';
 
 loadAll();
 
@@ -13,7 +13,7 @@ async function loadAll() {
 
 async function loadDatabases() {
     try {
-        const databases = await apiFetch('/api/databases');
+        const databases = await api.get('/api/databases');
         renderDatabases(databases);
     } catch (error) {
         alert('Fehler beim Laden der Datenbanken: ' + error.message);
@@ -22,7 +22,7 @@ async function loadDatabases() {
 
 async function loadDomains() {
     try {
-        const domains = await apiFetch('/api/domains');
+        const domains = await api.get('/api/domains');
         const select = document.getElementById('domainSelect');
         select.innerHTML = '<option value="">Bitte wählen...</option>' + 
             domains.map(domain => `<option value="${domain.id}">${domain.name}</option>`).join('');
@@ -33,7 +33,7 @@ async function loadDomains() {
 
 async function loadServers() {
     try {
-        const servers = await apiFetch('/api/database_servers');
+        const servers = await api.get('/api/database_servers');
         const select = document.getElementById('serverSelect');
         select.innerHTML = '<option value="">Bitte wählen...</option>' + 
             servers.map(server => `<option value="${server.id}">${server.host} (${server.type})</option>`).join('');
@@ -69,7 +69,7 @@ document.getElementById('addDatabaseForm').onsubmit = async (e) => {
     const data = Object.fromEntries(formData);
 
     try {
-        const result = await apiFetch('/api/databases', {data});
+        const result = await api.post('/api/databases', data);
 
         if (result.success) {
             e.target.reset();
@@ -87,7 +87,7 @@ window.deleteDatabase = async function(id, name) {
     if (!confirm(`Datenbank "${name}" wirklich löschen?`)) return;
     
     try {
-        await apiFetch(`/api/databases/${id}`, {del:{}});
+        await api.delete(`/api/databases/${id}`);
         loadDatabases();
     } catch (error) {
         alert('Fehler beim Löschen der Datenbank: ' + error.message);

@@ -1,5 +1,5 @@
 <script type="module">
-  import { apiFetch } from '/public/js/utils.js';
+  import { api } from '/public/js/utils.js';
   
   let users = [];
   let currentUserToDelete = null;
@@ -7,7 +7,7 @@
   // Benutzer laden
   async function loadUsers() {
     try {
-      users = await apiFetch('/api/users');
+      users = await api.get('/api/users');
       renderUsers(users);
     } catch (error) {
       alert('Fehler beim Laden der Benutzer: ' + error.message);
@@ -56,9 +56,7 @@
     if (!currentUserToDelete) return;
 
     try {
-      await apiFetch(`/api/users/${currentUserToDelete}`, {
-        method: 'DELETE'
-      });
+      await api.delete(`/api/users/${currentUserToDelete}`);
       loadUsers();
       hideDeleteUserModal();
     } catch (error) {
@@ -87,7 +85,7 @@
     };
     
     try {
-      await apiFetch('/api/users', {data});
+      await api.post('/api/users', data);
       hideAddUserModal();
       loadUsers();
       e.target.reset();
