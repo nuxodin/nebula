@@ -1,0 +1,76 @@
+<script type="module">
+import { h, render } from "https://esm.sh/preact";
+import htm from "https://esm.sh/htm";
+import { signal } from "https://esm.sh/@preact/signals";
+import { api, dialog } from '/public/js/utils.js';
+
+const html = htm.bind(h);
+const processes = signal([]);
+const error = signal(null);
+
+async function killProcess(pid) {
+    try {
+        await api.delete(`/api/prozess/${pid}`);
+        await updateProcessList();
+    } catch (err) {
+        console.error('Fehler beim Beenden des Prozesses:', err);
+        dialog.alert('Fehler beim Beenden des Prozesses: ' + err.message);
+    }
+}
+
+async function updateProcessList() {
+    try {
+        processes.value = await api.get('/api/prozess');
+        error.value = null;
+    } catch (err) {
+        console.error('Fehler beim Laden der Prozesse:', err);
+        error.value = 'Fehler beim Laden der Prozesse';
+    }
+}
+
+function ProcessList() {
+    return html`
+        <tbody id="processList">
+            ${error.value 
+                ? html`<tr><td colspan="12" class="error">${error.value}</td></tr>`
+                : processes.value?.length 
+                    ? processes.value.map(proc => html`
+                        <tr key=${proc.pid}>
+                            <td>${proc.pid}</td>
+                            <td>${proc.name}</td>
+                            <td>${proc.user || 'N/A'}</td>
+                            <td>${proc.cpu?.toFixed(1)}%</td>
+                            <td>${proc.memory?.toFixed(1)}%</td>
+                            <td>${proc.diskRead || 0} KiB/s</td>
+                            <td>${proc.diskWrite || 0} KiB/s</td>
+                            <td>
+                                <u2-time datetime=${proc.startTime} second type="relative">${proc.startTime}</u2-time>
+                            </td>
+                            <td>${proc.ports?.length ? proc.ports.join(', ') : '-'}</td>
+                            <td>${proc.parentProcess ? `${proc.parentProcess.name} (${proc.parentProcess.pid})` : '-'}</td>
+                            <td><small>${proc.command}</small></td>
+                            <td>
+                                <button class="u2-unstyle" 
+                                    u2-confirm=${`Möchten Sie den Prozess ${proc.pid} wirklich beenden?`}
+                                    onClick=${() => killProcess(proc.pid)}
+                                    title="Prozess beenden">
+                                    <i class="mdi mdi-stop"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `)
+                    : html`<tr><td colspan="12">Keine Prozesse gefunden</td></tr>`
+            }
+        </tbody>
+    `;
+}
+
+// Initial render
+render(html`<${ProcessList}/>`, document.getElementById('processList').parentNode);
+
+// Initial update
+updateProcessList();
+
+// Update every 5 seconds
+setInterval(updateProcessList, 5000);
+</script>

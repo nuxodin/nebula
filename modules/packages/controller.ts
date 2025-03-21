@@ -69,6 +69,14 @@ export const api = {
             });
         }
 
+        // order by hasUpdate
+        packages.sort((a, b) => {
+            if (a.hasUpdate && !b.hasUpdate) return -1;
+            if (!a.hasUpdate && b.hasUpdate) return 1;
+            return a.name.localeCompare(b.name);
+        });
+
+
         return packages;
     },
     

@@ -12,7 +12,7 @@ export async function installSSL(domainId: number, certType: 'lets_encrypt' | 'c
     const sslPath = `${config.ssl_cert_dir}/${domain.name}`;
     await ensureDir(sslPath);
 
-    if (certType === 'lets_encrypt' && config.lets_encrypt_enabled) {
+    if (certType === 'lets_encrypt') {
       // Certbot für Let's Encrypt verwenden
       await run(`certbot certonly --webroot -w ${config.vhosts_root}/${domain.name}/httpdocs -d ${domain.name} -d www.${domain.name} --cert-path ${sslPath}`);
       

@@ -11,8 +11,6 @@ export const config = {
   default_traffic_limit: 10240, // MB
   default_ip: "auto",
   ssl_cert_dir: "../nebula-data/ssl",
-
-  lets_encrypt_enabled: true,
   
   // DNS-Einstellungen
   bind_auto_reload: true,

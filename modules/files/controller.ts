@@ -68,12 +68,8 @@ export const list = async (c, {rootPath='/'}={}) => {
             const groupMatch = groupInfo.split('\n')
               .find(line => line.startsWith(`${gid}:`) || line.includes(`:${gid}:`));
             
-            if (ownerMatch) {
-              entry.ownerName = ownerMatch.split(':')[0];
-            }
-            if (groupMatch) {
-              entry.groupName = groupMatch.split(':')[0];
-            }
+            if (ownerMatch) entry.ownerName = ownerMatch.split(':')[0];
+            if (groupMatch) entry.groupName = groupMatch.split(':')[0];
           } catch {
             // Fallback to numeric IDs if name resolution fails
           }

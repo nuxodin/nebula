@@ -1,0 +1,49 @@
+<script type="module">
+import { api, dialog } from '/public/js/utils.js';
+
+async function killProcess(pid) {
+    try {
+        await api.delete(`/api/prozess/${pid}`);
+        await updateProcessList(); // Aktualisiere die Liste nach dem Beenden
+    } catch (error) {
+        console.error('Fehler beim Beenden des Prozesses:', error);
+        dialog.alert('Fehler beim Beenden des Prozesses: ' + error.message);
+    }
+}
+
+async function updateProcessList() {
+    try {
+        const processes = await api.get('/api/prozess');
+        const tbody = document.getElementById('processList');
+        
+        tbody.innerHTML = processes?.length ? processes.map(proc => `
+            <tr>
+                <td>${proc.pid}
+                <td>${proc.name}
+                <td>${proc.user || 'N/A'}
+                <td>${proc.cpu?.toFixed(1)}%
+                <td>${proc.memory?.toFixed(1)}%
+                <td>${proc.diskRead || 0} KiB/s
+                <td>${proc.diskWrite || 0} KiB/s
+                <td>
+                    <u2-time datetime="${proc.startTime}" second type=relative>${proc.startTime}</u2-time>
+                <td>${proc.ports?.length ? proc.ports.join(', ') : '-'}
+                <td>${proc.parentProcess ? `${proc.parentProcess.name} (${proc.parentProcess.pid})` : '-'}
+                <td><small>${proc.command}</small>
+                <td>
+                    <button class="u2-unstyle" u2-confirm="Möchten Sie den Prozess ${proc.pid} wirklich beenden?" onclick="window.killProcess(${proc.pid})" title="Prozess beenden">
+                        <i class="mdi mdi-stop"></i>
+                    </button>
+            </tr>
+        `).join('') : '<tr><td colspan="12">Keine Prozesse gefunden</td></tr>';
+    } catch (error) {
+        console.error('Fehler beim Laden der Prozesse:', error);
+        const tbody = document.getElementById('processList');
+        tbody.innerHTML = '<tr><td colspan="12" class="error">Fehler beim Laden der Prozesse</td></tr>';
+    }
+}
+
+window.killProcess = killProcess;
+updateProcessList();
+setInterval(updateProcessList, 5000);
+</script>

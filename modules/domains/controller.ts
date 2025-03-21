@@ -82,7 +82,7 @@ async function createTemplate(domain) {
   const templatePath = join(Deno.cwd(), "data", "templates", "default", "index.html");
   try {
     await copy(templatePath, domainPath);
-    logInfo(`Template kopiert nach ${domainPath}/httpdocs`, "Domains");
+    logInfo(`Template kopiert nach ${domainPath}`, "Domains");
   } catch (error) {
     logError(`Fehler beim Kopieren des Templates: ${error.message}`, "Domains");
   }

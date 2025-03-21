@@ -59,17 +59,10 @@ export async function writeZoneFile(domainId: number): Promise<void> {
     await Deno.writeTextFile(zonePath, zoneContent);
     logInfo(`Zone file for ${domain.name} written to ${zonePath}`, "DNS");
     
-    // Optional: Reload BIND
-    if (config.bind_auto_reload) {
-      const { code, stderr } = run('rndc', ['reload', domain.name]);
+    // Optional?: Reload BIND
+    const { code, stderr } = run('rndc', ['reload', domain.name], { throw: true });
+    logInfo(`BIND reloaded for ${domain.name}`, "DNS");
 
-      
-      if (code === 0) {
-        logInfo(`BIND reloaded for ${domain.name}`, "DNS");
-      } else {
-        throw new Error("Failed to reload BIND: " + stderr);
-      }
-    }
   } catch (error) {
     if (error instanceof Error) {
       logError(`Error writing zone file: ${error.message}`, "DNS");

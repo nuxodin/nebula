@@ -1,56 +1,60 @@
 <script type="module">
-import { api } from '/public/js/utils.js';
-import * as dialog from "https://cdn.jsdelivr.net/gh/u2ui/u2@x.x.x/js/dialog/dialog.min.js"
+    import { api, dialog } from '/public/js/utils.js';
+    import { h, render } from "https://esm.sh/preact";
+    import htm from "https://esm.sh/htm";
+    import { signal } from "https://esm.sh/@preact/signals";
 
+    const html = htm.bind(h);
+    const processes = signal([]);
+    const error = signal(null);
 
-async function killProcess(pid) {
-    try {
-        await api.delete(`/api/prozess/${pid}`);
-        await updateProcessList(); // Aktualisiere die Liste nach dem Beenden
-    } catch (error) {
-        console.error('Fehler beim Beenden des Prozesses:', error);
-        dialog.alert('Fehler beim Beenden des Prozesses: ' + error.message);
-    }
-}
+    const killProcess = async pid => {
+        await api.delete(`/api/prozess/${pid}`).catch(err => dialog.alert(err.message));
+        await updateProcessList();
+    };
 
-async function updateProcessList() {
-    try {
-        const processes = await api.get('/api/prozess');
-        const tbody = document.getElementById('processList');
-        
-        tbody.innerHTML = processes?.length ? processes.map(proc => `
-            <tr>
-                <td>${proc.pid}
-                <td>${proc.name}
-                <td>${proc.user || 'N/A'}
-                <td>${proc.cpu?.toFixed(1)}%
-                <td>${proc.memory?.toFixed(1)}%
-                <td>${proc.diskRead || 0} KiB/s
-                <td>${proc.diskWrite || 0} KiB/s
-                <td>
-                    <u2-time datetime="${proc.startTime}" second type=relative>${proc.startTime}</u2-time>
-                <td>${proc.ports?.length ? proc.ports.join(', ') : '-'}
-                <td>${proc.parentProcess ? `${proc.parentProcess.name} (${proc.parentProcess.pid})` : '-'}
-                <td><small>${proc.command}</small>
-                <td>
-                    <button class="u2-unstyle" u2-confirm="Möchten Sie den Prozess ${proc.pid} wirklich beenden?" onclick="window.killProcess(${proc.pid})" title="Prozess beenden">
-                        <i class="mdi mdi-stop"></i>
-                    </button>
-            </tr>
-        `).join('') : '<tr><td colspan="12">Keine Prozesse gefunden</td></tr>';
-    } catch (error) {
-        console.error('Fehler beim Laden der Prozesse:', error);
-        const tbody = document.getElementById('processList');
-        tbody.innerHTML = '<tr><td colspan="12" class="error">Fehler beim Laden der Prozesse</td></tr>';
-    }
-}
+    const updateProcessList = async () => {
+        try {
+            processes.value = await api.get('/api/prozess');
+            error.value = null;
+        } catch (err) {
+            console.error('Fehler:', err);
+            error.value = 'Fehler beim Laden';
+        }
+    };
 
-// Make killProcess available globally
-window.killProcess = killProcess;
- 
-// Initial update
-updateProcessList();
+    const ProcessRow = ({ proc }) => html`
+        <tr key=${proc.pid}>
+            <td>${proc.pid}</td>
+            <td>${proc.name}</td>
+            <td>${proc.user ?? 'N/A'}</td>
+            <td>${proc.cpu?.toFixed(1) ?? 0}%</td>
+            <td>${proc.memory?.toFixed(1) ?? 0}%</td>
+            <td>${proc.diskRead ?? 0}</td>
+            <td>${proc.diskWrite ?? 0}</td>
+            <td><u2-time datetime=${proc.startTime} second type="relative">${proc.startTime}</u2-time></td>
+            <td>${proc.ports?.join(', ') || '-'}</td>
+            <td>${proc.parentProcess ? `${proc.parentProcess.name} (${proc.parentProcess.pid})` : '-'}</td>
+            <td><small>${proc.command}</small></td>
+            <td>
+                <button class="u2-unstyle" 
+                    u2-confirm="Prozess ${proc.pid} beenden?"
+                    onClick=${() => killProcess(proc.pid)}
+                    title="Beenden">
+                    <i class="mdi mdi-trash-can"></i>
+                </button>
+            </td>
+        </tr>
+    `;
 
-// Aktualisiere alle 5 Sekunden
-setInterval(updateProcessList, 5000);
+    const ProcessList = () => html`
+        ${error.value ? html`<tr><td colspan="12" class="error">${error.value}</td></tr>` :
+         !processes.value.length ? html`<tr><td colspan="12">Keine Prozesse</td></tr>` :
+         processes.value.map(proc => html`<${ProcessRow} proc=${proc} />`)}
+    `;
+
+    // Direktes Rendern in #processList
+    render(html`<${ProcessList}/>`, document.getElementById('processList'));
+    updateProcessList();
+    setInterval(updateProcessList, 5000);
 </script>
