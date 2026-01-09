@@ -87,7 +87,7 @@ export async function checkInstalledPhpVersions(): Promise<{ version: string, st
     try {
       // Prüfen, ob Version installiert ist
       //const versionCmd = await run(`php${version}`, ["-v"], { silent: true });
-      const versionCmd = await run("php${version}", ["-v"], { silent: true, throw:true });
+      const versionCmd = await run(`php${version}`, ["-v"], { silent: true, throw:true });
       if (versionCmd.code === 0) {
         // Vermeiden von Duplikaten (falls Default-Version bereits erkannt wurde)
 

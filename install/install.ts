@@ -272,8 +272,8 @@ function createRequiredDirectories() {
     // SSL-Verzeichnis
     config.ssl_cert_dir,
     
-    // Backup-Verzeichnis
-    config.backup_directory
+    // Backup-Verzeichnis (todo)
+    // config.backup_directory
   ];
   
   for (const dir of directories) {

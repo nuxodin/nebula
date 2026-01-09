@@ -26,5 +26,5 @@ export const config = {
 
 if (Deno.build.os === 'windows') {
   config.vhosts_root = 'C:\\Inetpub\\vhosts';
-  config.bind_zones_dir = 'C:\\ProgrmData\\Nebula\\bind\\zones';
+  config.bind_zones_dir = 'C:\\ProgramData\\Nebula\\bind\\zones';
 }

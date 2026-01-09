@@ -3,7 +3,6 @@ import { logInfo, logError } from "../../utils/logger.ts";
 import { renderTemplate } from "../../utils/template.ts";
 import db from "../../utils/database.ts";
 import { hash } from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
-import { CDPSession } from 'https://deno.land/x/puppeteer@16.2.0/mod.ts';
 
 // View Controllers
 export const getUserView = async (c: Context) => {

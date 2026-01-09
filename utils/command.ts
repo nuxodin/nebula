@@ -277,6 +277,5 @@ export const status = async (service: string) => {
   const mapping = commands[commandKey];
   if (!mapping) throw new Error(`❌ Kein geeigneter Befehl zum Überprüfen des Status von ${service} gefunden.`);
   const result = await run(mapping.cmd ?? commandKey, mapping.args, { sudo: true });
-  const isRunning = result.code === 0;
-  return isRunning;
+  return result.code === 0;
 };
