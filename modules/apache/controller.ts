@@ -121,11 +121,9 @@ export const api = {
         const status = await api.status();
         const enabled = await run("systemctl", ["is-enabled", "apache2"], { sudo: true }).then(res => res.code === 0);
         const errorsParser = new LogParser("/var/log/apache2/error.log");
-        const errorsLogs = await errorsParser.getEntries({order: "desc", limit: 7});
+        const errorLog = await errorsParser.getEntries({order: "desc", limit: 7});
         const accessParser = new LogParser("/var/log/apache2/access.log");
-        const accessLogs = await accessParser.getEntries({order: "desc", limit: 7});
-        const errorLog = errorsLogs;
-        const accessLog = accessLogs;
+        const accessLog = await accessParser.getEntries({order: "desc", limit: 7});
         const configCheck = await run("apachectl", ["configtest"], { sudo: true });
         return {
             status,

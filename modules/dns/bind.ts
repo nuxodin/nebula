@@ -60,7 +60,7 @@ export async function writeZoneFile(domainId: number): Promise<void> {
     logInfo(`Zone file for ${domain.name} written to ${zonePath}`, "DNS");
     
     // Optional?: Reload BIND
-    const { code, stderr } = run('rndc', ['reload', domain.name], { throw: true });
+    const { code, stderr } = await run('rndc', ['reload', domain.name], { throw: true });
     logInfo(`BIND reloaded for ${domain.name}`, "DNS");
 
   } catch (error) {
